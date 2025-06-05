@@ -1,1 +1,14 @@
 [05-Jun-2025 14:44:06 Europe/Berlin] Timetable Error: Unknown column 't.start_time' in 'field list'
+[05-Jun-2025 15:19:03 Europe/Berlin] Schedule Error: Table 'timetable.timetable_group' doesn't exist
+[05-Jun-2025 15:22:50 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:25:03 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:25:24 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:25:49 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:25:50 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:26:17 Europe/Berlin] Schedule Error: Unknown column 't.start_time' in 'order clause'
+[05-Jun-2025 15:57:56 Europe/Berlin] Timetable Error: Facility is already assigned for this semester
+[05-Jun-2025 16:05:36 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: mysqli_stmt_bind_param() expects at least 2 arguments, 1 given in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:36
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(36): mysqli_stmt_bind_param(Object(mysqli_stmt))
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 36
