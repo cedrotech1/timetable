@@ -12,3 +12,35 @@ Stack trace:
 #0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(36): mysqli_stmt_bind_param(Object(mysqli_stmt))
 #1 {main}
   thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 36
+[07-Jun-2025 09:19:47 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'timetable.timetable_sessions' doesn't exist in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:19:56 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Table 'timetable.timetable_sessions' doesn't exist in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:21:52 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'f.location' in 'field list' in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:24:47 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'f.location' in 'field list' in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:26:38 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'f.location' in 'field list' in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:26:59 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'f.location' in 'field list' in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php:57
+Stack trace:
+#0 C:\xampp\htdocs\timetable\Dashboard\get_schedule.php(57): mysqli_prepare(Object(mysqli), 'SELECT \r\n    t....')
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable\Dashboard\get_schedule.php on line 57
+[07-Jun-2025 09:27:35 Europe/Berlin] Schedule Error: Unknown column 'f.location' in 'field list'
+[07-Jun-2025 09:28:37 Europe/Berlin] Schedule Error: Unknown column 'f.location' in 'field list'

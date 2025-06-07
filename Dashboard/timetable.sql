@@ -29,14 +29,6 @@ CREATE TABLE `department` (
 
 
 
-CREATE TABLE `facility` (
-  `id` int(11) NOT NULL,
-  `name` varchar(100) DEFAULT NULL,
-  `location` varchar(100) DEFAULT NULL,
-  `type` varchar(50) DEFAULT NULL,
-  `capacity` int(11) DEFAULT NULL,
-  `campus_id` int(11) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
 CREATE TABLE `intake` (
@@ -44,7 +36,7 @@ CREATE TABLE `intake` (
   `year` int(11) DEFAULT NULL,
   `month` int(11) DEFAULT NULL,
   `size` int(11) DEFAULT NULL,
-  `program_id` int(11) DEFAULT NULL
+  `program_id` int(11) DEFAULT NULL 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
@@ -83,6 +75,16 @@ CREATE TABLE `student_group` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 
+CREATE TABLE `facility` (
+  `id` int(11) NOT NULL,
+  `name` varchar(100) DEFAULT NULL,
+  `location` varchar(100) DEFAULT NULL,
+  `type` varchar(50) DEFAULT NULL,
+  `capacity` int(11) DEFAULT NULL,
+  `campus_id` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 CREATE TABLE `timetable` (
   `id` int(11) NOT NULL,
   `module_id` int(11) DEFAULT NULL,
@@ -91,6 +93,17 @@ CREATE TABLE `timetable` (
   `semester` varchar(10) DEFAULT NULL,
   `academic_year_id` int(11) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE timetable_sessions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  timetable_id INT NOT NULL,
+  day VARCHAR(10) NOT NULL,        
+  start_time TIME NOT NULL,          
+  end_time TIME NOT NULL            
+);
+
+
+
 
 
 CREATE TABLE `timetable_groups` (

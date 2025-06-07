@@ -319,11 +319,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                     
                     if ($_POST['action'] === 'add_intake') {
-                        if (!mysqli_query($connection, "INSERT INTO intake (year, month, program_id) VALUES ($year, $month, $program_id)")) {
+                        // Initialize size to 0 for new intake
+                        if (!mysqli_query($connection, "INSERT INTO intake (year, month, program_id, size) VALUES ($year, $month, $program_id, 0)")) {
                             throw new Exception("Failed to add intake: " . mysqli_error($connection));
                         }
                         $response = ['success' => true, 'message' => 'Intake added successfully.'];
                     } else {
+                        // When editing intake, we don't modify the size as it's managed by groups
                         if (!mysqli_query($connection, "UPDATE intake SET year = $year, month = $month, program_id = $program_id WHERE id = $id")) {
                             throw new Exception("Failed to update intake: " . mysqli_error($connection));
                         }
@@ -336,10 +338,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('Intake ID is required');
                     }
                     $id = (int)$_POST['intake_id'];
-                    if (!mysqli_query($connection, "DELETE FROM intake WHERE id = $id")) {
-                        throw new Exception("Failed to delete intake: " . mysqli_error($connection));
+                    
+                    // Start transaction
+                    mysqli_begin_transaction($connection);
+                    try {
+                        // Delete all associated student groups first
+                        if (!mysqli_query($connection, "DELETE FROM student_group WHERE intake_id = $id")) {
+                            throw new Exception("Failed to delete associated student groups: " . mysqli_error($connection));
+                        }
+                        
+                        // Then delete the intake
+                        if (!mysqli_query($connection, "DELETE FROM intake WHERE id = $id")) {
+                            throw new Exception("Failed to delete intake: " . mysqli_error($connection));
+                        }
+                        
+                        // Commit transaction
+                        mysqli_commit($connection);
+                        $response = ['success' => true, 'message' => 'Intake deleted successfully.'];
+                    } catch (Exception $e) {
+                        // Rollback transaction on error
+                        mysqli_rollback($connection);
+                        throw $e;
                     }
-                    $response = ['success' => true, 'message' => 'Intake deleted successfully.'];
                     break;
 
                 case 'add_student_group':
@@ -368,16 +388,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('A student group with this name already exists in this intake');
                     }
                     
-                    if ($_POST['action'] === 'add_student_group') {
-                        if (!mysqli_query($connection, "INSERT INTO student_group (name, size, intake_id) VALUES ('$name', $size, $intake_id)")) {
-                            throw new Exception("Failed to add student group: " . mysqli_error($connection));
+                    // Start transaction
+                    mysqli_begin_transaction($connection);
+                    try {
+                        if ($_POST['action'] === 'add_student_group') {
+                            // Add the new group
+                            if (!mysqli_query($connection, "INSERT INTO student_group (name, size, intake_id) VALUES ('$name', $size, $intake_id)")) {
+                                throw new Exception("Failed to add student group: " . mysqli_error($connection));
+                            }
+                            
+                            // Update intake size
+                            if (!mysqli_query($connection, "UPDATE intake SET size = COALESCE(size, 0) + $size WHERE id = $intake_id")) {
+                                throw new Exception("Failed to update intake size: " . mysqli_error($connection));
+                            }
+                            
+                            $response = ['success' => true, 'message' => 'Student group added successfully.'];
+                        } else {
+                            // Get the old group size
+                            $old_size_query = "SELECT size FROM student_group WHERE id = $id";
+                            $old_size_result = mysqli_query($connection, $old_size_query);
+                            if (!$old_size_result || !($old_size = mysqli_fetch_assoc($old_size_result))) {
+                                throw new Exception("Failed to get old group size");
+                            }
+                            $old_size = (int)$old_size['size'];
+                            
+                            // Update the group
+                            if (!mysqli_query($connection, "UPDATE student_group SET name = '$name', size = $size, intake_id = $intake_id WHERE id = $id")) {
+                                throw new Exception("Failed to update student group: " . mysqli_error($connection));
+                            }
+                            
+                            // Update intake size (subtract old size and add new size)
+                            if (!mysqli_query($connection, "UPDATE intake SET size = COALESCE(size, 0) - $old_size + $size WHERE id = $intake_id")) {
+                                throw new Exception("Failed to update intake size: " . mysqli_error($connection));
+                            }
+                            
+                            $response = ['success' => true, 'message' => 'Student group updated successfully.'];
                         }
-                        $response = ['success' => true, 'message' => 'Student group added successfully.'];
-                    } else {
-                        if (!mysqli_query($connection, "UPDATE student_group SET name = '$name', size = $size, intake_id = $intake_id WHERE id = $id")) {
-                            throw new Exception("Failed to update student group: " . mysqli_error($connection));
-                        }
-                        $response = ['success' => true, 'message' => 'Student group updated successfully.'];
+                        
+                        // Commit transaction
+                        mysqli_commit($connection);
+                    } catch (Exception $e) {
+                        // Rollback transaction on error
+                        mysqli_rollback($connection);
+                        throw $e;
                     }
                     break;
 
@@ -386,10 +439,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         throw new Exception('Group ID is required');
                     }
                     $id = (int)$_POST['group_id'];
-                    if (!mysqli_query($connection, "DELETE FROM student_group WHERE id = $id")) {
-                        throw new Exception("Failed to delete student group: " . mysqli_error($connection));
+                    
+                    // Start transaction
+                    mysqli_begin_transaction($connection);
+                    try {
+                        // Get the group size and intake_id before deleting
+                        $group_query = "SELECT size, intake_id FROM student_group WHERE id = $id";
+                        $group_result = mysqli_query($connection, $group_query);
+                        if (!$group_result || !($group = mysqli_fetch_assoc($group_result))) {
+                            throw new Exception("Failed to get group information");
+                        }
+                        $size = (int)$group['size'];
+                        $intake_id = (int)$group['intake_id'];
+                        
+                        // Delete the group
+                        if (!mysqli_query($connection, "DELETE FROM student_group WHERE id = $id")) {
+                            throw new Exception("Failed to delete student group: " . mysqli_error($connection));
+                        }
+                        
+                        // Update intake size
+                        if (!mysqli_query($connection, "UPDATE intake SET size = COALESCE(size, 0) - $size WHERE id = $intake_id")) {
+                            throw new Exception("Failed to update intake size: " . mysqli_error($connection));
+                        }
+                        
+                        // Commit transaction
+                        mysqli_commit($connection);
+                        $response = ['success' => true, 'message' => 'Student group deleted successfully.'];
+                    } catch (Exception $e) {
+                        // Rollback transaction on error
+                        mysqli_rollback($connection);
+                        throw $e;
                     }
-                    $response = ['success' => true, 'message' => 'Student group deleted successfully.'];
                     break;
 
                 default:

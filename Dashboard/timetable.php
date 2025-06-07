@@ -42,6 +42,7 @@ $modules_result = mysqli_query($connection, $modules_query);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,21 +55,37 @@ $modules_result = mysqli_query($connection, $modules_query);
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Load Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <style>
+    <!-- Google Fonts -->
+  <link href="https://fonts.gstatic.com" rel="preconnect">
+  <link
+    href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
+    rel="stylesheet">
+
+  <!-- Vendor CSS Files -->
+  <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+  <link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
+  <link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
+  <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
+  <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
+  <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
+   <style>
         .timetable-container {
             margin: 20px;
             padding: 20px;
             background: #fff;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .selected-groups {x 
+
+        .selected-groups {
             margin-top: 10px;
             padding: 10px;
             border: 1px solid #dee2e6;
             border-radius: 4px;
             background-color: #f8f9fa;
         }
+
         .selected-group {
             display: inline-flex;
             align-items: center;
@@ -78,6 +95,7 @@ $modules_result = mysqli_query($connection, $modules_query);
             border-radius: 15px;
             font-size: 0.9rem;
         }
+
         .selected-group button {
             margin-left: 8px;
             border: none;
@@ -88,24 +106,30 @@ $modules_result = mysqli_query($connection, $modules_query);
             font-size: 1.1rem;
             line-height: 1;
         }
+
         .selected-group button:hover {
             color: #bd2130;
         }
+
         .table th {
             position: sticky;
             top: 0;
             background: white;
             z-index: 1;
         }
+
         .group-row {
             cursor: pointer;
         }
+
         .group-row:hover {
             background-color: #f8f9fa;
         }
+
         .group-row.selected {
             background-color: #e9ecef;
         }
+
         .selected-groups-preview {
             max-height: 200px;
             overflow-y: auto;
@@ -114,6 +138,7 @@ $modules_result = mysqli_query($connection, $modules_query);
             border-radius: 4px;
             background-color: #f8f9fa;
         }
+
         .filter-badge {
             display: inline-block;
             margin: 2px;
@@ -122,34 +147,51 @@ $modules_result = mysqli_query($connection, $modules_query);
             border-radius: 12px;
             font-size: 0.8rem;
         }
+
         .group-info {
             font-size: 0.8rem;
             color: #6c757d;
         }
+
         .facility-row {
             cursor: pointer;
         }
+
         .facility-row:hover {
             background-color: #f8f9fa;
         }
+
         .facility-row.selected {
             background-color: #e9ecef;
         }
+
         .facility-radio {
             cursor: pointer;
         }
+
         .table-danger {
             background-color: #fff3f3;
         }
+
         .sticky-top {
             z-index: 1;
         }
     </style>
+      <link href="assets/css/style.css" rel="stylesheet">
 </head>
+
 <body>
+
+<?php
+  include ("./includes/header.php");
+  include ("./includes/menu.php");
+  ?>
+    <main id="main" class="main">
+
+
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="card mt-3">
                     <div class="card-header">
                         <h5>Schedule New Class</h5>
@@ -160,26 +202,63 @@ $modules_result = mysqli_query($connection, $modules_query);
                                 <label for="academicYear" class="form-label">Academic Year</label>
                                 <select class="form-select" id="academicYear" name="academic_year_id" required>
                                     <option value="">Select Academic Year</option>
-                                    <?php while($year = mysqli_fetch_assoc($academic_years_result)): ?>
-                                        <option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?></option>
+                                    <?php while ($year = mysqli_fetch_assoc($academic_years_result)): ?>
+                                        <option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?>
+                                        </option>
                                     <?php endwhile; ?>
                                 </select>
                             </div>
 
                             <div class="mb-3">
                                 <label for="semester" class="form-label">Semester</label>
-                                <select class="form-select" id="semester" name="semester" required disabled>
+                                <select class="form-select" id="semester" name="semester" required>
                                     <option value="">Select Semester</option>
                                     <option value="1">Semester 1</option>
                                     <option value="2">Semester 2</option>
                                 </select>
                             </div>
 
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">Schedule</label>
+                                <div id="scheduleContainer" class="border rounded p-3 bg-light">
+                                    <div class="session-entry mb-3">
+                                        <div class="row g-3 align-items-center">
+                                            <div class="col-md-4">
+                                                <select class="form-select session-day" name="sessions[0][day]"
+                                                    required>
+                                                    <option value="">Select Day</option>
+                                                    <option value="Monday">Monday</option>
+                                                    <option value="Tuesday">Tuesday</option>
+                                                    <option value="Wednesday">Wednesday</option>
+                                                    <option value="Thursday">Thursday</option>
+                                                    <option value="Friday">Friday</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="time" class="form-control session-start"
+                                                    name="sessions[0][start_time]" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="time" class="form-control session-end"
+                                                    name="sessions[0][end_time]" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <button type="button" class="btn btn-success add-session w-100">
+                                                    <i class="fas fa-plus"></i> Add
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
                             <div class="mb-3">
                                 <label for="studentGroups" class="form-label">Student Groups</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="selectedGroupsDisplay" readonly placeholder="Select groups">
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#groupsModal" disabled>
+                                    <input type="text" class="form-control" id="selectedGroupsDisplay" readonly
+                                        placeholder="Select groups">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#groupsModal">
                                         Select Groups
                                     </button>
                                 </div>
@@ -189,8 +268,10 @@ $modules_result = mysqli_query($connection, $modules_query);
                             <div class="mb-3">
                                 <label for="facility" class="form-label">Facility</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="selectedFacilityDisplay" readonly placeholder="Select facility">
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#facilityModal" disabled>
+                                    <input type="text" class="form-control" id="selectedFacilityDisplay" readonly
+                                        placeholder="Select facility">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#facilityModal">
                                         Select Facility
                                     </button>
                                 </div>
@@ -200,8 +281,10 @@ $modules_result = mysqli_query($connection, $modules_query);
                             <div class="mb-3">
                                 <label for="module" class="form-label">Module</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="selectedModuleDisplay" readonly placeholder="Select module">
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#moduleModal" disabled>
+                                    <input type="text" class="form-control" id="selectedModuleDisplay" readonly
+                                        placeholder="Select module">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#moduleModal">
                                         Select Module
                                     </button>
                                 </div>
@@ -211,8 +294,10 @@ $modules_result = mysqli_query($connection, $modules_query);
                             <div class="mb-3">
                                 <label for="lecturer" class="form-label">Lecturer</label>
                                 <div class="input-group">
-                                    <input type="text" class="form-control" id="selectedLecturerDisplay" readonly placeholder="Select lecturer">
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#lecturerModal" disabled>
+                                    <input type="text" class="form-control" id="selectedLecturerDisplay" readonly
+                                        placeholder="Select lecturer">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
+                                        data-bs-target="#lecturerModal">
                                         Select Lecturer
                                     </button>
                                 </div>
@@ -225,210 +310,565 @@ $modules_result = mysqli_query($connection, $modules_query);
                 </div>
             </div>
 
-            <div class="col-md-8">
+            <div class="col-md-6">
                 <?php include('schedule_display.php'); ?>
             </div>
         </div>
     </div>
 
-    <?php 
+    <?php
     include('module_selector.php');
     include('lecturer_selector.php');
     include('facility_selector.php');
     include('group_selector.php');
+    include('schedule_selector.php');
     ?>
 
     <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize modals using Bootstrap's getOrCreateInstance
-        const modalElements = document.querySelectorAll('.modal');
-        modalElements.forEach(modalElement => {
-            try {
-                bootstrap.Modal.getOrCreateInstance(modalElement);
-            } catch (error) {
-                console.error('Error initializing modal:', error);
+        document.addEventListener('DOMContentLoaded', function () {
+            // Session management
+            let sessionCount = 1;
+            const facilityDisplay = document.getElementById('selectedFacilityDisplay');
+            const facilityInput = document.getElementById('facility');
+            const selectedGroupsDisplay = document.getElementById('selectedGroupsDisplay');
+            const selectedGroups = document.getElementById('selectedGroups');
+            let selectedGroupIds = [];
+
+            // Function to format time for display (12-hour format)
+            function formatTimeForDisplay(time) {
+                if (!time) return '';
+                const [hours, minutes] = time.split(':');
+                const hour = parseInt(hours);
+                const ampm = hour >= 12 ? 'PM' : 'AM';
+                const hour12 = hour % 12 || 12;
+                return `${hour12}:${minutes} ${ampm}`;
             }
-        });
 
-        // Add click handlers for modal triggers
-        document.querySelectorAll('[data-bs-toggle="modal"]').forEach(button => {
-            button.addEventListener('click', function(e) {
-                e.preventDefault();
-                const targetModal = this.getAttribute('data-bs-target');
-                const modal = bootstrap.Modal.getOrCreateInstance(document.querySelector(targetModal));
-                modal.show();
-            });
-        });
-
-        // Form field dependency logic
-        const academicYearSelect = document.getElementById('academicYear');
-        const semesterSelect = document.getElementById('semester');
-        const groupsButton = document.querySelector('[data-bs-target="#groupsModal"]');
-        const facilityButton = document.querySelector('[data-bs-target="#facilityModal"]');
-        const moduleButton = document.querySelector('[data-bs-target="#moduleModal"]');
-        const lecturerButton = document.querySelector('[data-bs-target="#lecturerModal"]');
-        const submitButton = document.querySelector('button[type="submit"]');
-
-        // Enable semester when academic year is selected
-        academicYearSelect.addEventListener('change', function() {
-            semesterSelect.disabled = !this.value;
-            if (!this.value) {
-                semesterSelect.value = '';
-                groupsButton.disabled = true;
+            // Function to format time for database (24-hour format)
+            function formatTimeForDatabase(time) {
+                if (!time) return '';
+                const [time12, period] = time.split(' ');
+                const [hours, minutes] = time12.split(':');
+                let hour = parseInt(hours);
+                if (period === 'PM' && hour !== 12) hour += 12;
+                if (period === 'AM' && hour === 12) hour = 0;
+                return `${hour.toString().padStart(2, '0')}:${minutes}:00`;
             }
-        });
 
-        // Enable groups selection when semester is selected
-        semesterSelect.addEventListener('change', function() {
-            groupsButton.disabled = !this.value;
-            if (!this.value) {
-                document.getElementById('selectedGroupsDisplay').value = '';
-                document.getElementById('selectedGroups').innerHTML = '';
-                facilityButton.disabled = true;
+            // Function to validate time range
+            function validateTimeRange(startTime, endTime) {
+                const start = new Date(`2000-01-01T${startTime}`);
+                const end = new Date(`2000-01-01T${endTime}`);
+                return end > start;
             }
-        });
 
-        // Enable facility selection when groups are selected
-        function updateFacilityButton() {
-            facilityButton.disabled = selectedGroupIds.size === 0;
-            if (selectedGroupIds.size === 0) {
-                document.getElementById('selectedFacilityDisplay').value = '';
-                document.getElementById('facility').value = '';
-                moduleButton.disabled = true;
+            // Function to get all valid sessions
+            function getValidSessions() {
+                const sessions = [];
+                const sessionEntries = document.querySelectorAll('.session-entry');
+                console.log('Found session entries:', sessionEntries.length);
+
+                sessionEntries.forEach((entry, index) => {
+                    const day = entry.querySelector('.session-day').value;
+                    const startTime = entry.querySelector('.session-start').value;
+                    const endTime = entry.querySelector('.session-end').value;
+
+                    console.log(`Session ${index + 1}:`, { day, startTime, endTime });
+
+                    if (day && startTime && endTime) {
+                        // Validate time range
+                        if (!validateTimeRange(startTime, endTime)) {
+                            alert(`Invalid time range for session ${index + 1}. End time must be after start time.`);
+                            return;
+                        }
+
+                        sessions.push({
+                            day: day,
+                            start_time: startTime + ':00',
+                            end_time: endTime + ':00'
+                        });
+                    }
+                });
+
+                console.log('Valid sessions:', sessions);
+                return sessions;
             }
-        }
 
-        // Enable module selection when facility is selected
-        function updateModuleButton() {
-            moduleButton.disabled = !document.getElementById('facility').value;
-            if (!document.getElementById('facility').value) {
+            // Function to create session entry HTML
+            function createSessionEntryHTML(index) {
+                return `
+                <div class="session-entry mb-3">
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-4">
+                            <select class="form-select session-day" name="sessions[${index}][day]" required>
+                                <option value="">Select Day</option>
+                                <option value="Monday">Monday</option>
+                                <option value="Tuesday">Tuesday</option>
+                                <option value="Wednesday">Wednesday</option>
+                                <option value="Thursday">Thursday</option>
+                                <option value="Friday">Friday</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="time" class="form-control session-start" name="sessions[${index}][start_time]" required>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="time" class="form-control session-end" name="sessions[${index}][end_time]" required>
+                        </div>
+                        <div class="col-md-2">
+                            ${index === 0 ? `
+                                <button type="button" class="btn btn-success add-session w-100">
+                                    <i class="fas fa-plus"></i> Add
+                                </button>
+                            ` : `
+                            <button type="button" class="btn btn-danger remove-session w-100">
+                                <i class="fas fa-trash"></i> Remove
+                            </button>
+                            `}
+                        </div>
+                    </div>
+                </div>
+            `;
+            }
+
+            // Function to clear all selections
+            function clearSelections() {
+                // Clear facility selection
+                facilityDisplay.value = '';
+                facilityInput.value = '';
+
+                // Clear group selections
+                selectedGroupsDisplay.value = '';
+                selectedGroups.innerHTML = '';
+                selectedGroupIds = [];
+
+                // Clear module selection
                 document.getElementById('selectedModuleDisplay').value = '';
                 document.getElementById('module').value = '';
-                lecturerButton.disabled = true;
-            }
-        }
 
-        // Enable lecturer selection when module is selected
-        function updateLecturerButton() {
-            lecturerButton.disabled = !document.getElementById('module').value;
-            if (!document.getElementById('module').value) {
+                // Clear lecturer selection
                 document.getElementById('selectedLecturerDisplay').value = '';
                 document.getElementById('lecturer').value = '';
-                submitButton.disabled = false;
-            }
-        }
 
-        // Enable submit button when all fields are filled
-        function updateSubmitButton() {
-            const academicYear = document.getElementById('academicYear').value;
-            const semester = document.getElementById('semester').value;
-            const moduleId = document.getElementById('module').value;
-            const lecturerId = document.getElementById('lecturer').value;
-            const facilityId = document.getElementById('facility').value;
-            
-            // Enable submit button only if all fields are filled and at least one group is selected
-            // submitButton.disabled = !(academicYear && semester && moduleId && lecturerId && facilityId && selectedGroupIds.size > 0);
-        }
-
-        // Add event listeners for all field changes
-        academicYearSelect.addEventListener('change', updateSubmitButton);
-        semesterSelect.addEventListener('change', updateSubmitButton);
-        document.getElementById('facility').addEventListener('change', updateSubmitButton);
-        document.getElementById('module').addEventListener('change', updateSubmitButton);
-        document.getElementById('lecturer').addEventListener('change', updateSubmitButton);
-
-        // Make update functions globally accessible
-        window.updateFacilityButton = updateFacilityButton;
-        window.updateModuleButton = updateModuleButton;
-        window.updateLecturerButton = updateLecturerButton;
-        window.updateSubmitButton = updateSubmitButton;
-
-        // Handle form submission
-        document.getElementById('timetableForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            // Validate required fields
-            const academicYear = document.getElementById('academicYear').value;
-            const semester = document.getElementById('semester').value;
-            const moduleId = document.getElementById('module').value;
-            const lecturerId = document.getElementById('lecturer').value;
-            const facilityId = document.getElementById('facility').value;
-
-            // Check if any required field is empty
-            if (!academicYear) {
-                alert('Please select an Academic Year');
-                return false;
-            }
-            if (!semester) {
-                alert('Please select a Semester');
-                return false;
-            }
-            if (selectedGroupIds.size === 0) {
-                alert('Please select at least one student group');
-                return false;
-            }
-            if (!facilityId) {
-                alert('Please select a Facility');
-                return false;
-            }
-            if (!moduleId) {
-                alert('Please select a Module');
-                return false;
-            }
-            if (!lecturerId) {
-                alert('Please select a Lecturer');
-                return false;
+                // Clear schedule with new format
+                const scheduleContainer = document.getElementById('scheduleContainer');
+                scheduleContainer.innerHTML = createSessionEntryHTML(0);
+                sessionCount = 1;
             }
 
-            // Create FormData object
-            const formData = new FormData(this);
+            // Function to check facility and group availability
+            async function checkAvailability() {
+                const sessions = getValidSessions();
+                if (sessions.length === 0) {
+                    console.log('No valid sessions to check');
+                    return;
+                }
 
-            // Add group IDs to formData
-            selectedGroupIds.forEach(groupId => {
-                formData.append('group_ids[]', groupId);
-            });
-            
-            // Send POST request
-            fetch('save_timetable.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) {
-                    return response.json().then(err => {
-                        throw new Error(err.message || 'Failed to save timetable');
+                const academicYearId = document.getElementById('academicYear').value;
+                const semester = document.getElementById('semester').value;
+
+                if (!academicYearId || !semester) {
+                    console.log('Academic year or semester not selected');
+                    return;
+                }
+
+                // Get selected group IDs
+                const selectedGroups = document.querySelectorAll('.group-checkbox:checked');
+                const selectedGroupIds = Array.from(selectedGroups).map(cb => cb.value);
+
+                if (selectedGroupIds.length === 0) {
+                    // Clear facility selection if no groups are selected
+                    facilityDisplay.value = '';
+                    facilityInput.value = '';
+                    const facilityTable = document.querySelector('#facilityModal .table tbody');
+                    if (facilityTable) {
+                        facilityTable.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                Please select student groups first
+                            </td>
+                        </tr>
+                    `;
+                    }
+                    return;
+                }
+
+                // Check facility availability
+                try {
+                    console.log('Checking facility availability with:', {
+                        schedule: sessions,
+                        academic_year_id: academicYearId,
+                        semester: semester,
+                        group_ids: selectedGroupIds
                     });
+
+                    const response = await fetch('check_facility_availability.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            schedule: sessions,
+                            academic_year_id: academicYearId,
+                            semester: semester,
+                            group_ids: selectedGroupIds
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const facilityData = await response.json();
+                    console.log('Facility availability response:', facilityData);
+
+                    if (facilityData.success) {
+                        // Update facility modal with available facilities
+                        const facilityTable = document.querySelector('#facilityModal .table tbody');
+                        if (facilityTable) {
+                            facilityTable.innerHTML = '';
+
+                            if (facilityData.facilities.length === 0) {
+                                facilityTable.innerHTML = `
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted">
+                                        No available facilities for the selected schedule
+                                    </td>
+                                </tr>
+                            `;
+                            } else {
+                                facilityData.facilities.forEach(facility => {
+                                    const row = document.createElement('tr');
+                                    row.className = 'facility-row';
+                                    row.innerHTML = `
+                                    <td>
+                                        <input type="radio" name="facility" value="${facility.id}" class="facility-radio">
+                                    </td>
+                                    <td>${facility.name}</td>
+                                    <td>${facility.type}</td>
+                                    <td>${facility.location}</td>
+                                    <td>${facility.campus_name || 'N/A'}</td>
+                                    <td>
+                                        <span class="badge bg-success">
+                                            Capacity: ${facility.capacity} students
+                                        </span>
+                                    </td>
+                                `;
+                                    facilityTable.appendChild(row);
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking facility availability:', error);
+                    const facilityTable = document.querySelector('#facilityModal .table tbody');
+                    if (facilityTable) {
+                        facilityTable.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-danger">
+                                Error checking facility availability. Please try again.
+                            </td>
+                        </tr>
+                    `;
+                    }
                 }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success) {
-                    alert('Class scheduled successfully');
-                    // Reset form
-                    this.reset();
-                    // Clear selected groups
-                    selectedGroups.innerHTML = '';
-                    selectedGroupIds.clear();
-                    selectedGroupsData.clear();
-                    // Clear display fields
-                    document.getElementById('selectedGroupsDisplay').value = '';
-                    document.getElementById('selectedFacilityDisplay').value = '';
-                    document.getElementById('selectedModuleDisplay').value = '';
-                    document.getElementById('selectedLecturerDisplay').value = '';
-                    // Reload schedule
-                    loadSchedule();
-                } else {
-                    alert(data.message || 'Error scheduling class');
+
+                // Check group availability
+                try {
+                    console.log('Checking group availability with:', {
+                        schedule: sessions,
+                        academic_year_id: academicYearId,
+                        semester: semester
+                    });
+
+                    const response = await fetch('check_group_availability.php', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            schedule: sessions,
+                            academic_year_id: academicYearId,
+                            semester: semester
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const groupData = await response.json();
+                    console.log('Group availability response:', groupData);
+
+                    if (groupData.success) {
+                        const groupTable = document.querySelector('#groupsModal .table tbody');
+                        if (groupTable) {
+                            groupTable.innerHTML = '';
+
+                            if (groupData.groups.length === 0) {
+                                groupTable.innerHTML = `
+                                <tr>
+                                    <td colspan="4" class="text-center text-muted">
+                                        No groups available for the selected schedule
+                                    </td>
+                                </tr>
+                            `;
+                            } else {
+                                groupData.groups.forEach(group => {
+                                    const row = document.createElement('tr');
+                                    row.className = 'group-row';
+                                    row.innerHTML = `
+                                    <td>
+                                        <input type="checkbox" name="group" value="${group.id}" class="group-checkbox">
+                                    </td>
+                                    <td>${group.name}</td>
+                                    <td>${group.program_name}</td>
+                                    <td>${group.year}/${group.month}</td>
+                                `;
+                                    groupTable.appendChild(row);
+                                });
+                            }
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error checking group availability:', error);
+                    const groupTable = document.querySelector('#groupsModal .table tbody');
+                    if (groupTable) {
+                        groupTable.innerHTML = `
+                        <tr>
+                            <td colspan="4" class="text-center text-danger">
+                                Error checking group availability. Please try again.
+                            </td>
+                        </tr>
+                    `;
+                    }
                 }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Error scheduling class: ' + error.message);
+            }
+
+            // Add event listeners for academic year and semester changes
+            document.getElementById('academicYear').addEventListener('change', function () {
+                clearSelections();
+                checkAvailability();
             });
 
-            return false;
+            document.getElementById('semester').addEventListener('change', function () {
+                clearSelections();
+                checkAvailability();
+            });
+
+            // Add event listeners for schedule changes
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.session-day, .session-start, .session-end')) {
+                    console.log('Session field changed:', e.target.name, e.target.value);
+                    checkAvailability();
+                }
+            });
+
+            // Add event listener for group selection changes
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.group-checkbox')) {
+                    // Clear facility selection when groups change
+                    facilityDisplay.value = '';
+                    facilityInput.value = '';
+                    checkAvailability();
+                }
+            });
+
+            // Add event listener for facility radio buttons
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.facility-radio')) {
+                    const row = e.target.closest('tr');
+                    const facilityName = row.cells[1].textContent;
+                    const facilityId = e.target.value;
+                    facilityDisplay.value = facilityName;
+                    facilityInput.value = facilityId;
+                    const facilityModal = bootstrap.Modal.getInstance(document.getElementById('facilityModal'));
+                    if (facilityModal) {
+                        facilityModal.hide();
+                    }
+                }
+            });
+
+            // Update add session handler
+            document.addEventListener('click', function (e) {
+                if (e.target.closest('.add-session')) {
+                    const container = document.getElementById('scheduleContainer');
+                    const newSession = document.createElement('div');
+                    newSession.className = 'session-entry mb-3';
+                    newSession.innerHTML = createSessionEntryHTML(sessionCount);
+                    container.appendChild(newSession);
+                    sessionCount++;
+                }
+            });
+
+            // Add time validation on change
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.session-start, .session-end')) {
+                    const sessionEntry = e.target.closest('.session-entry');
+                    const startTime = sessionEntry.querySelector('.session-start').value;
+                    const endTime = sessionEntry.querySelector('.session-end').value;
+
+                    if (startTime && endTime) {
+                        if (!validateTimeRange(startTime, endTime)) {
+                            alert('End time must be after start time');
+                            e.target.value = '';
+                        }
+                    }
+                }
+            });
+
+            // Function to validate sessions
+            function validateSessions() {
+                const sessions = getValidSessions();
+                console.log('Validating sessions:', sessions);
+
+                if (sessions.length === 0) {
+                    const sessionEntries = document.querySelectorAll('.session-entry');
+                    let emptyFields = [];
+
+                    sessionEntries.forEach((entry, index) => {
+                        const day = entry.querySelector('.session-day').value;
+                        const startTime = entry.querySelector('.session-start').value;
+                        const endTime = entry.querySelector('.session-end').value;
+
+                        if (!day) emptyFields.push(`Day for session ${index + 1}`);
+                        if (!startTime) emptyFields.push(`Start time for session ${index + 1}`);
+                        if (!endTime) emptyFields.push(`End time for session ${index + 1}`);
+                    });
+
+                    alert(`Please complete all session fields:\n${emptyFields.join('\n')}`);
+                    return false;
+                }
+                return true;
+            }
+
+            // Handle form submission
+            document.getElementById('timetableForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!validateSessions()) {
+                    return;
+                }
+
+                // Create FormData object
+                const formData = new FormData(this);
+
+                // Add group IDs to formData
+                selectedGroupIds.forEach(groupId => {
+                    formData.append('group_ids[]', groupId);
+                });
+
+                // Add schedule data to formData
+                formData.append('schedule', JSON.stringify(getValidSessions()));
+
+                // Send POST request
+                try {
+                    const response = await fetch('save_timetable.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('Class scheduled successfully');
+                        // Reset form
+                        this.reset();
+                        clearSelections();
+                        // Reload schedule
+                        loadSchedule();
+                    } else {
+                        alert(data.message || 'Error scheduling class');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error scheduling class: ' + error.message);
+                }
+            });
+
+            // Function to load schedule
+            async function loadSchedule() {
+                const academicYearId = document.getElementById('academicYear').value;
+                const semester = document.getElementById('semester').value;
+
+                if (!academicYearId || !semester) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`get_schedule.php?academic_year=${academicYearId}&semester=${semester}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const schedule = await response.json();
+
+                    // Update schedule display
+                    const scheduleContainer = document.querySelector('#scheduleDisplay');
+                    if (scheduleContainer) {
+                        // Clear existing content
+                        scheduleContainer.innerHTML = '';
+
+                        if (schedule.length === 0) {
+                            scheduleContainer.innerHTML = '<div class="alert alert-info">No classes scheduled for this period</div>';
+                            return;
+                        }
+
+                        // Create schedule table
+                        const table = document.createElement('table');
+                        table.className = 'table table-bordered table-hover';
+                        table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Groups</th>
+                                <th>Lecturer</th>
+                                <th>Facility</th>
+                                <th>Schedule</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+
+                        const tbody = table.querySelector('tbody');
+                        schedule.forEach(item => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                            <td>
+                                <strong>${item.module_code}</strong><br>
+                                <small class="text-muted">${item.module_name}</small>
+                            </td>
+                            <td>${item.groups.join(', ')}</td>
+                            <td>${item.lecturer_name}</td>
+                            <td>
+                                ${item.facility_name}<br>
+                                <small class="text-muted">${item.facility_type} (${item.facility_capacity} seats)</small>
+                            </td>
+                            <td>
+                                ${item.sessions.map(session =>
+                                `${session.day}<br>${formatTimeForDisplay(session.start_time)} - ${formatTimeForDisplay(session.end_time)}`
+                            ).join('<br>')}
+                            </td>
+                        `;
+                            tbody.appendChild(row);
+                        });
+
+                        scheduleContainer.appendChild(table);
+                    }
+                } catch (error) {
+                    console.error('Error loading schedule:', error);
+                    const scheduleContainer = document.querySelector('#scheduleDisplay');
+                    if (scheduleContainer) {
+                        scheduleContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            Error loading schedule. Please try again.
+                        </div>
+                    `;
+                    }
+                }
+            }
         });
-    });
     </script>
+      <script src="assets/js/main.js"></script>
+  </main><!-- End #main -->
 </body>
+
 </html>

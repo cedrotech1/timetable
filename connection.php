@@ -5,7 +5,7 @@ ini_set('display_errors', 0);
 // Default database configuration
 $dbHost = 'localhost';
 $dbPort = '3306';
-$dbName = 'hostel';
+$dbName = 'timetable';
 $dbUser = 'root';
 $dbPassword = '';
 

@@ -107,7 +107,7 @@ try {
             }
 
             // Validate header
-            $required_columns = ['name', 'type', 'capacity'];
+            $required_columns = ['name', 'type', 'capacity', 'location'];
             $header = array_map('strtolower', $header);
             $missing_columns = array_diff($required_columns, $header);
             
@@ -120,6 +120,7 @@ try {
             $name_index = array_search('name', $header);
             $type_index = array_search('type', $header);
             $capacity_index = array_search('capacity', $header);
+            $location_index = array_search('location', $header);
 
             // Read data rows
             $row_number = 1;
@@ -132,7 +133,7 @@ try {
                 }
 
                 // Validate row data
-                if (!isset($row[$name_index]) || !isset($row[$type_index]) || !isset($row[$capacity_index])) {
+                if (!isset($row[$name_index]) || !isset($row[$type_index]) || !isset($row[$capacity_index]) || !isset($row[$location_index])) {
                     $error_messages[] = "Row $row_number: Missing required data";
                     continue;
                 }
@@ -140,10 +141,11 @@ try {
                 $name = trim($row[$name_index]);
                 $type = trim($row[$type_index]);
                 $capacity = trim($row[$capacity_index]);
+                $location = trim($row[$location_index]);
 
                 // Validate data types
-                if (empty($name) || empty($type)) {
-                    $error_messages[] = "Row $row_number: Name and type cannot be empty";
+                if (empty($name) || empty($type) || empty($location)) {
+                    $error_messages[] = "Row $row_number: Name, type, and location cannot be empty";
                     continue;
                 }
 
@@ -155,7 +157,8 @@ try {
                 $data[] = [
                     'name' => $name,
                     'type' => $type,
-                    'capacity' => intval($capacity)
+                    'capacity' => intval($capacity),
+                    'location' => $location
                 ];
             }
             fclose($handle);
@@ -178,18 +181,19 @@ try {
         $name = mysqli_real_escape_string($connection, $row['name']);
         $type = mysqli_real_escape_string($connection, $row['type']);
         $capacity = intval($row['capacity']);
+        $location = mysqli_real_escape_string($connection, $row['location']);
 
-        // Check if facility already exists
-        $check_sql = "SELECT id FROM facility WHERE name = '$name' AND campus_id = $campus_id";
+        // Check if facility already exists in the same campus and location
+        $check_sql = "SELECT id FROM facility WHERE name = '$name' AND campus_id = $campus_id AND location = '$location'";
         $check_result = mysqli_query($connection, $check_sql);
 
         if (mysqli_num_rows($check_result) > 0) {
-            $error_messages[] = "Facility '$name' already exists in this campus";
+            $error_messages[] = "Facility '$name' already exists in this campus and location";
             continue;
         }
 
         // Insert new facility
-        $sql = "INSERT INTO facility (name, type, capacity, campus_id) VALUES ('$name', '$type', $capacity, $campus_id)";
+        $sql = "INSERT INTO facility (name, type, capacity, campus_id, location) VALUES ('$name', '$type', $capacity, $campus_id, '$location')";
         
         if (mysqli_query($connection, $sql)) {
             $success_count++;

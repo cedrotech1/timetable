@@ -20,7 +20,7 @@
                             <i class="bi bi-upload"></i><span>Upload student information</span>
                         </a>
                     </li>
-                       
+
                     <!-- <li>
                         <a class="nav-link collapsed" href="allstudents.php">
                             <i class="bi bi-card-heading"></i><span>All students</span>
@@ -44,7 +44,7 @@
                 </a>
             </li>
 
-        
+
             <li>
                 <a class="nav-link collapsed" href="manage_hostels.php">
                     <i class="bi bi-building"></i><span>manage hostels</span>
@@ -81,37 +81,35 @@
                     <i class="bi bi-people"></i><span>Manage Users</span>
                 </a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link collapsed" data-bs-target="#icons-nav" data-bs-toggle="collapse" href="#">
-                    <i class="bi bi-database"></i><span>Manage Data</span><i class="bi bi-chevron-down ms-auto"></i>
+
+
+
+            <li>
+                <a class="nav-link collapsed text-danger" href="Reset_structure_data.php">
+                    <i class="bi bi-trash"></i><span class="text-danger">Reset Structure Datas</span>
                 </a>
-                <ul id="icons-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                    <li>
-                        <a class="nav-link collapsed" href="add_data.php">
-                            <i class="bi bi-upload"></i><span>Upload student information</span>
-                        </a>
-                    </li>
-                    
-                  
-
-                  
-
-                    <li>
-                        <a class="nav-link collapsed" href="updateinfo.php">
-                            <i class="bi bi-pencil-square"></i><span>Update Info</span>
-                        </a>
-                    </li>
-
-               
-
-                    <li>
-                        <a class="nav-link collapsed text-danger" href="cleardata.php">
-                            <i class="bi bi-trash"></i><span class="text-danger">Delete All System Data</span>
-                        </a>
-                    </li>
-                </ul>
             </li>
-            <!-- manage_hostels --> 
+
+            <li>
+                <a class="nav-link collapsed text-danger" href="Reset_docs_data.php">
+                    <i class="bi bi-trash"></i><span class="text-danger">Reset Docs Datas</span>
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="upload_data.php">
+                    <i class="bi bi-building"></i><span>manage data by upload</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="manage_data.php">
+                    <i class="bi bi-building"></i><span>manage campus by form</span>
+                </a>
+            </li>
+
+
+            <!-- manage_hostels -->
             <li class="nav-item">
                 <a class="nav-link collapsed" href="manage_campus.php">
                     <i class="bi bi-building"></i><span>manage campus</span>
@@ -123,42 +121,54 @@
                     <i class="bi bi-building"></i><span>manage timetable</span>
                 </a>
             </li>
+            <!-- time_table_view -->
+
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="time_table_view.php">
+                    <i class="bi bi-building"></i><span>time table view</span>
+                </a>
+            </li>
+
+          
+
 
 
             <!-- Manage Student Cards -->
-
+      
 
             <!-- Settings -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" data-bs-target="#icons-nav10" data-bs-toggle="collapse" href="#">
-                    <i class="bi bi-gear"></i><span>Settings</span><i class="bi bi-chevron-down ms-auto"></i>
-                </a>
-                <ul id="icons-nav10" class="nav-content collapse" data-bs-parent="#sidebar-nav">
+            <!-- <a class="nav-link collapsed" data-bs-target="#icons-nav10" data-bs-toggle="collapse" href="#">
+                <i class="bi bi-gear"></i><span>Settings</span><i class="bi bi-chevron-down ms-auto"></i>
+            </a>
+            <ul id="icons-nav10" class="nav-content collapse" data-bs-parent="#sidebar-nav">
 
-                    <li>
-                        <a class="nav-link collapsed" href="users-profile.php">
-                            <i class="bi bi-person-circle"></i><span>Profile</span>
-                        </a>
-                    </li>
-               
-                    <li>
-                        <a class="nav-link collapsed" href="system.php">
-                            <i class="bi bi-gear-fill"></i><span>System settings</span>
-                        </a>
-                    </li>
+                <li>
+                    <a class="nav-link collapsed" href="users-profile.php">
+                        <i class="bi bi-person-circle"></i><span>Profile</span>
+                    </a>
+                </li>
 
-                    <li>
-                        <a class="nav-link collapsed" href="download.php">
-                            <i class="bi bi-download"></i><span>backup data file</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
+                <li>
+                    <a class="nav-link collapsed" href="system.php">
+                        <i class="bi bi-gear-fill"></i><span>System settings</span>
+                    </a>
+                </li>
+
+                <li>
+                    <a class="nav-link collapsed" href="download.php">
+                        <i class="bi bi-download"></i><span>backup data file</span>
+                    </a>
+                </li>
+            </ul>
+            </li>  -->
             <!-- normal one menu -->
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link collapsed" href="search.php">
                     <i class="bi bi-file-earmark-bar-graph"></i><span>manage reports</span>
                 </a>
+            </li> -->
+            <li>
+                
             </li>
             <li class="nav-item">
                 <a class="nav-link collapsed" href="../logout.php">

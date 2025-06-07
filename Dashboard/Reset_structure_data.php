@@ -121,8 +121,8 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
 
           <div class="card">
     <div class="card-body">
-        <h5 class="card-title">DELETE ALL SYSTEM DATA</h5>
-        <form id="clearDataForm" action="cleardata.php" method="post">
+        <h5 class="card-title">DELETE ALL STRUCTURE DATA</h5>
+        <form id="clearDataForm" action="Reset_structure_data.php" method="post">
   <input type="password" class="form-control" name="password" placeholder="ENTER PASSWORD" required><br>
   <input type="submit" value="Clear Data" class="btn btn-danger col-12">
 </form>

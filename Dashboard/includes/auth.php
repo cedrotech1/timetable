@@ -21,7 +21,7 @@ function checkUserRole(array $allowedRoles)
         include '../403.php';
         exit();
     }
-}
+}   
 
 /**
  * Function to check if user is logged in

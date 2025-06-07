@@ -136,25 +136,38 @@ $programs = mysqli_fetch_all($programs_result, MYSQLI_ASSOC);
                                                 <table class="table table-bordered">
                                                     <thead>
                                                         <tr>
-                                                            <th>name</th>
-                                                            <th>type</th>
-                                                            <th>capacity</th>
+                                                            <th>Name</th>
+                                                            <th>Type</th>
+                                                            <th>Capacity</th>
+                                                            <th>Location</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         <tr>
-                                                            <td>Lecture Hall 1</td>
-                                                            <td>Lecture Hall</td>
-                                                            <td>100</td>
+                                                            <td>Room 101</td>
+                                                            <td>Classroom</td>
+                                                            <td>30</td>
+                                                            <td>Block A</td>
                                                         </tr>
                                                         <tr>
-                                                            <td>Computer Lab 1</td>
+                                                            <td>Lab 201</td>
                                                             <td>Laboratory</td>
-                                                            <td>30</td>
+                                                            <td>25</td>
+                                                            <td>Block B</td>
+                                                        </tr>
+                                                        <tr>
+                                                            <td>Hall 301</td>
+                                                            <td>Lecture Hall</td>
+                                                            <td>100</td>
+                                                            <td>Block C</td>
                                                         </tr>
                                                     </tbody>
                                                 </table>
                                             </div>
+                                            <p class="text-muted mt-3">
+                                                <i class="bi bi-info-circle me-1"></i>
+                                                Note: Facility names must be unique within the same campus and location.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>

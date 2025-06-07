@@ -116,7 +116,7 @@ try {
         $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
         // Insert lecturer
-        $insert_query = "INSERT INTO users (names, email, phone, campus, role, password, active) VALUES (?, ?, ?, ?, 'lecturer', ?, 1)";
+        $insert_query = "INSERT INTO users (names, email, phone, campus, role, password, active, image) VALUES (?, ?, ?, ?, 'lecturer', ?, 1, 'upload/icon1.png')";
         $insert_stmt = mysqli_prepare($connection, $insert_query);
         mysqli_stmt_bind_param($insert_stmt, "sssss", $row['names'], $row['email'], $row['phone'], $row['campus'], $hashed_password);
 

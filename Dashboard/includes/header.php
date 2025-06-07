@@ -1,21 +1,27 @@
 <?php
-// include('connection.php');
-$userid=$_SESSION['id'];
-$campus=$_SESSION['campus'];
+session_start();
+include('connection.php');
+
+// Check if user is logged in
+if (!isset($_SESSION['id'])) {
+    header("Location: ../login.php");
+    exit();
+}
+
+$userid = $_SESSION['id'];
+$campus = $_SESSION['campus'];
 $ok1 = mysqli_query($connection, "select * from users where id=$userid");
-                  while ($row = mysqli_fetch_array($ok1)) {
-                    $id = $row["id"];
-                    $names = $row["names"];
-                    $image = $row["image"];
-                    $phone = $row["phone"];
-                    $email = $row["email"];
-                    $about = $row["about"];
-                    $role = $row["role"];
-                    $campus = $row["campus"];
-                    
-                }
+while ($row = mysqli_fetch_array($ok1)) {
+    $id = $row["id"];
+    $names = $row["names"];
+    $image = $row["image"];
+    $phone = $row["phone"];
+    $email = $row["email"];
+    $about = $row["about"];
+    $role = $row["role"];
+    $campus = $row["campus"];
+}
          
-          
 ?>
 <!-- ======= Header ======= -->
 
