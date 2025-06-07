@@ -1,187 +1,213 @@
 <?php
 include('connection.php');
 
-header('Content-Type: application/json');
+// Get filter parameters
+$campus_id = isset($_GET['campus_id']) ? intval($_GET['campus_id']) : null;
+$college_id = isset($_GET['college_id']) ? intval($_GET['college_id']) : null;
+$school_id = isset($_GET['school_id']) ? intval($_GET['school_id']) : null;
+$department_id = isset($_GET['department_id']) ? intval($_GET['department_id']) : null;
+$program_id = isset($_GET['program_id']) ? intval($_GET['program_id']) : null;
+$intake_id = isset($_GET['intake_id']) ? intval($_GET['intake_id']) : null;
+$group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : null;
+$module_id = isset($_GET['module_id']) ? intval($_GET['module_id']) : null;
+$lecturer_id = isset($_GET['lecturer_id']) ? intval($_GET['lecturer_id']) : null;
+$facility_id = isset($_GET['facility_id']) ? intval($_GET['facility_id']) : null;
+$academic_year_id = isset($_GET['academic_year_id']) ? intval($_GET['academic_year_id']) : null;
+$semester = isset($_GET['semester']) ? $_GET['semester'] : null;
 
-try {
-    // Start with timetable_sessions and join all related tables
-    $query = "
-        SELECT 
-            ts.id as session_id,
-            ts.day,
-            ts.start_time,
-            ts.end_time,
-            
-            -- Timetable info
-            t.id as timetable_id,
-            t.semester,
-            ay.year_label as academic_year,
-            
-            -- Module info
-            m.id as module_id,
-            m.code as module_code,
-            m.name as module_name,
-            m.credits,
-            m.year as module_year,
-            
-            -- Lecturer info
-            u.id as lecturer_id,
-            u.names as lecturer_name,
-            
-            -- Facility info
-            f.id as facility_id,
-            f.name as facility_name,
-            f.location as facility_location,
-            f.type as facility_type,
-            
-            -- Group info with its complete chain
-            sg.id as group_id,
-            sg.name as group_name,
-            
-            -- Group's Intake info
-            i.id as intake_id,
-            i.year as intake_year,
-            i.month as intake_month,
-            
-            -- Group's Program info
-            p.id as program_id,
-            p.name as program_name,
-            p.code as program_code,
-            
-            -- Group's Department info
-            d.id as department_id,
-            d.name as department_name,
-            
-            -- Group's School info
-            s.id as school_id,
-            s.name as school_name,
-            
-            -- Group's College info
-            c.id as college_id,
-            c.name as college_name,
-            
-            -- Group's Campus info
-            cp.id as campus_id,
-            cp.name as campus_name
-            
-        FROM timetable_sessions ts
-        JOIN timetable t ON ts.timetable_id = t.id
-        JOIN academic_year ay ON t.academic_year_id = ay.id
-        JOIN module m ON t.module_id = m.id
-        JOIN users u ON t.lecturer_id = u.id
-        JOIN facility f ON t.facility_id = f.id
-        JOIN timetable_groups tg ON t.id = tg.timetable_id
-        JOIN student_group sg ON tg.group_id = sg.id
-        JOIN intake i ON sg.intake_id = i.id
-        JOIN program p ON i.program_id = p.id
-        JOIN department d ON p.department_id = d.id
-        JOIN school s ON d.school_id = s.id
-        JOIN college c ON s.college_id = c.id
-        JOIN campus cp ON c.campus_id = cp.id
-        ORDER BY ts.day, ts.start_time, sg.name";
+// Build the base query
+$query = "
+    SELECT 
+        ts.id as session_id,
+        ts.day,
+        ts.start_time,
+        ts.end_time,
+        t.id as timetable_id,
+        t.semester,
+        t.academic_year_id,
+        m.id as module_id,
+        m.name as module_name,
+        m.code as module_code,
+        u.id as lecturer_id,
+        u.names as lecturer_name,
+        f.id as facility_id,
+        f.name as facility_name,
+        f.location as facility_location,
+        f.type as facility_type,
+        f.capacity as facility_capacity,
+        c.id as campus_id,
+        c.name as campus_name,
+        col.id as college_id,
+        col.name as college_name,
+        s.id as school_id,
+        s.name as school_name,
+        d.id as department_id,
+        d.name as department_name,
+        p.id as program_id,
+        p.name as program_name,
+        p.code as program_code,
+        i.id as intake_id,
+        i.year as intake_year,
+        i.month as intake_month,
+        sg.id as group_id,
+        sg.name as group_name,
+        sg.size as group_size,
+        ay.year_label as academic_year
+    FROM timetable_sessions ts
+    JOIN timetable t ON ts.timetable_id = t.id
+    JOIN module m ON t.module_id = m.id
+    JOIN users u ON t.lecturer_id = u.id AND u.role = 'lecturer'
+    JOIN facility f ON t.facility_id = f.id
+    JOIN campus c ON f.campus_id = c.id
+    JOIN timetable_groups tg ON t.id = tg.timetable_id
+    JOIN student_group sg ON tg.group_id = sg.id
+    JOIN intake i ON sg.intake_id = i.id
+    JOIN program p ON i.program_id = p.id
+    JOIN department d ON p.department_id = d.id
+    JOIN school s ON d.school_id = s.id
+    JOIN college col ON s.college_id = col.id
+    JOIN academic_year ay ON t.academic_year_id = ay.id
+    WHERE 1=1
+";
 
-    $result = mysqli_query($connection, $query);
+// Add filters
+$params = [];
+if ($campus_id) {
+    $query .= " AND c.id = ?";
+    $params[] = $campus_id;
+}
+if ($college_id) {
+    $query .= " AND col.id = ?";
+    $params[] = $college_id;
+}
+if ($school_id) {
+    $query .= " AND s.id = ?";
+    $params[] = $school_id;
+}
+if ($department_id) {
+    $query .= " AND d.id = ?";
+    $params[] = $department_id;
+}
+if ($program_id) {
+    $query .= " AND p.id = ?";
+    $params[] = $program_id;
+}
+if ($intake_id) {
+    $query .= " AND i.id = ?";
+    $params[] = $intake_id;
+}
+if ($group_id) {
+    $query .= " AND sg.id = ?";
+    $params[] = $group_id;
+}
+if ($module_id) {
+    $query .= " AND m.id = ?";
+    $params[] = $module_id;
+}
+if ($lecturer_id) {
+    $query .= " AND u.id = ?";
+    $params[] = $lecturer_id;
+}
+if ($facility_id) {
+    $query .= " AND f.id = ?";
+    $params[] = $facility_id;
+}
+if ($academic_year_id) {
+    $query .= " AND t.academic_year_id = ?";
+    $params[] = $academic_year_id;
+}
+if ($semester) {
+    $query .= " AND t.semester = ?";
+    $params[] = $semester;
+}
+
+$query .= " ORDER BY ts.day, ts.start_time, ts.end_time";
+
+// Prepare and execute the query
+$stmt = mysqli_prepare($connection, $query);
+if (!empty($params)) {
+    $types = str_repeat('i', count($params));
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+}
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+
+// Organize the data
+$timetable = [];
+while ($row = mysqli_fetch_assoc($result)) {
+    $session_key = $row['session_id'];
     
-    if (!$result) {
-        throw new Exception(mysqli_error($connection));
-    }
-
-    $sessions = [];
-    $currentSession = null;
-
-    while ($row = mysqli_fetch_assoc($result)) {
-        // If this is a new session or we're starting fresh
-        if ($currentSession === null || 
-            $currentSession['session']['id'] !== $row['session_id']) {
-            
-            // If we have a previous session, add it to our sessions array
-            if ($currentSession !== null) {
-                $sessions[] = $currentSession;
-            }
-
-            // Create new session structure
-            $currentSession = [
-                'session' => [
-                    'id' => $row['session_id'],
-                    'day' => $row['day'],
-                    'start_time' => $row['start_time'],
-                    'end_time' => $row['end_time']
+    if (!isset($timetable[$session_key])) {
+        $timetable[$session_key] = [
+            'session' => [
+                'id' => $row['session_id'],
+                'day' => $row['day'],
+                'start_time' => $row['start_time'],
+                'end_time' => $row['end_time']
+            ],
+            'timetable' => [
+                'id' => $row['timetable_id'],
+                'semester' => $row['semester'],
+                'academic_year' => $row['academic_year'],
+                'module' => [
+                    'id' => $row['module_id'],
+                    'name' => $row['module_name'],
+                    'code' => $row['module_code']
                 ],
-                'timetable' => [
-                    [
-                        'id' => $row['timetable_id'],
-                        'semester' => $row['semester'],
-                        'academic_year' => $row['academic_year'],
-                        'module' => [
-                            'id' => $row['module_id'],
-                            'code' => $row['module_code'],
-                            'name' => $row['module_name'],
-                            'credits' => $row['credits'],
-                            'year' => $row['module_year']
-                        ],
-                        'lecturer' => [
-                            'id' => $row['lecturer_id'],
-                            'name' => $row['lecturer_name']
-                        ],
-                        'facility' => [ 
-                            'id' => $row['facility_id'],
-                            'name' => $row['facility_name'],
-                            'location' => $row['facility_location'],
-                            'type' => $row['facility_type']
-                        ],
-                        'groups' => []
-                    ]
-                ]
-            ];
-        }
-
-        // Add group with its complete chain to the current timetable entry
-        $currentSession['timetable'][0]['groups'][] = [
-            'id' => $row['group_id'],
-            'name' => $row['group_name'],
-            'intake' => [
-                'id' => $row['intake_id'],
-                'year' => $row['intake_year'],
-                'month' => $row['intake_month']
-            ],
-            'program' => [
-                'id' => $row['program_id'],
-                'name' => $row['program_name'],
-                'code' => $row['program_code']
-            ],
-            'department' => [
-                'id' => $row['department_id'],
-                'name' => $row['department_name']
-            ],
-            'school' => [
-                'id' => $row['school_id'],
-                'name' => $row['school_name']
-            ],
-            'college' => [
-                'id' => $row['college_id'],
-                'name' => $row['college_name']
-            ],
-            'campus' => [
-                'id' => $row['campus_id'],
-                'name' => $row['campus_name']
+                'lecturer' => [
+                    'id' => $row['lecturer_id'],
+                    'name' => $row['lecturer_name']
+                ],
+                'facility' => [
+                    'id' => $row['facility_id'],
+                    'name' => $row['facility_name'],
+                    'location' => $row['facility_location'],
+                    'type' => $row['facility_type'],
+                    'capacity' => $row['facility_capacity']
+                ],
+                'groups' => []
             ]
         ];
     }
-
-    // Add the last session
-    if ($currentSession !== null) {
-        $sessions[] = $currentSession;
-    }
-
-    echo json_encode([
-        'success' => true,
-        'data' => $sessions
-    ]);
-
-} catch (Exception $e) {
-    echo json_encode([
-        'success' => false,
-        'error' => $e->getMessage()
-    ]);
+    
+    // Add group information
+    $timetable[$session_key]['timetable']['groups'][] = [
+        'id' => $row['group_id'],
+        'name' => $row['group_name'],
+        'size' => $row['group_size'],
+        'campus' => [
+            'id' => $row['campus_id'],
+            'name' => $row['campus_name']
+        ],
+        'college' => [
+            'id' => $row['college_id'],
+            'name' => $row['college_name']
+        ],
+        'school' => [
+            'id' => $row['school_id'],
+            'name' => $row['school_name']
+        ],
+        'department' => [
+            'id' => $row['department_id'],
+            'name' => $row['department_name']
+        ],
+        'program' => [
+            'id' => $row['program_id'],
+            'name' => $row['program_name'],
+            'code' => $row['program_code']
+        ],
+        'intake' => [
+            'id' => $row['intake_id'],
+            'year' => $row['intake_year'],
+            'month' => $row['intake_month']
+        ]
+    ];
 }
+
+// Return the response
+header('Content-Type: application/json');
+echo json_encode([
+    'success' => true,
+    'data' => array_values($timetable)
+]);
 ?> 

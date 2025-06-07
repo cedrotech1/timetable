@@ -3,25 +3,19 @@ include('connection.php');
 header('Content-Type: application/json');
 
 try {
-    $school_id = isset($_GET['school_id']) ? (int)$_GET['school_id'] : 0;
-    
-    if (!$school_id) {
-        throw new Exception('School ID is required');
-    }
-
-    $result = mysqli_query($connection, "SELECT id, name FROM department WHERE school_id = $school_id ORDER BY name");
+    $result = mysqli_query($connection, "SELECT id, name FROM campus ORDER BY name");
     if (!$result) {
         throw new Exception(mysqli_error($connection));
     }
 
-    $departments = [];
+    $campuses = [];
     while ($row = mysqli_fetch_assoc($result)) {
-        $departments[] = $row;
+        $campuses[] = $row;
     }
 
     echo json_encode([
         'success' => true,
-        'data' => $departments
+        'data' => $campuses
     ]);
 } catch (Exception $e) {
     echo json_encode([
