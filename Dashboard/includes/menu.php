@@ -102,12 +102,17 @@
                 </a>
             </li>
 
+                <li class="nav-item">
+                    <a class="nav-link collapsed" href="manage_data.php">
+                        <i class="bi bi-building"></i><span>manage campus by form</span>
+                    </a>
+                </li>
+            <!-- organization_structure -->
             <li class="nav-item">
-                <a class="nav-link collapsed" href="manage_data.php">
-                    <i class="bi bi-building"></i><span>manage campus by form</span>
+                <a class="nav-link collapsed" href="organization_structure.php">
+                    <i class="bi bi-building"></i><span>organization structure</span>
                 </a>
             </li>
-
 
             <!-- manage_hostels -->
             <li class="nav-item">

@@ -1,13 +1,13 @@
 <?php
-// Only start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
-}
+// // Only start session if not already started
+// if (session_status() === PHP_SESSION_NONE) {
+//     session_start();
+// }
 
-if(!isset($_SESSION['loggedin'])){
-    echo"<script>window.location.href='../login.php'</script>";
+// if(!isset($_SESSION['loggedin'])){
+//     echo"<script>window.location.href='../login.php'</script>";
 
-}
+// }
 
 
 require_once '../../loadEnv.php';
