@@ -1,746 +1,1021 @@
 <?php
-// Start output buffering at the very beginning
-ob_start();
 session_start();
+include('connection.php');
 
-// Error handling for database connection
-function handleDbError($connection) {
-    if (!$connection) {
-        ob_clean(); // Clear any previous output
-        header('Content-Type: application/json');
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Database connection failed: ' . mysqli_connect_error()
-        ]);
-        exit();
-    }
-}
+// Get all campuses
+$campuses = [];
+$res = mysqli_query($connection, "SELECT id, name FROM campus ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $campuses[] = $row;
 
-// Set JSON headers for all AJAX responses
-if(isset($_POST['ajax_login']) || isset($_POST['ajax_signup']) || isset($_POST['get_user_details'])) {
-    ob_clean(); // Clear any previous output
-    header('Content-Type: application/json');
-}
+// Get academic years
+$years = [];
+$res = mysqli_query($connection, "SELECT id, year_label FROM academic_year ORDER BY year_label DESC");
+while ($row = mysqli_fetch_assoc($res)) $years[] = $row;
 
-// Error handler for JSON responses
-function sendJsonResponse($status, $message, $data = []) {
-    ob_clean(); // Clear any previous output
-    header('Content-Type: application/json');
-    echo json_encode([
-        'status' => $status,
-        'message' => $message,
-        'data' => $data
-    ]);
-    exit();
-}
-
-// Include database connection
-try {
-    ob_clean(); // Clear any previous output
-    include("connection.php");
-    handleDbError($connection);
-} catch (Exception $e) {
-    ob_clean(); // Clear any previous output
-    header('Content-Type: application/json');
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'Database connection error: ' . $e->getMessage()
-    ]);
-    exit();
-}
-
-// AJAX endpoint to get user details
-if(isset($_POST['get_user_details'])) {
-    try {
-        if (!isset($_POST['regnumber']) || empty($_POST['regnumber'])) {
-            sendJsonResponse('error', 'Registration number is required');
-        }
-
-        $regnumber = mysqli_real_escape_string($connection, $_POST['regnumber']);
-        $query = "SELECT * FROM info WHERE regnumber = '$regnumber'";
-        $result = mysqli_query($connection, $query);
-
-        if (!$result) {
-            sendJsonResponse('error', 'Database query error: ' . mysqli_error($connection));
-        }
-        
-        if(mysqli_num_rows($result) > 0) {
-            sendJsonResponse('success', 'Registration number found');
-        } else {
-            sendJsonResponse('error', 'Registration number not found');
-        }
-    } catch (Exception $e) {
-        sendJsonResponse('error', 'Server error: ' . $e->getMessage());
-    }
-}
-
-// AJAX endpoint for login
-if(isset($_POST['ajax_login'])) {
-    try {
-        ob_clean(); // Clear any previous output
-        header('Content-Type: application/json');
-        
-        if (!isset($_POST['login_regnumber']) || !isset($_POST['login_password'])) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Registration number and password are required'
-            ]);
-            exit();
-        }
-
-        $regnumber = mysqli_real_escape_string($connection, $_POST['login_regnumber']);
-        $password = mysqli_real_escape_string($connection, $_POST['login_password']);
-
-        $query = "SELECT * FROM info WHERE regnumber = '$regnumber'";
-        $result = mysqli_query($connection, $query);
-
-        if (!$result) {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Database query error: ' . mysqli_error($connection)
-            ]);
-            exit();
-        }
-
-        if (mysqli_num_rows($result) > 0) {
-            $user = mysqli_fetch_assoc($result);
-            if (password_verify($password, $user['password'])) {
-                // Store user info in session
-                $_SESSION['student_id'] = $user['id'];
-                $_SESSION['student_regnumber'] = $user['regnumber'];
-                $_SESSION['student_name'] = $user['names'];
-                $_SESSION['student_email'] = $user['email'];
-                $_SESSION['student_campus'] = $user['campus'];
-                $_SESSION['student_college'] = $user['college'];
-                $_SESSION['student_school'] = $user['school'];
-                $_SESSION['student_program'] = $user['program'];
-                $_SESSION['student_year'] = $user['yearofstudy'];
-                $_SESSION['student_gender'] = $user['gender'];
-                $_SESSION['student_status'] = $user['status'];
-
-                echo json_encode([
-                    'status' => 'success',
-                    'message' => 'Login successful!',
-                    'redirect' => true
-                ]);
-                exit();
-            } else {
-                echo json_encode([
-                    'status' => 'error',
-                    'message' => 'Invalid password!'
-                ]);
-                exit();
-            }
-        } else {
-            echo json_encode([
-                'status' => 'error',
-                'message' => 'Registration number not found!'
-            ]);
-            exit();
-        }
-    } catch (Exception $e) {
-        ob_clean(); // Clear any previous output
-        header('Content-Type: application/json');
-        echo json_encode([
-            'status' => 'error',
-            'message' => 'Server error: ' . $e->getMessage()
-        ]);
-        exit();
-    }
-}
-
-// AJAX endpoint for signup
-if(isset($_POST['ajax_signup'])) {
-    try {
-        // Validate required fields
-        $required_fields = ['regnumber', 'phone', 'national_id', 'password', 'confirm_password'];
-        foreach ($required_fields as $field) {
-            if (!isset($_POST[$field]) || empty($_POST[$field])) {
-                sendJsonResponse('error', ucfirst($field) . ' is required');
-            }
-        }
-
-        $regnumber = mysqli_real_escape_string($connection, $_POST['regnumber']);
-        $phone = mysqli_real_escape_string($connection, $_POST['phone']);
-        $national_id = mysqli_real_escape_string($connection, $_POST['national_id']);
-        $password = mysqli_real_escape_string($connection, $_POST['password']);
-        $confirm_password = mysqli_real_escape_string($connection, $_POST['confirm_password']);
-
-        // Validate password match
-        if ($password !== $confirm_password) {
-            sendJsonResponse('error', 'Passwords do not match!');
-        }
-
-        // Check if user exists with given credentials
-        $query = "SELECT * FROM info WHERE regnumber = '$regnumber'";
-        $result = mysqli_query($connection, $query);
-
-        if (!$result) {
-            sendJsonResponse('error', 'Database query error: ' . mysqli_error($connection));
-        }
-
-        if (mysqli_num_rows($result) > 0) {
-            $user = mysqli_fetch_assoc($result);
-            $errors = [];
-            
-            // Check phone number
-            if($user['phone'] !== $phone) {
-                $errors[] = "Phone number does not match";
-            }
-            
-            // Check national ID
-            if($user['national_id'] !== $national_id) {
-                $errors[] = "National ID does not match";
-            }
-            
-            if(empty($errors)) {
-                // Hash the password
-                $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                
-                // Update the password
-                $update_query = "UPDATE info SET password = '$hashed_password' WHERE regnumber = '$regnumber'";
-                if (mysqli_query($connection, $update_query)) {
-                    sendJsonResponse('success', 'Password updated successfully! Redirecting to login...', ['redirect' => 'login.php']);
-                } else {
-                    sendJsonResponse('error', 'Error updating password: ' . mysqli_error($connection));
-                }
-            } else {
-                sendJsonResponse('error', 'Validation failed: ' . implode(", ", $errors));
-            }
-        } else {
-            sendJsonResponse('error', 'Registration number not found!');
-        }
-    } catch (Exception $e) {
-        sendJsonResponse('error', 'Server error: ' . $e->getMessage());
-    }
-}
-
-// Only show HTML if not an AJAX request
-if(!isset($_POST['ajax_login']) && !isset($_POST['ajax_signup']) && !isset($_POST['get_user_details'])) {
+$semesters = ['1', '2'];
 ?>
-<!DOCTYPE html>
-<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hostel Management System - Login & Signup</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100;300;400;500;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css">
-    <style>
-        body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #f8f9fa;
-            margin: 0;
-            padding: 0;
-        }
-        .auth-container {
-            max-width: 800px;
-            margin: 50px auto;
-            padding: 20px;
-        }
-        .auth-box {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-            padding: 30px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-        .auth-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 25px rgba(0,0,0,0.15);
-        }
-        .form-group {
-            margin-bottom: 25px;
-        }
-        .form-control {
-            border: 1px solid #e0e0e0;
-            border-radius: 5px;
-            padding: 12px;
-            transition: all 0.3s ease;
-        }
-        .form-control:focus {
-            border-color: #007bff;
-            box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-        }
-        .nav-tabs {
-            border-bottom: 2px solid #e0e0e0;
-            margin-bottom: 30px;
-        }
-        .nav-tabs .nav-link {
-            border: none;
-            color: #666;
-            font-weight: 500;
-            padding: 10px 20px;
-            transition: all 0.3s ease;
-        }
-        .nav-tabs .nav-link.active {
-            color: #007bff;
-            border-bottom: 2px solid #007bff;
-            background: none;
-        }
-        .nav-tabs .nav-link:hover {
-            border: none;
-            color: #007bff;
-        }
-        .btn-primary {
-            background: linear-gradient(45deg, #007bff, #0056b3);
-            border: none;
-            padding: 12px 30px;
-            font-weight: 500;
-            transition: all 0.3s ease;
-        }
-        .btn-primary:hover {
-            background: linear-gradient(45deg, #0056b3, #003d82);
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,123,255,0.3);
-        }
-        .validation-error {
-            color: #dc3545;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
-            display: none;
-        }
-        .alert {
-            display: none;
-            margin-bottom: 20px;
-            border-radius: 5px;
-            padding: 15px;
-            transition: all 0.3s ease;
-        }
-        .alert-danger {
-            background-color: #fff5f5;
-            border: 1px solid #feb2b2;
-            color: #c53030;
-        }
-        .alert-success {
-            background-color: #f0fff4;
-            border: 1px solid #9ae6b4;
-            color: #2f855a;
-        }
-        h2 {
-            color: #333;
-            font-weight: 600;
-            margin-bottom: 30px;
-        }
-        label {
-            color: #555;
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-        
-        /* Loading Spinner Styles */
-        .spinner-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.8);
-            display: none;
-            justify-content: center;
-            align-items: center;
-            z-index: 9999;
-        }
-        .spinner-container {
-            text-align: center;
-        }
-        .spinner {
-            width: 50px;
-            height: 50px;
-            border: 5px solid #f3f3f3;
-            border-top: 5px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 15px;
-        }
-        .spinner-text {
-            color: #007bff;
-            font-weight: 500;
-            font-size: 16px;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .btn-loading {
-            position: relative;
-            color: transparent !important;
-        }
-        .btn-loading::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            top: 50%;
-            left: 50%;
-            margin: -10px 0 0 -10px;
-            border: 2px solid #fff;
-            border-top-color: transparent;
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-    </style>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+
+<title>UR-TIMETABLE</title>
+<meta content="" name="description">
+<meta content="" name="keywords">
+
+<!-- Favicons -->
+<link href="assets/img/icon1.png" rel="icon">
+<link href="assets/img/icon1.png" rel="apple-touch-icon">
+
+<!-- Google Fonts -->
+<link href="https://fonts.gstatic.com" rel="preconnect">
+<link
+    href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
+    rel="stylesheet">
+
+<!-- Vendor CSS Files -->
+<link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+<link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
+<link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
+<link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
+<link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
+<link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
+
+    <link href="assets/css/style.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
 </head>
 <body>
-    <!-- Loading Spinner -->
-    <div class="spinner-overlay">
-        <div class="spinner-container">
-            <div class="spinner"></div>
-            <div class="spinner-text">Processing...</div>
-        </div>
-    </div>
 
-    <div class="container">
-        <div class="auth-container">
-            <ul class="nav nav-tabs" id="authTabs" role="tablist">
-                <li class="nav-item">
-                    <a class="nav-link active" id="login-tab" data-toggle="tab" href="#login" role="tab">Login</a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" id="signup-tab" data-toggle="tab" href="#signup" role="tab">Sign Up</a>
-                </li>
-            </ul>
 
-            <div class="alert alert-danger" id="error-alert"></div>
-            <div class="alert alert-success" id="success-alert"></div>
 
-            <div class="tab-content" id="authTabsContent">
-                <!-- Login Form -->
-                <div class="tab-pane fade show active" id="login" role="tabpanel">
-                    <div class="auth-box">
-                        <h2 class="text-center mb-4">Login</h2>
-                        <button type="button" class="btn btn-info btn-block mb-4" data-toggle="modal" data-target="#demoModal">
-                            <i class="fas fa-users"></i> Demo Accounts
-                        </button>
-                        <form id="loginForm">
-                            <div class="form-group">
-                                <label for="login_regnumber">Registration Number</label>
-                                <input type="text" class="form-control" id="login_regnumber" name="login_regnumber" required>
-                            </div>
 
-                            <div class="form-group">
-                                <label for="login_password">Password</label>
-                                <input type="password" class="form-control" id="login_password" name="login_password" required>
-                            </div>
 
-                            <button type="submit" class="btn btn-primary btn-block">Login</button>
-                        </form>
-                    </div>
-                </div>
-
-                <!-- Signup Form -->
-                <div class="tab-pane fade" id="signup" role="tabpanel">
-                    <div class="auth-box">
-                        <h2 class="text-center mb-4">Sign Up</h2>
-                        <button type="button" class="btn btn-info btn-block mb-4" data-toggle="modal" data-target="#signupDemoModal">
-                            <i class="fas fa-users"></i> Demo Accounts
-                        </button>
-                        <div class="alert alert-info mb-4">
-                            <strong>Demo Data:</strong><br>
-                            Registration Number: REG001<br>
-                            Phone: 0712345678<br>
-                            National ID: 12345678
-                        </div>
-                        <form id="signupForm">
-                            <div class="form-group">
-                                <label for="regnumber">Registration Number</label>
-                                <input type="text" class="form-control" id="regnumber" name="regnumber" required>
-                                <div class="validation-error" id="regnumber-error"></div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="phone">Phone Number</label>
-                                <input type="tel" class="form-control" id="phone" name="phone" required>
-                                <div class="validation-error" id="phone-error"></div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="national_id">National ID</label>
-                                <input type="text" class="form-control" id="national_id" name="national_id" required>
-                                <div class="validation-error" id="national_id-error"></div>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="password">Password</label>
-                                <input type="password" class="form-control" id="password" name="password" required>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="confirm_password">Confirm Password</label>
-                                <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
-                                <div class="validation-error" id="password-error"></div>
-                            </div>
-
-                            <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Demo Accounts Modal -->
-    <div class="modal fade" id="demoModal" tabindex="-1" role="dialog" aria-labelledby="demoModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="demoModalLabel">Demo Accounts</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="demo-accounts">
-                        <div class="demo-account mb-3">
-                            <h6><i class="fas fa-user-graduate"></i> Huye Student / year 3</h6>
-                            <p class="mb-1"><strong>Reg Number:</strong> 20231008</p>
-                            <p class="mb-1"><strong>Phone:</strong> 0788609666</p>
-                            <p class="mb-1"><strong>National ID:</strong> 1002003008</p>
-                            <p class="mb-1"><strong>Password:</strong> 1234</p>
-                            <button class="btn btn-sm btn-primary use-demo" data-reg="20231008" data-pass="1234">Use This Account</button>
-                        </div>
-                        <hr>
-                        <div class="demo-account mb-3">
-                            <h6><i class="fas fa-user-graduate"></i> Huye Student / year 3</h6>
-                            <p class="mb-1"><strong>Reg Number:</strong> 20231007</p>
-                            <p class="mb-1"><strong>Phone:</strong> 0721686167</p>
-                            <p class="mb-1"><strong>National ID:</strong> 1002003007</p>
-                            <p class="mb-1"><strong>Password:</strong> 1234</p>
-                            <button class="btn btn-sm btn-primary use-demo" data-reg="20231007" data-pass="1234">Use This Account</button>
-                        </div>
-                     
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Signup Demo Accounts Modal -->
-    <div class="modal fade" id="signupDemoModal" tabindex="-1" role="dialog" aria-labelledby="signupDemoModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="signupDemoModalLabel">Demo Accounts for Sign Up</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <div class="demo-accounts">
-                        <div class="demo-account mb-3">
-                            <h6><i class="fas fa-user-graduate"></i> Huye Student / year 3</h6>
-                            <p class="mb-1"><strong>Reg Number:</strong> 20231008</p>
-                            <p class="mb-1"><strong>Phone:</strong> 0788609666</p>
-                            <p class="mb-1"><strong>National ID:</strong> 1002003008</p>
-                            <button class="btn btn-sm btn-primary use-signup-demo" 
-                                data-reg="20231008" 
-                                data-phone="0788609666" 
-                                data-national-id="1002003008">Use This Account</button>
-                        </div>
-                        <hr>
-                        <div class="demo-account mb-3">
-                            <h6><i class="fas fa-user-graduate"></i> Huye Student / year 3</h6>
-                            <p class="mb-1"><strong>Reg Number:</strong> 20231007</p>
-                            <p class="mb-1"><strong>Phone:</strong> 0721686167</p>
-                            <p class="mb-1"><strong>National ID:</strong> 1002003007</p>
-                            <button class="btn btn-sm btn-primary use-signup-demo" 
-                                data-reg="20231007" 
-                                data-phone="0721686167" 
-                                data-national-id="1002003007">Use This Account</button>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<main id="main" class="main">
+<div class="container-fluid py-4">
+    <h2 class="mb-4">Time Table</h2>
     
-    <script>
-    $(document).ready(function() {
-        function showSpinner() {
-            $('.spinner-overlay').fadeIn();
-        }
+    <!-- Filters Section -->
+    <div class="filters-section">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-funnel"></i> Filter Timetable</h5>
+            </div>
+            <div class="card-body">
+                <form id="filterForm" class="row g-3">
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-geo-alt"></i> Campus</label>
+                        <select class="form-select" id="campus_id" name="campus_id">
+                            <option value="">All Campuses</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-building"></i> College</label>
+                        <select class="form-select" id="college_id" name="college_id">
+                            <option value="">All Colleges</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-bank"></i> School</label>
+                        <select class="form-select" id="school_id" name="school_id">
+                            <option value="">All Schools</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-diagram-3"></i> Department</label>
+                        <select class="form-select" id="department_id" name="department_id">
+                            <option value="">All Departments</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-mortarboard"></i> Program</label>
+                        <select class="form-select" id="program_id" name="program_id">
+                            <option value="">All Programs</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-people"></i> Intake</label>
+                        <select class="form-select" id="intake_id" name="intake_id">
+                            <option value="">All Intakes</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-calendar"></i> Academic Year</label>
+                        <select class="form-select" id="academic_year_id" name="academic_year_id">
+                            <option value="">All Years</option>
+                            <?php foreach ($years as $year): ?>
+                                <option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label"><i class="bi bi-book"></i> Semester</label>
+                        <select class="form-select" id="semester" name="semester">
+                            <option value="">All Semesters</option>
+                            <?php foreach ($semesters as $sem): ?>
+                                <option value="<?php echo $sem; ?>">Semester <?php echo $sem; ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <div class="btn-group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search"></i> Apply Filters
+                            </button>
+                            <button type="button" class="btn btn-secondary" onclick="resetFilters()">
+                                <i class="bi bi-x-circle"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-        function hideSpinner() {
-            $('.spinner-overlay').fadeOut();
-        }
+    <!-- Timetable Grid -->
+    <div class="timetable-container">
+        <div class="table-responsive">
+            <table class="table table-striped" id="timetableTable">
+                <thead>
+                    <tr>
+                        <th>Day</th>
+                        <th>Time</th>
+                        <th>Module</th>
+                        <th>Lecturer</th>
+                        <th>Campus</th>
+                        <th>College</th>
+                        <th>School</th>
+                        <th>Department</th>
+                        <th>Program</th>
+                        <th>Group</th>
+                        <th>Intake</th>
+                        <th>Facility</th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-        function showAlert(message, type) {
-            $('#error-alert, #success-alert').hide();
-            $(`#${type}-alert`).text(message).fadeIn();
-            setTimeout(() => {
-                $(`#${type}-alert`).fadeOut();
-            }, 5000);
-        }
+<div class="loading" id="loadingIndicator" style="display: none;">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading...</span>
+    </div>
+</div>
 
-        // Handle registration number input
-        $('#regnumber').on('blur', function() {
-            const regnumber = $(this).val().trim();
-            if(regnumber) {
-                $.ajax({
-                    url: 'signup.php',
-                    type: 'POST',
-                    data: {
-                        get_user_details: true,
-                        regnumber: regnumber
-                    },
-                    dataType: 'json',
-                    success: function(response) {
-                        if(response.status === 'success') {
-                            $('#regnumber-error').hide();
-                        } else {
-                            $('#regnumber-error').text(response.message).show();
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    // Initialize Select2 for all select elements
+    $('.form-select').select2({
+        width: '100%'
+    });
+    
+    // Load initial data for dropdowns
+    loadCampuses();
+    loadAcademicYears();
+
+    // Add event listeners using jQuery
+    $('#campus_id').on('change', handleCampusChange);
+    $('#college_id').on('change', handleCollegeChange);
+    $('#school_id').on('change', handleSchoolChange);
+    $('#department_id').on('change', handleDepartmentChange);
+    $('#program_id').on('change', handleProgramChange);
+    $('#intake_id').on('change', loadTimetable);
+    $('#academic_year_id').on('change', loadTimetable);
+    $('#semester').on('change', loadTimetable);
+
+    // Load timetable when page loads
+    loadTimetable();
+});
+
+function showLoading() {
+    $('#loadingIndicator').show();
+}
+
+function hideLoading() {
+    $('#loadingIndicator').hide();
+}
+
+function resetFilters() {
+    $('#filterForm')[0].reset();
+    $('.form-select').val('').trigger('change');
+    loadTimetable();
+}
+
+// Load academic years
+function loadAcademicYears() {
+    const yearSelect = $('#academic_year_id');
+    yearSelect.empty().append('<option value="">All Years</option>');
+    <?php foreach ($years as $year): ?>
+    yearSelect.append(`<option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?></option>`);
+    <?php endforeach; ?>
+}
+
+// Load campuses
+function loadCampuses() {
+    $.ajax({
+        url: 'Dashboard/get_organization_structure.php',
+        method: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            if (response.success && response.data) {
+                const campusSelect = $('#campus_id');
+                campusSelect.empty().append('<option value="">All Campuses</option>');
+                response.data.forEach(campus => {
+                    campusSelect.append(`<option value="${campus.id}">${campus.name}</option>`);
+                });
+            } else {
+                console.error('Error loading campuses:', response.error || 'Unknown error');
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading campuses:', {
+                status: status,
+                error: error,
+                response: xhr.responseText
+            });
+        }
+    });
+}
+
+function handleCampusChange() {
+    const campusId = $(this).val();
+    const collegeSelect = $('#college_id');
+    const schoolSelect = $('#school_id');
+    const departmentSelect = $('#department_id');
+    const programSelect = $('#program_id');
+    
+    // Reset dependent dropdowns
+    collegeSelect.empty().append('<option value="">All Colleges</option>');
+    schoolSelect.empty().append('<option value="">All Schools</option>');
+    departmentSelect.empty().append('<option value="">All Departments</option>');
+    programSelect.empty().append('<option value="">All Programs</option>');
+    
+    if (campusId) {
+        $.ajax({
+            url: 'Dashboard/get_organization_structure.php',
+            method: 'GET',
+            data: { campus_id: campusId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    response.data.forEach(campus => {
+                        if (campus.id == campusId && campus.colleges) {
+                            campus.colleges.forEach(college => {
+                                collegeSelect.append(`<option value="${college.id}">${college.name}</option>`);
+                            });
                         }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('AJAX Error:', {xhr, status, error});
-                        showAlert('An error occurred. Please try again.', 'error');
-                    }
+                    });
+                } else {
+                    console.error('Error loading colleges:', response.error || 'Unknown error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading colleges:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
                 });
             }
         });
+    }
+    loadTimetable();
+}
 
-        // Handle password confirmation
-        $('#confirm_password').on('input', function() {
-            const password = $('#password').val();
-            const confirmPassword = $(this).val();
-            if(password !== confirmPassword) {
-                $('#password-error').text('Passwords do not match').show();
-            } else {
-                $('#password-error').hide();
+function handleCollegeChange() {
+    const collegeId = $(this).val();
+    const schoolSelect = $('#school_id');
+    const departmentSelect = $('#department_id');
+    const programSelect = $('#program_id');
+    
+    // Reset dependent dropdowns
+    schoolSelect.empty().append('<option value="">All Schools</option>');
+    departmentSelect.empty().append('<option value="">All Departments</option>');
+    programSelect.empty().append('<option value="">All Programs</option>');
+    
+    if (collegeId) {
+        $.ajax({
+            url: 'Dashboard/get_organization_structure.php',
+            method: 'GET',
+            data: { college_id: collegeId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    response.data.forEach(campus => {
+                        campus.colleges.forEach(college => {
+                            if (college.id == collegeId && college.schools) {
+                                college.schools.forEach(school => {
+                                    schoolSelect.append(`<option value="${school.id}">${school.name}</option>`);
+                                });
+                            }
+                        });
+                    });
+                } else {
+                    console.error('Error loading schools:', response.error || 'Unknown error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading schools:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
             }
         });
-
-        // Handle login form submission
-        $('#loginForm').on('submit', function(e) {
-            e.preventDefault();
-            const $btn = $(this).find('button[type="submit"]');
-            $btn.addClass('btn-loading').prop('disabled', true);
-            showSpinner();
-
-            $.ajax({
-                url: 'signup.php',
-                type: 'POST',
-                data: {
-                    ajax_login: true,
-                    login_regnumber: $('#login_regnumber').val().trim(),
-                    login_password: $('#login_password').val()
-                },
-                dataType: 'json',
-                success: function(response) {
-                    hideSpinner();
-                    $btn.removeClass('btn-loading').prop('disabled', false);
-                    if(response.status === 'success') {
-                        showAlert(response.message, 'success');
-                        if(response.redirect) {
-                            setTimeout(() => {
-                                window.location.href = 'Students/index.php';
-                            }, 1000);
-                        }
-                    } else {
-                        showAlert(response.message, 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideSpinner();
-                    $btn.removeClass('btn-loading').prop('disabled', false);
-                    console.error('Login AJAX Error:', {xhr, status, error});
-                    showAlert('An error occurred. Please try again.', 'error');
-                }
-            });
-        });
-
-        // Handle signup form submission
-        $('#signupForm').on('submit', function(e) {
-            e.preventDefault();
-            const $btn = $(this).find('button[type="submit"]');
-            $btn.addClass('btn-loading').prop('disabled', true);
-            showSpinner();
-
-            $.ajax({
-                url: 'signup.php',
-                type: 'POST',
-                data: {
-                    ajax_signup: true,
-                    regnumber: $('#regnumber').val().trim(),
-                    phone: $('#phone').val().trim(),
-                    national_id: $('#national_id').val().trim(),
-                    password: $('#password').val(),
-                    confirm_password: $('#confirm_password').val()
-                },
-                dataType: 'json',
-                success: function(response) {
-                    hideSpinner();
-                    $btn.removeClass('btn-loading').prop('disabled', false);
-                    if(response.status === 'success') {
-                        showAlert('Password updated successfully! Redirecting to login...', 'success');
-                        // Clear form
-                        $('#signupForm')[0].reset();
-                        // Switch to login tab after 4 seconds
-                        setTimeout(() => {
-                            $('#login-tab').tab('show');
-                            // Clear success message
-                            $('#success-alert').hide();
-                        }, 4000);
-                    } else {
-                        showAlert(response.message, 'error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    hideSpinner();
-                    $btn.removeClass('btn-loading').prop('disabled', false);
-                    console.error('Signup AJAX Error:', {xhr, status, error});
-                    showAlert('An error occurred. Please try again.', 'error');
-                }
-            });
-        });
-
-        // Handle tab switching
-        $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
-            $('.validation-error').hide();
-            $('#error-alert, #success-alert').hide();
-        });
-
-        // Handle demo account selection
-        $('.use-demo').click(function() {
-            const regNumber = $(this).data('reg');
-            const password = $(this).data('pass');
-            
-            $('#login_regnumber').val(regNumber);
-            $('#login_password').val(password);
-            
-            $('#demoModal').modal('hide');
-        });
-
-        // Handle demo account selection for signup
-        $('.use-signup-demo').click(function() {
-            const regNumber = $(this).data('reg');
-            const phone = $(this).data('phone');
-            const nationalId = $(this).data('national-id');
-            
-            $('#regnumber').val(regNumber);
-            $('#phone').val(phone);
-            $('#national_id').val(nationalId);
-            
-            $('#signupDemoModal').modal('hide');
-        });
-    });
-    </script>
-</body>
-</html>
-<?php
+    }
+    loadTimetable();
 }
-?>
+
+function handleSchoolChange() {
+    const schoolId = $(this).val();
+    const departmentSelect = $('#department_id');
+    const programSelect = $('#program_id');
+    
+    // Reset dependent dropdowns
+    departmentSelect.empty().append('<option value="">All Departments</option>');
+    programSelect.empty().append('<option value="">All Programs</option>');
+    
+    if (schoolId) {
+        $.ajax({
+            url: 'Dashboard/get_organization_structure.php',
+            method: 'GET',
+            data: { school_id: schoolId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    response.data.forEach(campus => {
+                        campus.colleges.forEach(college => {
+                            college.schools.forEach(school => {
+                                if (school.id == schoolId && school.departments) {
+                                    school.departments.forEach(department => {
+                                        departmentSelect.append(`<option value="${department.id}">${department.name}</option>`);
+                                    });
+                                }
+                            });
+                        });
+                    });
+                } else {
+                    console.error('Error loading departments:', response.error || 'Unknown error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading departments:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+            }
+        });
+    }
+    loadTimetable();
+}
+
+function handleDepartmentChange() {
+    const departmentId = $(this).val();
+    const programSelect = $('#program_id');
+    
+    // Reset dependent dropdown
+    programSelect.empty().append('<option value="">All Programs</option>');
+    
+    if (departmentId) {
+        $.ajax({
+            url: 'Dashboard/get_organization_structure.php',
+            method: 'GET',
+            data: { department_id: departmentId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    response.data.forEach(campus => {
+                        campus.colleges.forEach(college => {
+                            college.schools.forEach(school => {
+                                school.departments.forEach(department => {
+                                    if (department.id == departmentId && department.programs) {
+                                        department.programs.forEach(program => {
+                                            programSelect.append(`<option value="${program.id}">${program.name}</option>`);
+                                        });
+                                    }
+                                });
+                            });
+                        });
+                    });
+                } else {
+                    console.error('Error loading programs:', response.error || 'Unknown error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading programs:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+            }
+        });
+    }
+    loadTimetable();
+}
+
+function handleProgramChange() {
+    const programId = $(this).val();
+    const intakeSelect = $('#intake_id');
+    
+    // Reset intake dropdown
+    intakeSelect.empty().append('<option value="">All Intakes</option>');
+    
+    if (programId) {
+        $.ajax({
+            url: 'Dashboard/get_organization_structure.php',
+            method: 'GET',
+            data: { program_id: programId },
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    response.data.forEach(campus => {
+                        campus.colleges.forEach(college => {
+                            college.schools.forEach(school => {
+                                school.departments.forEach(department => {
+                                    department.programs.forEach(program => {
+                                        if (program.id == programId && program.intakes) {
+                                            program.intakes.forEach(intake => {
+                                                intakeSelect.append(`<option value="${intake.id}">${intake.year}/${intake.month}</option>`);
+                                            });
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                    });
+                } else {
+                    console.error('Error loading intakes:', response.error || 'Unknown error');
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error loading intakes:', {
+                    status: status,
+                    error: error,
+                    response: xhr.responseText
+                });
+            }
+        });
+    }
+    loadTimetable();
+}
+
+function loadTimetable() {
+    showLoading();
+    
+    $.ajax({
+        url: 'Dashboard/get_timetable.php',
+        method: 'GET',
+        data: {
+            campus_id: $('#campus_id').val(),
+            college_id: $('#college_id').val(),
+            school_id: $('#school_id').val(),
+            department_id: $('#department_id').val(),
+            program_id: $('#program_id').val(),
+            intake_id: $('#intake_id').val(),
+            academic_year_id: $('#academic_year_id').val(),
+            semester: $('#semester').val()
+        },
+        dataType: 'json',
+        success: function(response) {
+            hideLoading();
+            const container = $('.timetable-container');
+            container.empty();
+
+            if (response.success) {
+                if (response.data && response.data.length > 0) {
+                    displayTimetable(response.data);
+                } else {
+                    // Show no data message with selected filters
+                    const campus = $('#campus_id option:selected').text();
+                    const college = $('#college_id option:selected').text();
+                    const school = $('#school_id option:selected').text();
+                    const department = $('#department_id option:selected').text();
+                    const program = $('#program_id option:selected').text();
+                    const intake = $('#intake_id option:selected').text();
+                    const academicYear = $('#academic_year_id option:selected').text();
+                    const semester = $('#semester option:selected').text();
+
+                    container.html(`
+                        <div class="timetable-card">
+                            <div class="card-header">
+                                <h5 class="mb-0">No Timetable Found</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="alert alert-info">
+                                    <i class="bi bi-info-circle"></i> No timetable data found for the selected filters:
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted mb-2">Organization Structure</h6>
+                                        ${campus !== 'All Campuses' ? `<div><strong>Campus:</strong> ${campus}</div>` : ''}
+                                        ${college !== 'All Colleges' ? `<div><strong>College:</strong> ${college}</div>` : ''}
+                                        ${school !== 'All Schools' ? `<div><strong>School:</strong> ${school}</div>` : ''}
+                                        ${department !== 'All Departments' ? `<div><strong>Department:</strong> ${department}</div>` : ''}
+                                        ${program !== 'All Programs' ? `<div><strong>Program:</strong> ${program}</div>` : ''}
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-muted mb-2">Academic Details</h6>
+                                        ${intake !== 'All Intakes' ? `<div><strong>Intake:</strong> ${intake}</div>` : ''}
+                                        ${academicYear !== 'All Years' ? `<div><strong>Academic Year:</strong> ${academicYear}</div>` : ''}
+                                        ${semester !== 'All Semesters' ? `<div><strong>Semester:</strong> ${semester}</div>` : ''}
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="button" class="btn btn-primary" onclick="resetFilters()">
+                                        <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `);
+                }
+            } else {
+                container.html(`
+                    <div class="timetable-card">
+                        <div class="card-header bg-danger text-white">
+                            <h5 class="mb-0">Error</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="alert alert-danger">
+                                <i class="bi bi-exclamation-triangle"></i> ${response.error || 'An error occurred while loading the timetable.'}
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }
+        },
+        error: function(xhr, status, error) {
+            hideLoading();
+            const container = $('.timetable-container');
+            container.html(`
+                <div class="timetable-card">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">Error</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle"></i> Failed to load timetable data. Please try again later.
+                        </div>
+                        <div class="text-muted">
+                            <small>Error details: ${error}</small>
+                        </div>
+                    </div>
+                </div>
+            `);
+            console.error('Error loading timetable:', {
+                status: status,
+                error: error,
+                response: xhr.responseText
+            });
+        }
+    });
+}
+
+function displayTimetable(data) {
+    const container = $('.timetable-container');
+    container.empty();
+    
+    // Get selected filter values
+    const campus = $('#campus_id option:selected').text();
+    const college = $('#college_id option:selected').text();
+    const school = $('#school_id option:selected').text();
+    const department = $('#department_id option:selected').text();
+    const program = $('#program_id option:selected').text();
+    const intake = $('#intake_id option:selected').text();
+    const academicYear = $('#academic_year_id option:selected').text();
+    const semester = $('#semester option:selected').text();
+
+    // Add title card with filters
+    container.append(`
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="timetable-card">
+                    <div class="card-header">
+                        <h5 class="mb-0">Timetable</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Organization Structure</h6>
+                                ${campus !== 'All Campuses' ? `<div><strong>Campus:</strong> ${campus}</div>` : ''}
+                                ${college !== 'All Colleges' ? `<div><strong>College:</strong> ${college}</div>` : ''}
+                                ${school !== 'All Schools' ? `<div><strong>School:</strong> ${school}</div>` : ''}
+                                ${department !== 'All Departments' ? `<div><strong>Department:</strong> ${department}</div>` : ''}
+                                ${program !== 'All Programs' ? `<div><strong>Program:</strong> ${program}</div>` : ''}
+                            </div>
+                            <div class="col-md-6">
+                                <h6 class="text-muted mb-2">Academic Details</h6>
+                                ${intake !== 'All Intakes' ? `<div><strong>Intake:</strong> ${intake}</div>` : ''}
+                                ${academicYear !== 'All Years' ? `<div><strong>Academic Year:</strong> ${academicYear}</div>` : ''}
+                                ${semester !== 'All Semesters' ? `<div><strong>Semester:</strong> ${semester}</div>` : ''}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `);
+    
+    // Group sessions by day
+    const sessionsByDay = {};
+    data.forEach(session => {
+        const day = session.session.day;
+        if (!sessionsByDay[day]) {
+            sessionsByDay[day] = [];
+        }
+        sessionsByDay[day].push(session);
+    });
+
+    // Sort days
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    
+    // Display sessions by day
+    days.forEach(day => {
+        if (sessionsByDay[day] && sessionsByDay[day].length > 0) {
+            // Add day header
+            container.append(`
+                <div class="row mb-3">
+                    <div class="col-12">
+                        <div class="day-header">
+                            <h3 class="mb-0">${day}</h3>
+                        </div>
+                    </div>
+                </div>
+            `);
+
+            // Create a row for the day's sessions
+            const dayRow = $('<div class="row mb-4"></div>');
+            
+            // Create cards for each session
+            sessionsByDay[day].forEach(session => {
+                const card = $(`
+                    <div class="col-md-6 mb-4">
+                        <div class="timetable-card h-100">
+                            <div class="card-header">
+                                <h5 class="mb-0">${session.timetable.module.name}</h5>
+                                <span class="badge bg-light text-dark">
+                                    ${session.session.start_time} - ${session.session.end_time}
+                                </span>
+                            </div>
+                            <div class="card-body">
+                                <div class="module-info">
+                                    <div class="module-code">${session.timetable.module.code}</div>
+                                </div>
+                                
+                                <div class="time-info">
+                                    <i class="bi bi-clock"></i> ${session.session.start_time} - ${session.session.end_time}
+                                </div>
+                                
+                                <div class="facility-info">
+                                    <i class="bi bi-building"></i> ${session.timetable.facility.name}
+                                    <small class="d-block text-muted">${session.timetable.facility.location}</small>
+                                </div>
+                                
+                                <div class="lecturer-info">
+                                    <i class="bi bi-person"></i> ${session.timetable.lecturer.name}
+                                </div>
+                                
+                                <div class="group-info">
+                                    <h6>Groups:</h6>
+                                    <div class="row">
+                                        ${session.timetable.groups.map(group => `
+                                            <div class="col-md-6 mb-2">
+                                                <div class="group-card">
+                                                    <div class="group-header">
+                                                        <strong>${group.name}</strong>
+                                                        <small class="text-muted">Size: ${group.size}</small>
+                                                    </div>
+                                                    <div class="group-details">
+                                                        <div><i class="bi bi-geo-alt"></i> Campus: ${group.campus.name}</div>
+                                                        <div><i class="bi bi-building"></i> College: ${group.college.name}</div>
+                                                        <div><i class="bi bi-bank"></i> School: ${group.school.name}</div>
+                                                        <div><i class="bi bi-diagram-3"></i> Department: ${group.department.name}</div>
+                                                        <div><i class="bi bi-mortarboard"></i> Program: ${group.program.name} (${group.program.code})</div>
+                                                        <div><i class="bi bi-calendar"></i> Intake: ${group.intake.year}/${group.intake.month}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                dayRow.append(card);
+            });
+            
+            container.append(dayRow);
+        }
+    });
+}
+
+// Handle form submission
+$('#filterForm').on('submit', function(e) {
+    e.preventDefault();
+    loadTimetable();
+});
+</script>
+
+
+<a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i
+    class="bi bi-arrow-up-short"></i></a>
+
+<!-- Vendor JS Files -->
+<script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
+<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="assets/vendor/chart.js/chart.umd.js"></script>
+<script src="assets/vendor/echarts/echarts.min.js"></script>
+<script src="assets/vendor/quill/quill.min.js"></script>
+<script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
+<script src="assets/vendor/tinymce/tinymce.min.js"></script>
+<script src="assets/vendor/php-email-form/validate.js"></script>
+
+<!-- Template Main JS File -->
+<script src="assets/js/main.js"></script>
+
+<style>
+.timetable-container {
+    padding: 20px;
+}
+
+.timetable-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s ease;
+    height: 100%;
+}
+
+.timetable-card:hover {
+    transform: translateY(-5px);
+}
+
+.timetable-card .card-header {
+    background: #012970;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.timetable-card .card-body {
+    padding: 20px;
+}
+
+.timetable-card .module-info {
+    margin-bottom: 15px;
+}
+
+.timetable-card .module-code {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.timetable-card .time-info {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+}
+
+.timetable-card .group-info {
+    margin-top: 20px;
+}
+
+.group-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+    border: 1px solid #e9ecef;
+    height: 100%;
+}
+
+.group-card .group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.group-card .group-details {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+}
+
+.group-card .group-details div {
+    font-size: 0.85em;
+    color: #495057;
+}
+
+.group-card .group-details i {
+    color: #012970;
+    margin-right: 5px;
+}
+
+.timetable-card .facility-info {
+    background: #e8f4ff;
+    padding: 10px;
+    border-radius: 5px;
+    margin-top: 15px;
+}
+
+.timetable-card .lecturer-info {
+    color: #666;
+    font-size: 0.9em;
+    margin-top: 10px;
+}
+
+.day-header {
+    background: #012970;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 5px;
+}
+
+.filters-section {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.filters-section .card {
+    border: none;
+    box-shadow: none;
+}
+
+.filters-section .card-header {
+    background: #012970;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.filters-section .card-header h5 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.filters-section .form-label {
+    font-weight: 600;
+    color: #012970;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.filters-section .form-select {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 10px 15px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background-color: #f8f9fa;
+}
+
+.filters-section .form-select:hover {
+    border-color: #012970;
+    background-color: white;
+}
+
+.filters-section .form-select:focus {
+    border-color: #012970;
+    box-shadow: 0 0 0 0.2rem rgba(1, 41, 112, 0.25);
+    background-color: white;
+}
+
+.filters-section .btn {
+    padding: 10px 25px;
+    font-weight: 500;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.filters-section .btn-primary {
+    background: #012970;
+    border-color: #012970;
+}
+
+.filters-section .btn-primary:hover {
+    background: #001f5c;
+    border-color: #001f5c;
+    transform: translateY(-2px);
+}
+
+.filters-section .btn-secondary {
+    background: #6c757d;
+    border-color: #6c757d;
+}
+
+.filters-section .btn-secondary:hover {
+    background: #5a6268;
+    border-color: #5a6268;
+    transform: translateY(-2px);
+}
+
+.filters-section .select2-container--default .select2-selection--single {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    height: 42px;
+    background-color: #f8f9fa;
+}
+
+.filters-section .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 42px;
+    padding-left: 15px;
+    color: #495057;
+}
+
+.filters-section .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 40px;
+}
+
+.filters-section .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #012970;
+}
+
+.filters-section .select2-dropdown {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
+}
+
+.filters-section .row {
+    margin-bottom: 15px;
+}
+
+.filters-section .col-md-2 {
+    margin-bottom: 15px;
+}
+
+.filters-section .btn-group {
+    margin-top: 10px;
+}
+
+.filters-section .btn-group .btn {
+    margin-right: 10px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .filters-section {
+        padding: 15px;
+    }
+    
+    .filters-section .col-md-2 {
+        width: 100%;
+    }
+    
+    .filters-section .btn-group {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .filters-section .btn-group .btn {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+
+.alert {
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 20px;
+}
+
+.alert-info {
+    background-color: #e8f4ff;
+    border-color: #b8daff;
+    color: #004085;
+}
+
+.alert-danger {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.alert i {
+    margin-right: 8px;
+}
+
+.text-muted small {
+    font-size: 0.85em;
+}
+</style>
+</body>
+</html> 

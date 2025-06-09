@@ -1,6 +1,7 @@
 <?php
+session_start();
 include('connection.php');
-include('./includes/auth.php');
+// include('./includes/auth.php');
 // checkUserRole(['information_modifier']);
 
 require_once '../../loadEnv.php';

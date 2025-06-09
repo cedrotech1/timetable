@@ -1,6 +1,14 @@
 <?php
-
+session_start();    
 include('connection.php');
+
+// Get current system settings
+$system_query = "SELECT s.*, ay.year_label 
+                FROM system s 
+                LEFT JOIN academic_year ay ON s.accademic_year_id = ay.id 
+                LIMIT 1";
+$system_result = mysqli_query($connection, $system_query);
+$system_data = mysqli_fetch_assoc($system_result);
 
 // Get academic years
 $academic_years_query = "SELECT * FROM academic_year ORDER BY year_label DESC";
@@ -191,7 +199,7 @@ $modules_result = mysqli_query($connection, $modules_query);
 
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-6">
+            <div class="col-md-8">
                 <div class="card mt-3">
                     <div class="card-header">
                         <h5>Schedule New Class</h5>
@@ -200,22 +208,25 @@ $modules_result = mysqli_query($connection, $modules_query);
                         <form id="timetableForm" method="POST" action="save_timetable.php" onsubmit="return false;">
                             <div class="mb-3">
                                 <label for="academicYear" class="form-label">Academic Year</label>
-                                <select class="form-select" id="academicYear" name="academic_year_id" required>
-                                    <option value="">Select Academic Year</option>
+                                <select class="form-select" id="academicYear" name="academic_year_id" required disabled>
                                     <?php while ($year = mysqli_fetch_assoc($academic_years_result)): ?>
-                                        <option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?>
+                                        <option value="<?php echo $year['id']; ?>" 
+                                            <?php echo ($year['id'] == $system_data['accademic_year_id']) ? 'selected' : ''; ?>>
+                                            <?php echo $year['year_label']; ?>
                                         </option>
                                     <?php endwhile; ?>
                                 </select>
+                                <input type="hidden" name="academic_year_id" value="<?php echo $system_data['accademic_year_id']; ?>">
                             </div>
 
                             <div class="mb-3">
                                 <label for="semester" class="form-label">Semester</label>
-                                <select class="form-select" id="semester" name="semester" required>
-                                    <option value="">Select Semester</option>
-                                    <option value="1">Semester 1</option>
-                                    <option value="2">Semester 2</option>
+                                <select class="form-select" id="semester" name="semester" required disabled>
+                                    <option value="1" <?php echo ($system_data['semester'] == '1') ? 'selected' : ''; ?>>Semester 1</option>
+                                    <option value="2" <?php echo ($system_data['semester'] == '2') ? 'selected' : ''; ?>>Semester 2</option>
+                                    <option value="3" <?php echo ($system_data['semester'] == '3') ? 'selected' : ''; ?>>Semester 3</option>
                                 </select>
+                                <input type="hidden" name="semester" value="<?php echo $system_data['semester']; ?>">
                             </div>
 
                             <div class="mb-4">
@@ -310,9 +321,7 @@ $modules_result = mysqli_query($connection, $modules_query);
                 </div>
             </div>
 
-            <div class="col-md-6">
-                <?php include('schedule_display.php'); ?>
-            </div>
+         
         </div>
     </div>
 

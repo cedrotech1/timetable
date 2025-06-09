@@ -1,5 +1,8 @@
 <?php
-include('connection.php');
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
+include('../connection.php');
 
 // Get filter parameters
 $campus_id = isset($_GET['campus_id']) ? intval($_GET['campus_id']) : null;

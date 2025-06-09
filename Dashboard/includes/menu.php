@@ -135,14 +135,7 @@
             </li>
 
           
-
-
-
-            <!-- Manage Student Cards -->
-      
-
-            <!-- Settings -->
-            <!-- <a class="nav-link collapsed" data-bs-target="#icons-nav10" data-bs-toggle="collapse" href="#">
+             <a class="nav-link collapsed" data-bs-target="#icons-nav10" data-bs-toggle="collapse" href="#">
                 <i class="bi bi-gear"></i><span>Settings</span><i class="bi bi-chevron-down ms-auto"></i>
             </a>
             <ul id="icons-nav10" class="nav-content collapse" data-bs-parent="#sidebar-nav">
@@ -165,7 +158,7 @@
                     </a>
                 </li>
             </ul>
-            </li>  -->
+            </li>  
             <!-- normal one menu -->
             <!-- <li class="nav-item">
                 <a class="nav-link collapsed" href="search.php">

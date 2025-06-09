@@ -18,7 +18,7 @@ if (file_exists(__DIR__ . '/../loadEnv.php')) {
         // Override defaults with environment variables if they exist
         $dbHost = getenv('DB_HOST') ?: $dbHost;
         $dbPort = getenv('DB_PORT') ?: $dbPort;
-        $dbName = getenv('DB_HOSTEL') ?: $dbName; // Use DB_HOSTEL
+        $dbName = getenv('DB_TIMETABLE') ?: $dbName; // Use DB_HOSTEL
         $dbUser = getenv('DB_USER') ?: $dbUser;
         $dbPassword = getenv('DB_PASSWORD') ?: $dbPassword;
         // $timeLimit = getenv('TIME') ?: 1; // Load TIME variable
