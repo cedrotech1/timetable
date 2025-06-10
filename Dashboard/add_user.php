@@ -1,5 +1,5 @@
 <?php
-session_start();
+session_start();  
 include('connection.php');
 // include('./includes/auth.php');
 // checkUserRole(['information_modifier']);

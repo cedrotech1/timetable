@@ -7,12 +7,54 @@ $campuses = [];
 $res = mysqli_query($connection, "SELECT id, name FROM campus ORDER BY name");
 while ($row = mysqli_fetch_assoc($res)) $campuses[] = $row;
 
+// Get all colleges
+$colleges = [];
+$res = mysqli_query($connection, "SELECT id, name, campus_id FROM college ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $colleges[] = $row;
+
+// Get all schools
+$schools = [];
+$res = mysqli_query($connection, "SELECT id, name, college_id FROM school ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $schools[] = $row;
+
+// Get all departments
+$departments = [];
+$res = mysqli_query($connection, "SELECT id, name, school_id FROM department ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $departments[] = $row;
+
+// Get all programs
+$programs = [];
+$res = mysqli_query($connection, "SELECT id, name, department_id FROM program ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $programs[] = $row;
+
+// Get all intakes
+$intakes = [];
+$res = mysqli_query($connection, "SELECT id, name, program_id FROM intake ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $intakes[] = $row;
+
+// Get all student groups
+$student_groups = [];
+$res = mysqli_query($connection, "SELECT id, name, intake_id FROM student_group ORDER BY name");
+while ($row = mysqli_fetch_assoc($res)) $student_groups[] = $row;
+
 // Get academic years
 $years = [];
 $res = mysqli_query($connection, "SELECT id, year_label FROM academic_year ORDER BY year_label DESC");
 while ($row = mysqli_fetch_assoc($res)) $years[] = $row;
 
 $semesters = ['1', '2'];
+
+// Get all groups
+$groups = [];
+$res = mysqli_query($connection, "SELECT g.id, g.name, g.intake_id, i.program_id, p.department_id, d.school_id, s.college_id, c.campus_id 
+                                FROM student_group g 
+                                JOIN intake i ON g.intake_id = i.id 
+                                JOIN program p ON i.program_id = p.id 
+                                JOIN department d ON p.department_id = d.id 
+                                JOIN school s ON d.school_id = s.id 
+                                JOIN college c ON s.college_id = c.id 
+                                ORDER BY g.name");
+while ($row = mysqli_fetch_assoc($res)) $groups[] = $row;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -49,79 +91,86 @@ $semesters = ['1', '2'];
             margin-bottom: 30px;
         }
         
-        .filters-section .card {
-            border: none;
-            box-shadow: none;
-        }
-        
-        .filters-section .card-header {
-            background: #012970;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 10px;
+        .filter-step {
             margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            background: #f8f9fa;
         }
         
-        .filters-section .card-header h5 {
-            margin: 0;
-            font-size: 1.2rem;
-            font-weight: 600;
+        .filter-step.active {
+            border-color: #012970;
+            background: #fff;
         }
         
-        .filters-section .form-label {
+        .filter-step .step-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .filter-step .step-title {
             font-weight: 600;
             color: #012970;
-            margin-bottom: 8px;
+            margin: 0;
+        }
+        
+        .filter-step .step-number {
+            background: #012970;
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             font-size: 0.9rem;
         }
         
-        .filters-section .form-select {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 10px 15px;
-            font-size: 0.95rem;
-            transition: all 0.3s ease;
-            background-color: #f8f9fa;
+        .filter-group {
+            margin-bottom: 15px;
         }
         
-        .filters-section .form-select:hover {
-            border-color: #012970;
-            background-color: white;
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #012970;
+            margin-bottom: 8px;
         }
         
-        .filters-section .form-select:focus {
-            border-color: #012970;
-            box-shadow: 0 0 0 0.2rem rgba(1, 41, 112, 0.25);
-            background-color: white;
+        .filter-group label i {
+            font-size: 1.1rem;
         }
         
-        .filters-section .btn {
-            padding: 10px 25px;
-            font-weight: 500;
-            border-radius: 8px;
-            transition: all 0.3s ease;
+        .group-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
         }
         
-        .filters-section .btn-primary {
-            background: #012970;
-            border-color: #012970;
+        .group-tag {
+            background: #e8f4ff;
+            color: #012970;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
         }
         
-        .filters-section .btn-primary:hover {
-            background: #001f5c;
-            border-color: #001f5c;
-            transform: translateY(-2px);
+        .group-tag .remove-tag {
+            cursor: pointer;
+            color: #dc3545;
         }
         
-        .filters-section .btn-secondary {
-            background: #6c757d;
-            border-color: #6c757d;
-        }
-        
-        .filters-section .btn-secondary:hover {
-            background: #5a6268;
-            border-color: #5a6268;
-            transform: translateY(-2px);
+        .group-tag .remove-tag:hover {
+            color: #bd2130;
         }
         
         .timetable-table {
@@ -360,73 +409,60 @@ $semesters = ['1', '2'];
             <div class="filters-section">
                 <div class="card">
                     <div class="card-header">
-                        <h5><i class="bi bi-funnel"></i> Filter Timetable</h5>
+                        <h5>Time Table Filters</h5>
                     </div>
                     <div class="card-body">
-                        <form id="filterForm" class="row g-3">
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-geo-alt"></i> Campus</label>
-                                <select class="form-select" id="campus_id" name="campus_id">
-                                    <option value="">All Campuses</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-building"></i> College</label>
-                                <select class="form-select" id="college_id" name="college_id">
-                                    <option value="">All Colleges</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-bank"></i> School</label>
-                                <select class="form-select" id="school_id" name="school_id">
-                                    <option value="">All Schools</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-diagram-3"></i> Department</label>
-                                <select class="form-select" id="department_id" name="department_id">
-                                    <option value="">All Departments</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-mortarboard"></i> Program</label>
-                                <select class="form-select" id="program_id" name="program_id">
-                                    <option value="">All Programs</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-people"></i> Intake</label>
-                                <select class="form-select" id="intake_id" name="intake_id">
-                                    <option value="">All Intakes</option>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-calendar"></i> Academic Year</label>
-                                <select class="form-select" id="academic_year_id" name="academic_year_id">
-                                    <option value="">All Years</option>
-                                    <?php foreach ($years as $year): ?>
-                                        <option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label"><i class="bi bi-book"></i> Semester</label>
-                                <select class="form-select" id="semester" name="semester">
-                                    <option value="">All Semesters</option>
-                                    <?php foreach ($semesters as $sem): ?>
-                                        <option value="<?php echo $sem; ?>">Semester <?php echo $sem; ?></option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                            <div class="col-12">
-                                <div class="btn-group">
-                                    <button type="submit" class="btn btn-primary">
-                                        <i class="bi bi-search"></i> Apply Filters
-                                    </button>
-                                    <button type="button" class="btn btn-secondary" onclick="resetFilters()">
-                                        <i class="bi bi-x-circle"></i> Reset
-                                    </button>
+                        <form id="filterForm" method="GET">
+                            <!-- Step 1: Academic Year and Semester -->
+                            <div class="filter-step active" id="academic-step">
+                                <div class="step-header">
+                                    <h6 class="step-title">Step 1: Academic Information</h6>
+                                    <span class="step-number">1</span>
                                 </div>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="filter-group">
+                                            <label><i class="bi bi-calendar"></i> Academic Year</label>
+                                            <select class="form-select" id="year" name="year" required>
+                                                <option value="">Select Year</option>
+                                                <?php foreach ($years as $year): ?>
+                                                    <option value="<?php echo $year['id']; ?>"><?php echo htmlspecialchars($year['year_label']); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="filter-group">
+                                            <label><i class="bi bi-book"></i> Semester</label>
+                                            <select class="form-select" id="semester" name="semester" required>
+                                                <option value="">Select Semester</option>
+                                                <?php foreach ($semesters as $semester): ?>
+                                                    <option value="<?php echo $semester; ?>"><?php echo htmlspecialchars($semester); ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Step 2: Group Selection -->
+                            <div class="filter-step" id="group-step">
+                                <div class="step-header">
+                                    <h6 class="step-title">Step 2: Group Selection</h6>
+                                    <span class="step-number">2</span>
+                                </div>
+                                <div class="filter-group">
+                                    <label><i class="bi bi-people"></i> Select Groups</label>
+                                    <select class="form-select" id="group_id" name="group_id[]" multiple>
+                                        <option value="">All Groups</option>
+                                    </select>
+                                    <div class="group-tags" id="selectedGroups"></div>
+                                </div>
+                            </div>
+
+                            <div class="text-end mt-4">
+                                <button type="submit" class="btn btn-primary">View Time Table</button>
+                                <button type="reset" class="btn btn-secondary">Reset</button>
                             </div>
                         </form>
                     </div>
@@ -466,439 +502,114 @@ $semesters = ['1', '2'];
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     
     <script>
-        $(document).ready(function() {
-            // Initialize Select2 for all select elements
-            $('.form-select').select2({
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Select2 for group selection
+            $('#group_id').select2({
+                placeholder: "Select groups",
+                allowClear: true,
                 width: '100%'
             });
-            
-            // Load initial data for dropdowns
-            loadCampuses();
-            loadAcademicYears();
-            
-            // Add event listeners using jQuery
-            $('#campus_id').on('change', handleCampusChange);
-            $('#college_id').on('change', handleCollegeChange);
-            $('#school_id').on('change', handleSchoolChange);
-            $('#department_id').on('change', handleDepartmentChange);
-            $('#program_id').on('change', handleProgramChange);
-            $('#intake_id').on('change', loadTimetable);
-            $('#academic_year_id').on('change', loadTimetable);
-            $('#semester').on('change', loadTimetable);
-            
-            // Load timetable when page loads
-            loadTimetable();
-        });
-        
-        function showLoading() {
-            $('#loadingIndicator').show();
-        }
-        
-        function hideLoading() {
-            $('#loadingIndicator').hide();
-        }
-        
-        function resetFilters() {
-            $('#filterForm')[0].reset();
-            $('.form-select').val('').trigger('change');
-            loadTimetable();
-        }
-        
-        // Load academic years
-        function loadAcademicYears() {
-            const yearSelect = $('#academic_year_id');
-            yearSelect.empty().append('<option value="">All Years</option>');
-            <?php foreach ($years as $year): ?>
-            yearSelect.append(`<option value="<?php echo $year['id']; ?>"><?php echo $year['year_label']; ?></option>`);
-            <?php endforeach; ?>
-        }
-        
-        // Load campuses
-        function loadCampuses() {
-            $.ajax({
-                url: 'Dashboard/get_organization_structure.php',
-                method: 'GET',
-                dataType: 'json',
-                success: function(response) {
-                    if (response.success && response.data) {
-                        const campusSelect = $('#campus_id');
-                        campusSelect.empty().append('<option value="">All Campuses</option>');
-                        response.data.forEach(campus => {
-                            campusSelect.append(`<option value="${campus.id}">${campus.name}</option>`);
-                        });
-                    } else {
-                        console.error('Error loading campuses:', response.error || 'Unknown error');
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error loading campuses:', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText
-                    });
-                }
-            });
-        }
-        
-        function handleCampusChange() {
-            const campusId = $(this).val();
-            const collegeSelect = $('#college_id');
-            const schoolSelect = $('#school_id');
-            const departmentSelect = $('#department_id');
-            const programSelect = $('#program_id');
-            
-            // Reset dependent dropdowns
-            collegeSelect.empty().append('<option value="">All Colleges</option>');
-            schoolSelect.empty().append('<option value="">All Schools</option>');
-            departmentSelect.empty().append('<option value="">All Departments</option>');
-            programSelect.empty().append('<option value="">All Programs</option>');
-            
-            if (campusId) {
-                $.ajax({
-                    url: 'Dashboard/get_organization_structure.php',
-                    method: 'GET',
-                    data: { campus_id: campusId },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            response.data.forEach(campus => {
-                                if (campus.id == campusId && campus.colleges) {
-                                    campus.colleges.forEach(college => {
-                                        collegeSelect.append(`<option value="${college.id}">${college.name}</option>`);
-                                    });
-                                }
-                            });
-                        } else {
-                            console.error('Error loading colleges:', response.error || 'Unknown error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading colleges:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-                    }
-                });
-            }
-            loadTimetable();
-        }
-        
-        function handleCollegeChange() {
-            const collegeId = $(this).val();
-            const schoolSelect = $('#school_id');
-            const departmentSelect = $('#department_id');
-            const programSelect = $('#program_id');
-            
-            // Reset dependent dropdowns
-            schoolSelect.empty().append('<option value="">All Schools</option>');
-            departmentSelect.empty().append('<option value="">All Departments</option>');
-            programSelect.empty().append('<option value="">All Programs</option>');
-            
-            if (collegeId) {
-                $.ajax({
-                    url: 'Dashboard/get_organization_structure.php',
-                    method: 'GET',
-                    data: { college_id: collegeId },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            response.data.forEach(campus => {
-                                campus.colleges.forEach(college => {
-                                    if (college.id == collegeId && college.schools) {
-                                        college.schools.forEach(school => {
-                                            schoolSelect.append(`<option value="${school.id}">${school.name}</option>`);
-                                        });
-                                    }
-                                });
-                            });
-                        } else {
-                            console.error('Error loading schools:', response.error || 'Unknown error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading schools:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-                    }
-                });
-            }
-            loadTimetable();
-        }
-        
-        function handleSchoolChange() {
-            const schoolId = $(this).val();
-            const departmentSelect = $('#department_id');
-            const programSelect = $('#program_id');
-            
-            // Reset dependent dropdowns
-            departmentSelect.empty().append('<option value="">All Departments</option>');
-            programSelect.empty().append('<option value="">All Programs</option>');
-            
-            if (schoolId) {
-                $.ajax({
-                    url: 'Dashboard/get_organization_structure.php',
-                    method: 'GET',
-                    data: { school_id: schoolId },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            response.data.forEach(campus => {
-                                campus.colleges.forEach(college => {
-                                    college.schools.forEach(school => {
-                                        if (school.id == schoolId && school.departments) {
-                                            school.departments.forEach(department => {
-                                                departmentSelect.append(`<option value="${department.id}">${department.name}</option>`);
-                                            });
-                                        }
-                                    });
-                                });
-                            });
-                        } else {
-                            console.error('Error loading departments:', response.error || 'Unknown error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading departments:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-                    }
-                });
-            }
-            loadTimetable();
-        }
-        
-        function handleDepartmentChange() {
-            const departmentId = $(this).val();
-            const programSelect = $('#program_id');
-            
-            // Reset dependent dropdown
-            programSelect.empty().append('<option value="">All Programs</option>');
-            
-            if (departmentId) {
-                $.ajax({
-                    url: 'Dashboard/get_organization_structure.php',
-                    method: 'GET',
-                    data: { department_id: departmentId },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            response.data.forEach(campus => {
-                                campus.colleges.forEach(college => {
-                                    college.schools.forEach(school => {
-                                        school.departments.forEach(department => {
-                                            if (department.id == departmentId && department.programs) {
-                                                department.programs.forEach(program => {
-                                                    programSelect.append(`<option value="${program.id}">${program.name}</option>`);
-                                                });
-                                            }
-                                        });
-                                    });
-                                });
-                            });
-                        } else {
-                            console.error('Error loading programs:', response.error || 'Unknown error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading programs:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-                    }
-                });
-            }
-            loadTimetable();
-        }
-        
-        function handleProgramChange() {
-            const programId = $(this).val();
-            const intakeSelect = $('#intake_id');
-            
-            // Reset intake dropdown
-            intakeSelect.empty().append('<option value="">All Intakes</option>');
-            
-            if (programId) {
-                $.ajax({
-                    url: 'Dashboard/get_organization_structure.php',
-                    method: 'GET',
-                    data: { program_id: programId },
-                    dataType: 'json',
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            response.data.forEach(campus => {
-                                campus.colleges.forEach(college => {
-                                    college.schools.forEach(school => {
-                                        school.departments.forEach(department => {
-                                            department.programs.forEach(program => {
-                                                if (program.id == programId && program.intakes) {
-                                                    program.intakes.forEach(intake => {
-                                                        intakeSelect.append(`<option value="${intake.id}">${intake.year}/${intake.month}</option>`);
-                                                    });
-                                                }
-                                            });
-                                        });
-                                    });
-                                });
-                            });
-                        } else {
-                            console.error('Error loading intakes:', response.error || 'Unknown error');
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('Error loading intakes:', {
-                            status: status,
-                            error: error,
-                            response: xhr.responseText
-                        });
-                    }
-                });
-            }
-            loadTimetable();
-        }
-        
-        function loadTimetable() {
-            showLoading();
-            
-            $.ajax({
-                url: 'Dashboard/get_timetable.php',
-                method: 'GET',
-                data: {
-                    campus_id: $('#campus_id').val(),
-                    college_id: $('#college_id').val(),
-                    school_id: $('#school_id').val(),
-                    department_id: $('#department_id').val(),
-                    program_id: $('#program_id').val(),
-                    intake_id: $('#intake_id').val(),
-                    academic_year_id: $('#academic_year_id').val(),
-                    semester: $('#semester').val()
-                },
-                dataType: 'json',
-                success: function(response) {
-                    hideLoading();
-                    const tbody = $('#timetableTable tbody');
-                    tbody.empty();
-                    
-                    if (response.success) {
-                        if (response.data && response.data.length > 0) {
-                            // Group sessions by day
-                            const sessionsByDay = {};
-                            response.data.forEach(session => {
-                                const day = session.session.day;
-                                if (!sessionsByDay[day]) {
-                                    sessionsByDay[day] = [];
-                                }
-                                sessionsByDay[day].push(session);
-                            });
 
-                            // Sort days
-                            const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-                            
-                            // Display sessions by day
-                            days.forEach(day => {
-                                if (sessionsByDay[day] && sessionsByDay[day].length > 0) {
-                                    // Add day header
-                                    tbody.append(`
-                                        <tr class="day-header-row">
-                                            <td colspan="6" class="text-center py-3">
-                                                <h4 class="mb-0 text-white">${day}</h4>
-                                            </td>
-                                        </tr>
-                                    `);
+            // Store all groups data
+            const groups = <?php echo json_encode($groups); ?>;
 
-                                    // Add sessions for this day
-                                    sessionsByDay[day].forEach(session => {
-                                        const row = $(`
-                                            <tr>
-                                                <td class="text-center">
-                                                    <span class="badge bg-primary">${session.session.day}</span>
-                                                </td>
-                                                <td class="text-center">
-                                                    <i class="bi bi-clock"></i> ${session.session.start_time} - ${session.session.end_time}
-                                                </td>
-                                                <td>
-                                                    <strong>${session.timetable.module.name}</strong>
-                                                    <br>
-                                                    <small class="text-muted">${session.timetable.module.code}</small>
-                                                </td>
-                                                <td>
-                                                    <i class="bi bi-person"></i> ${session.timetable.lecturer.name}
-                                                </td>
-                                                <td>
-                                                    <i class="bi bi-building"></i> ${session.timetable.facility.name}
-                                                    <br>
-                                                    <small class="text-muted">${session.timetable.facility.location}</small>
-                                                </td>
-                                                <td>
-                                                    ${session.timetable.groups.map(group => `
-                                                        <span class="badge bg-info mb-1">
-                                                            ${group.name}
-                                                            <small class="ms-1">(${group.size})</small>
-                                                        </span>
-                                                    `).join('')}
-                                                </td>
-                                            </tr>
-                                        `);
-                                        tbody.append(row);
-                                    });
-                                }
-                            });
-                        } else {
-                            tbody.append(`
-                                <tr>
-                                    <td colspan="6" class="text-center py-4">
-                                        <div class="alert alert-info mb-0">
-                                            <i class="bi bi-info-circle"></i> No timetable data found for the selected filters.
-                                        </div>
-                                    </td>
-                                </tr>
-                            `);
-                        }
-                    } else {
-                        tbody.append(`
-                            <tr>
-                                <td colspan="6" class="text-center py-4">
-                                    <div class="alert alert-danger mb-0">
-                                        <i class="bi bi-exclamation-triangle"></i> ${response.error || 'An error occurred while loading the timetable.'}
-                                    </div>
-                                </td>
-                            </tr>
+            // Function to update group tags
+            function updateGroupTags() {
+                const selectedGroups = $('#group_id').val() || [];
+                const tagsContainer = $('#selectedGroups');
+                tagsContainer.empty();
+
+                selectedGroups.forEach(groupId => {
+                    const group = groups.find(g => g.id === groupId);
+                    if (group) {
+                        const tag = $(`
+                            <div class="group-tag">
+                                <span>${group.name}</span>
+                                <i class="bi bi-x-circle remove-tag" data-group-id="${group.id}"></i>
+                            </div>
                         `);
+                        tagsContainer.append(tag);
                     }
-                },
-                error: function(xhr, status, error) {
-                    hideLoading();
-                    const tbody = $('#timetableTable tbody');
-                    tbody.html(`
+                });
+            }
+
+            // Handle group selection change
+            $('#group_id').on('change', function() {
+                updateGroupTags();
+            });
+
+            // Handle tag removal
+            $(document).on('click', '.remove-tag', function() {
+                const groupId = $(this).data('group-id');
+                const selectedGroups = $('#group_id').val() || [];
+                const newSelection = selectedGroups.filter(id => id !== groupId);
+                $('#group_id').val(newSelection).trigger('change');
+            });
+
+            // Form submission
+            $('#filterForm').on('submit', function(e) {
+                e.preventDefault();
+                const year = $('#year').val();
+                const semester = $('#semester').val();
+                const selectedGroups = $('#group_id').val() || [];
+
+                if (!year || !semester) {
+                    alert('Please select both Academic Year and Semester');
+                    return;
+                }
+
+                // Show loading indicator
+                $('#loadingIndicator').show();
+
+                // Make AJAX call to fetch timetable
+                $.ajax({
+                    url: 'get_timetable.php',
+                    method: 'POST',
+                    data: {
+                        year: year,
+                        semester: semester,
+                        groups: selectedGroups
+                    },
+                    success: function(response) {
+                        // Update timetable table
+                        updateTimetable(response);
+                    },
+                    error: function() {
+                        alert('Error fetching timetable data');
+                    },
+                    complete: function() {
+                        $('#loadingIndicator').hide();
+                    }
+                });
+            });
+
+            // Function to update timetable
+            function updateTimetable(data) {
+                const tbody = $('#timetableTable tbody');
+                tbody.empty();
+
+                data.forEach(row => {
+                    const tr = $(`
                         <tr>
-                            <td colspan="6" class="text-center py-4">
-                                <div class="alert alert-danger mb-0">
-                                    <i class="bi bi-exclamation-triangle"></i> Failed to load timetable data. Please try again later.
-                                </div>
-                                <div class="text-muted mt-2">
-                                    <small>Error details: ${error}</small>
-                                </div>
-                            </td>
+                            <td>${row.day}</td>
+                            <td>${row.time}</td>
+                            <td>${row.module}</td>
+                            <td>${row.lecturer}</td>
+                            <td>${row.facility}</td>
+                            <td>${row.groups}</td>
                         </tr>
                     `);
-                    console.error('Error loading timetable:', {
-                        status: status,
-                        error: error,
-                        response: xhr.responseText
-                    });
-                }
+                    tbody.append(tr);
+                });
+            }
+
+            // Form reset
+            $('button[type="reset"]').on('click', function() {
+                setTimeout(() => {
+                    $('#group_id').val(null).trigger('change');
+                    updateGroupTags();
+                }, 0);
             });
-        }
-        
-        // Handle form submission
-        $('#filterForm').on('submit', function(e) {
-            e.preventDefault();
-            loadTimetable();
         });
     </script>
 </body>

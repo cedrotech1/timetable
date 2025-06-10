@@ -281,8 +281,8 @@ $modules_result = mysqli_query($connection, $modules_query);
                                 <div class="input-group">
                                     <input type="text" class="form-control" id="selectedFacilityDisplay" readonly
                                         placeholder="Select facility">
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                                        data-bs-target="#facilityModal">
+                                    <button type="button" class="btn btn-primary" id="facilityButton" data-bs-toggle="modal"
+                                        data-bs-target="#facilityModal" disabled>
                                         Select Facility
                                     </button>
                                 </div>
@@ -341,7 +341,8 @@ $modules_result = mysqli_query($connection, $modules_query);
             const facilityInput = document.getElementById('facility');
             const selectedGroupsDisplay = document.getElementById('selectedGroupsDisplay');
             const selectedGroups = document.getElementById('selectedGroups');
-            let selectedGroupIds = [];
+            let selectedGroupIds = new Set();
+            let selectedGroupsData = new Map(); // Store group data for display
 
             // Function to format time for display (12-hour format)
             function formatTimeForDisplay(time) {
@@ -356,50 +357,103 @@ $modules_result = mysqli_query($connection, $modules_query);
             // Function to format time for database (24-hour format)
             function formatTimeForDatabase(time) {
                 if (!time) return '';
+                console.log('Formatting time:', time);
+                
+                // If time is already in 24-hour format (HH:mm), return it
+                if (/^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time)) {
+                    const formatted = time + ':00';
+                    console.log('Time already in 24h format:', formatted);
+                    return formatted;
+                }
+                
+                // Otherwise, convert from 12-hour format
                 const [time12, period] = time.split(' ');
                 const [hours, minutes] = time12.split(':');
                 let hour = parseInt(hours);
                 if (period === 'PM' && hour !== 12) hour += 12;
                 if (period === 'AM' && hour === 12) hour = 0;
-                return `${hour.toString().padStart(2, '0')}:${minutes}:00`;
+                const formatted = `${hour.toString().padStart(2, '0')}:${minutes}:00`;
+                console.log('Converted time:', formatted);
+                return formatted;
             }
 
             // Function to validate time range
             function validateTimeRange(startTime, endTime) {
+                if (!startTime || !endTime) {
+                    console.log('Missing time values:', { startTime, endTime });
+                    return false;
+                }
+                
+                console.log('Validating time range:', { startTime, endTime });
+                
+                // Convert times to comparable format
                 const start = new Date(`2000-01-01T${startTime}`);
                 const end = new Date(`2000-01-01T${endTime}`);
-                return end > start;
+                
+                // Check if times are valid
+                if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+                    console.log('Invalid time format');
+                    return false;
+                }
+                
+                // Check if end time is after start time
+                const isValid = end > start;
+                console.log('Time range validation result:', isValid);
+                return isValid;
             }
 
             // Function to get all valid sessions
             function getValidSessions() {
                 const sessions = [];
                 const sessionEntries = document.querySelectorAll('.session-entry');
-                console.log('Found session entries:', sessionEntries.length);
+                console.log('=== SESSION VALIDATION START ===');
+                console.log('Number of session entries found:', sessionEntries.length);
 
                 sessionEntries.forEach((entry, index) => {
                     const day = entry.querySelector('.session-day').value;
                     const startTime = entry.querySelector('.session-start').value;
                     const endTime = entry.querySelector('.session-end').value;
 
-                    console.log(`Session ${index + 1}:`, { day, startTime, endTime });
+                    console.log(`\nSession ${index + 1} Details:`, {
+                        day: day,
+                        startTime: startTime,
+                        endTime: endTime,
+                        hasDay: !!day,
+                        hasStartTime: !!startTime,
+                        hasEndTime: !!endTime
+                    });
 
                     if (day && startTime && endTime) {
                         // Validate time range
-                        if (!validateTimeRange(startTime, endTime)) {
-                            alert(`Invalid time range for session ${index + 1}. End time must be after start time.`);
+                        const isValidTimeRange = validateTimeRange(startTime, endTime);
+                        console.log(`Time range validation for session ${index + 1}:`, isValidTimeRange);
+
+                        if (!isValidTimeRange) {
+                            console.log(`Invalid time range for session ${index + 1}`);
                             return;
                         }
 
+                        // Format times for database
+                        const formattedStartTime = formatTimeForDatabase(startTime);
+                        const formattedEndTime = formatTimeForDatabase(endTime);
+
+                        console.log(`Formatted times for session ${index + 1}:`, {
+                            original: { start: startTime, end: endTime },
+                            formatted: { start: formattedStartTime, end: formattedEndTime }
+                        });
+
                         sessions.push({
                             day: day,
-                            start_time: startTime + ':00',
-                            end_time: endTime + ':00'
+                            start_time: formattedStartTime,
+                            end_time: formattedEndTime
                         });
+                    } else {
+                        console.log(`Session ${index + 1} is missing required values`);
                     }
                 });
 
-                console.log('Valid sessions:', sessions);
+                console.log('\nFinal Valid Sessions:', sessions);
+                console.log('=== SESSION VALIDATION END ===\n');
                 return sessions;
             }
 
@@ -440,8 +494,246 @@ $modules_result = mysqli_query($connection, $modules_query);
             `;
             }
 
+            // Update selected groups display
+            window.updateSelectedGroupsDisplay = function() {
+                const selectedGroupsDiv = document.getElementById('selectedGroups');
+                if (!selectedGroupsDiv) return;
+                
+                selectedGroupsDiv.innerHTML = '';
+
+                if (!window.selectedGroupsData || window.selectedGroupsData.size === 0) {
+                    selectedGroupsDiv.innerHTML = '<div class="text-muted text-center">No groups selected</div>';
+                    return;
+                }
+
+                // Calculate total size
+                let totalSize = 0;
+                window.selectedGroupsData.forEach((data, id) => {
+                    console.log('Processing group data for main display:', { id, data });
+                    if (data.size) {
+                        totalSize += parseInt(data.size);
+                    }
+                });
+
+                console.log('Total size for main display:', totalSize);
+
+                // Add summary at the top
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'selected-groups-summary mb-3 p-2 bg-light rounded';
+                summaryDiv.innerHTML = `
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>${window.selectedGroupsData.size} Groups Selected</strong>
+                        </div>
+                        <div>
+                            <strong>Total Size: ${totalSize} Students</strong>
+                        </div>
+                    </div>
+                `;
+                selectedGroupsDiv.appendChild(summaryDiv);
+
+                // Add individual groups
+                window.selectedGroupsData.forEach((data, id) => {
+                    const groupDiv = document.createElement('div');
+                    groupDiv.className = 'selected-group';
+                    
+                    // Format group info
+                    const infoParts = [];
+                    if (data.size) infoParts.push(`Size: ${data.size} students`);
+                    if (data.program_name) infoParts.push(data.program_name);
+                    if (data.intake_year && data.intake_month) {
+                        infoParts.push(`${data.intake_year}/${data.intake_month}`);
+                    }
+                    
+                    groupDiv.innerHTML = `
+                        <div>
+                            <div class="group-name">${data.name}</div>
+                            <div class="group-info">
+                                ${infoParts.join(' | ')}
+                            </div>
+                        </div>
+                        <button type="button" class="remove-group" data-group-id="${id}" title="Remove group">
+                            <i class="fas fa-times"></i>
+                        </button>
+                        <input type="hidden" name="group_ids[]" value="${id}">
+                    `;
+                    selectedGroupsDiv.appendChild(groupDiv);
+                });
+
+                // Update display text
+                const displayInput = document.getElementById('selectedGroupsDisplay');
+                if (displayInput) {
+                    displayInput.value = window.selectedGroupsData.size > 0 ? 
+                        `${window.selectedGroupsData.size} group(s) selected - Total: ${totalSize} students` : '';
+                }
+
+                // Update facility button state
+                updateFacilityButton();
+            };
+
+            // Add event listener for group removal in main display
+            document.addEventListener('click', function(e) {
+                if (e.target.closest('.remove-group')) {
+                    const groupId = e.target.closest('.remove-group').dataset.groupId;
+                    if (window.selectedGroupIds) {
+                        window.selectedGroupIds.delete(groupId);
+                    }
+                    if (window.selectedGroupsData) {
+                        window.selectedGroupsData.delete(groupId);
+                    }
+                    window.updateSelectedGroupsDisplay();
+                }
+            });
+
+            // Make updateFacilityButton globally accessible
+            window.updateFacilityButton = function() {
+                console.log('\n=== UPDATING FACILITY BUTTON STATE ===');
+                const facilityButton = document.getElementById('facilityButton');
+                if (facilityButton) {
+                    // Check if groups are selected
+                    const hasGroups = window.selectedGroupIds && window.selectedGroupIds.size > 0;
+                    
+                    // Check if schedule is valid - only check the first session entry
+                    const firstSessionEntry = document.querySelector('.session-entry');
+                    const hasValidSchedule = firstSessionEntry && 
+                        firstSessionEntry.querySelector('.session-day').value &&
+                        firstSessionEntry.querySelector('.session-start').value &&
+                        firstSessionEntry.querySelector('.session-end').value;
+                    
+                    console.log('Button state conditions:', {
+                        hasGroups,
+                        hasValidSchedule,
+                        selectedGroups: window.selectedGroupIds ? Array.from(window.selectedGroupIds) : [],
+                        firstSession: firstSessionEntry ? {
+                            day: firstSessionEntry.querySelector('.session-day').value,
+                            startTime: firstSessionEntry.querySelector('.session-start').value,
+                            endTime: firstSessionEntry.querySelector('.session-end').value
+                        } : null
+                    });
+                    
+                    // Enable button if both conditions are met
+                    facilityButton.disabled = !(hasValidSchedule && hasGroups);
+                    
+                    // Add tooltip to explain why button is disabled
+                    if (facilityButton.disabled) {
+                        const reason = !hasValidSchedule ? 'Please complete schedule first' : 
+                                     !hasGroups ? 'Please select groups first' : 
+                                     'Please complete all required fields';
+                        facilityButton.title = reason;
+                    } else {
+                        facilityButton.title = 'Select a facility';
+                    }
+                    
+                    console.log('Button state updated:', {
+                        disabled: facilityButton.disabled,
+                        title: facilityButton.title
+                    });
+                }
+                console.log('=== FACILITY BUTTON STATE UPDATED ===\n');
+            };
+
+            // Add event listeners for schedule changes
+            document.addEventListener('change', function(e) {
+                if (e.target.matches('.session-day, .session-start, .session-end')) {
+                    console.log('Schedule changed:', {
+                        element: e.target.name,
+                        value: e.target.value
+                    });
+                    window.updateFacilityButton();
+                }
+            });
+
+            // Add event listener for group selection changes
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('group-checkbox')) {
+                    console.log('Group selection changed');
+                    window.updateFacilityButton();
+                }
+            });
+
+            // Initialize button states
+            document.addEventListener('DOMContentLoaded', function() {
+                window.updateFacilityButton();
+            });
+
+            // Function to handle group selection
+            function handleGroupSelection(groupId, isChecked) {
+                console.log('\n=== HANDLING GROUP SELECTION ===');
+                console.log('Group selection:', {
+                    groupId,
+                    isChecked,
+                    currentSelectedGroups: Array.from(selectedGroupIds)
+                });
+
+                if (isChecked) {
+                    // Get the group info from the row
+                    const row = document.querySelector(`#groupsModal .group-checkbox[value="${groupId}"]`).closest('tr');
+                    if (row) {
+                        const groupName = row.querySelector('td:nth-child(2)').textContent;
+                        const groupInfo = row.querySelector('td:nth-child(3)').textContent;
+                        
+                        // Store the group data
+                        selectedGroupsData.set(groupId, {
+                            name: groupName,
+                            info: groupInfo
+                        });
+                        selectedGroupIds.add(groupId);
+                    }
+                } else {
+                    // Remove the group data
+                    selectedGroupsData.delete(groupId);
+                    selectedGroupIds.delete(groupId);
+                }
+
+                // Update the display
+                updateSelectedGroupsDisplay();
+                console.log('=== GROUP SELECTION HANDLED ===\n');
+            }
+
+            // Function to remove a group
+            function removeGroup(groupId) {
+                console.log('\n=== REMOVING GROUP ===');
+                console.log('Removing group:', groupId);
+    
+                // Remove from our data structures
+                selectedGroupsData.delete(groupId);
+                selectedGroupIds.delete(groupId);
+    
+                // Update the display
+                updateSelectedGroupsDisplay();
+    
+                    // Clear facility selection if no groups are selected
+                if (selectedGroupIds.size === 0) {
+                    facilityDisplay.value = '';
+                    facilityInput.value = '';
+                }
+    
+                console.log('=== GROUP REMOVED ===\n');
+            }
+
+            // Add event listener for group selection in modal
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.group-checkbox')) {
+                    const groupId = e.target.value;
+                    const isChecked = e.target.checked;
+                    handleGroupSelection(groupId, isChecked);
+                }
+            });
+
+            // Add event listener for modal close
+            document.addEventListener('hidden.bs.modal', function (e) {
+                if (e.target.id === 'groupsModal') {
+                    console.log('\n=== GROUPS MODAL CLOSED ===');
+                    // Update the display after modal is closed
+                    updateSelectedGroupsDisplay();
+                    console.log('=== GROUPS MODAL CLOSED HANDLED ===\n');
+                }
+            });
+
             // Function to clear all selections
             function clearSelections() {
+                console.log('\n=== CLEARING ALL SELECTIONS ===');
+                
                 // Clear facility selection
                 facilityDisplay.value = '';
                 facilityInput.value = '';
@@ -449,7 +741,8 @@ $modules_result = mysqli_query($connection, $modules_query);
                 // Clear group selections
                 selectedGroupsDisplay.value = '';
                 selectedGroups.innerHTML = '';
-                selectedGroupIds = [];
+                selectedGroupIds.clear();
+                selectedGroupsData.clear();
 
                 // Clear module selection
                 document.getElementById('selectedModuleDisplay').value = '';
@@ -459,10 +752,252 @@ $modules_result = mysqli_query($connection, $modules_query);
                 document.getElementById('selectedLecturerDisplay').value = '';
                 document.getElementById('lecturer').value = '';
 
-                // Clear schedule with new format
+                // Clear schedule
                 const scheduleContainer = document.getElementById('scheduleContainer');
                 scheduleContainer.innerHTML = createSessionEntryHTML(0);
                 sessionCount = 1;
+
+                // Update facility button state
+                updateFacilityButton();
+                
+                console.log('=== ALL SELECTIONS CLEARED ===\n');
+            }
+
+            // Add event listeners for academic year and semester changes
+            document.getElementById('academicYear').addEventListener('change', function () {
+                clearSelections();
+                checkAvailability();
+            });
+
+            document.getElementById('semester').addEventListener('change', function () {
+                clearSelections();
+                checkAvailability();
+            });
+
+            // Add event listener for schedule changes
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.session-day, .session-start, .session-end')) {
+                    console.log('\n=== SCHEDULE CHANGE DETECTED ===');
+                    console.log('Changed field:', {
+                        name: e.target.name,
+                        value: e.target.value,
+                        type: e.target.type
+                    });
+                    
+                    const sessionEntry = e.target.closest('.session-entry');
+                    const startTime = sessionEntry.querySelector('.session-start').value;
+                    const endTime = sessionEntry.querySelector('.session-end').value;
+                    const day = sessionEntry.querySelector('.session-day').value;
+                    
+                    console.log('Current session state:', { day, startTime, endTime });
+                    
+                    if (startTime && endTime) {
+                        const isValid = validateTimeRange(startTime, endTime);
+                        console.log('Time range validation result:', isValid);
+                        
+                        if (!isValid) {
+                            alert('End time must be after start time');
+                            e.target.value = '';
+                        }
+                    }
+                    
+                    updateFacilityButton();
+                    checkAvailability();
+                    console.log('=== SCHEDULE CHANGE HANDLED ===\n');
+                }
+            });
+
+            // Add event listener for facility radio buttons
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.facility-radio')) {
+                    const row = e.target.closest('tr');
+                    const facilityName = row.cells[1].textContent;
+                    const facilityId = e.target.value;
+                    facilityDisplay.value = facilityName;
+                    facilityInput.value = facilityId;
+                    const facilityModal = bootstrap.Modal.getInstance(document.getElementById('facilityModal'));
+                    if (facilityModal) {
+                        facilityModal.hide();
+                    }
+                }
+            });
+
+            // Update add session handler
+            document.addEventListener('click', function (e) {
+                if (e.target.closest('.add-session')) {
+                    const container = document.getElementById('scheduleContainer');
+                    const newSession = document.createElement('div');
+                    newSession.className = 'session-entry mb-3';
+                    newSession.innerHTML = createSessionEntryHTML(sessionCount);
+                    container.appendChild(newSession);
+                    sessionCount++;
+                }
+            });
+
+            // Add time validation on change
+            document.addEventListener('change', function (e) {
+                if (e.target.matches('.session-start, .session-end')) {
+                    const sessionEntry = e.target.closest('.session-entry');
+                    const startTime = sessionEntry.querySelector('.session-start').value;
+                    const endTime = sessionEntry.querySelector('.session-end').value;
+
+                    if (startTime && endTime) {
+                        if (!validateTimeRange(startTime, endTime)) {
+                            alert('End time must be after start time');
+                            e.target.value = '';
+                        }
+                    }
+                }
+            });
+
+            // Function to validate sessions
+            function validateSessions() {
+                const sessions = getValidSessions();
+                console.log('Validating sessions:', sessions);
+
+                if (sessions.length === 0) {
+                    const sessionEntries = document.querySelectorAll('.session-entry');
+                    let emptyFields = [];
+
+                    sessionEntries.forEach((entry, index) => {
+                        const day = entry.querySelector('.session-day').value;
+                        const startTime = entry.querySelector('.session-start').value;
+                        const endTime = entry.querySelector('.session-end').value;
+
+                        if (!day) emptyFields.push(`Day for session ${index + 1}`);
+                        if (!startTime) emptyFields.push(`Start time for session ${index + 1}`);
+                        if (!endTime) emptyFields.push(`End time for session ${index + 1}`);
+                    });
+
+                    alert(`Please complete all session fields:\n${emptyFields.join('\n')}`);
+                    return false;
+                }
+                return true;
+            }
+
+            // Handle form submission
+            document.getElementById('timetableForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!validateSessions()) {
+                    return;
+                }
+
+                // Create FormData object
+                const formData = new FormData(this);
+
+                // Add group IDs to formData (ensuring no duplicates)
+                const uniqueGroupIds = Array.from(selectedGroupIds);
+                uniqueGroupIds.forEach(groupId => {
+                    formData.append('group_ids[]', groupId);
+                });
+
+                // Add schedule data to formData
+                formData.append('schedule', JSON.stringify(getValidSessions()));
+
+                // Send POST request
+                try {
+                    const response = await fetch('save_timetable.php', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert('Class scheduled successfully');
+                        // Reset form
+                        this.reset();
+                        clearSelections();
+                        // Reload schedule
+                        loadSchedule();
+                    } else {
+                        alert(data.message || 'Error scheduling class');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Error scheduling class: ' + error.message);
+                }
+            });
+
+            // Function to load schedule
+            async function loadSchedule() {
+                const academicYearId = document.getElementById('academicYear').value;
+                const semester = document.getElementById('semester').value;
+
+                if (!academicYearId || !semester) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`get_schedule.php?academic_year=${academicYearId}&semester=${semester}`);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    const schedule = await response.json();
+
+                    // Update schedule display
+                    const scheduleContainer = document.querySelector('#scheduleDisplay');
+                    if (scheduleContainer) {
+                        // Clear existing content
+                        scheduleContainer.innerHTML = '';
+
+                        if (schedule.length === 0) {
+                            scheduleContainer.innerHTML = '<div class="alert alert-info">No classes scheduled for this period</div>';
+                            return;
+                        }
+
+                        // Create schedule table
+                        const table = document.createElement('table');
+                        table.className = 'table table-bordered table-hover';
+                        table.innerHTML = `
+                        <thead>
+                            <tr>
+                                <th>Module</th>
+                                <th>Groups</th>
+                                <th>Lecturer</th>
+                                <th>Facility</th>
+                                <th>Schedule</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    `;
+
+                        const tbody = table.querySelector('tbody');
+                        schedule.forEach(item => {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                            <td>
+                                <strong>${item.module_code}</strong><br>
+                                <small class="text-muted">${item.module_name}</small>
+                            </td>
+                            <td>${item.groups.join(', ')}</td>
+                            <td>${item.lecturer_name}</td>
+                            <td>
+                                ${item.facility_name}<br>
+                                <small class="text-muted">${item.facility_type} (${item.facility_capacity} seats)</small>
+                            </td>
+                            <td>
+                                ${item.sessions.map(session =>
+                                `${session.day}<br>${formatTimeForDisplay(session.start_time)} - ${formatTimeForDisplay(session.end_time)}`
+                            ).join('<br>')}
+                            </td>
+                        `;
+                            tbody.appendChild(row);
+                        });
+
+                        scheduleContainer.appendChild(table);
+                    }
+                } catch (error) {
+                    console.error('Error loading schedule:', error);
+                    const scheduleContainer = document.querySelector('#scheduleDisplay');
+                    if (scheduleContainer) {
+                        scheduleContainer.innerHTML = `
+                        <div class="alert alert-danger">
+                            Error loading schedule. Please try again.
+                        </div>
+                    `;
+                    }
+                }
             }
 
             // Function to check facility and group availability
@@ -481,11 +1016,8 @@ $modules_result = mysqli_query($connection, $modules_query);
                     return;
                 }
 
-                // Get selected group IDs
-                const selectedGroups = document.querySelectorAll('.group-checkbox:checked');
-                const selectedGroupIds = Array.from(selectedGroups).map(cb => cb.value);
-
-                if (selectedGroupIds.length === 0) {
+                // Use the selectedGroupIds Set
+                if (selectedGroupIds.size === 0) {
                     // Clear facility selection if no groups are selected
                     facilityDisplay.value = '';
                     facilityInput.value = '';
@@ -508,7 +1040,7 @@ $modules_result = mysqli_query($connection, $modules_query);
                         schedule: sessions,
                         academic_year_id: academicYearId,
                         semester: semester,
-                        group_ids: selectedGroupIds
+                        group_ids: Array.from(selectedGroupIds)
                     });
 
                     const response = await fetch('check_facility_availability.php', {
@@ -520,7 +1052,7 @@ $modules_result = mysqli_query($connection, $modules_query);
                             schedule: sessions,
                             academic_year_id: academicYearId,
                             semester: semester,
-                            group_ids: selectedGroupIds
+                            group_ids: Array.from(selectedGroupIds)
                         })
                     });
 
@@ -654,226 +1186,57 @@ $modules_result = mysqli_query($connection, $modules_query);
                 }
             }
 
-            // Add event listeners for academic year and semester changes
-            document.getElementById('academicYear').addEventListener('change', function () {
-                clearSelections();
-                checkAvailability();
-            });
-
-            document.getElementById('semester').addEventListener('change', function () {
-                clearSelections();
-                checkAvailability();
-            });
-
-            // Add event listeners for schedule changes
-            document.addEventListener('change', function (e) {
-                if (e.target.matches('.session-day, .session-start, .session-end')) {
-                    console.log('Session field changed:', e.target.name, e.target.value);
-                    checkAvailability();
+            // Add styles for the group display
+            const style = document.createElement('style');
+            style.textContent = `
+                .selected-groups-summary {
+                    border: 1px solid #dee2e6;
+                    background-color: #f8f9fa;
+                    margin-bottom: 1rem;
                 }
-            });
-
-            // Add event listener for group selection changes
-            document.addEventListener('change', function (e) {
-                if (e.target.matches('.group-checkbox')) {
-                    // Clear facility selection when groups change
-                    facilityDisplay.value = '';
-                    facilityInput.value = '';
-                    checkAvailability();
+                .selected-groups-summary strong {
+                    color: #0d6efd;
                 }
-            });
-
-            // Add event listener for facility radio buttons
-            document.addEventListener('change', function (e) {
-                if (e.target.matches('.facility-radio')) {
-                    const row = e.target.closest('tr');
-                    const facilityName = row.cells[1].textContent;
-                    const facilityId = e.target.value;
-                    facilityDisplay.value = facilityName;
-                    facilityInput.value = facilityId;
-                    const facilityModal = bootstrap.Modal.getInstance(document.getElementById('facilityModal'));
-                    if (facilityModal) {
-                        facilityModal.hide();
-                    }
+                .selected-group {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.75rem;
+                    margin-bottom: 0.5rem;
+                    background-color: #fff;
+                    border: 1px solid #dee2e6;
+                    border-radius: 0.25rem;
+                    transition: all 0.2s ease;
                 }
-            });
-
-            // Update add session handler
-            document.addEventListener('click', function (e) {
-                if (e.target.closest('.add-session')) {
-                    const container = document.getElementById('scheduleContainer');
-                    const newSession = document.createElement('div');
-                    newSession.className = 'session-entry mb-3';
-                    newSession.innerHTML = createSessionEntryHTML(sessionCount);
-                    container.appendChild(newSession);
-                    sessionCount++;
+                .selected-group:hover {
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
                 }
-            });
-
-            // Add time validation on change
-            document.addEventListener('change', function (e) {
-                if (e.target.matches('.session-start, .session-end')) {
-                    const sessionEntry = e.target.closest('.session-entry');
-                    const startTime = sessionEntry.querySelector('.session-start').value;
-                    const endTime = sessionEntry.querySelector('.session-end').value;
-
-                    if (startTime && endTime) {
-                        if (!validateTimeRange(startTime, endTime)) {
-                            alert('End time must be after start time');
-                            e.target.value = '';
-                        }
-                    }
+                .selected-group .group-name {
+                    font-weight: 500;
+                    color: #212529;
+                    margin-bottom: 0.25rem;
                 }
-            });
-
-            // Function to validate sessions
-            function validateSessions() {
-                const sessions = getValidSessions();
-                console.log('Validating sessions:', sessions);
-
-                if (sessions.length === 0) {
-                    const sessionEntries = document.querySelectorAll('.session-entry');
-                    let emptyFields = [];
-
-                    sessionEntries.forEach((entry, index) => {
-                        const day = entry.querySelector('.session-day').value;
-                        const startTime = entry.querySelector('.session-start').value;
-                        const endTime = entry.querySelector('.session-end').value;
-
-                        if (!day) emptyFields.push(`Day for session ${index + 1}`);
-                        if (!startTime) emptyFields.push(`Start time for session ${index + 1}`);
-                        if (!endTime) emptyFields.push(`End time for session ${index + 1}`);
-                    });
-
-                    alert(`Please complete all session fields:\n${emptyFields.join('\n')}`);
-                    return false;
+                .selected-group .group-info {
+                    font-size: 0.875rem;
+                    color: #6c757d;
                 }
-                return true;
-            }
-
-            // Handle form submission
-            document.getElementById('timetableForm').addEventListener('submit', async function (e) {
-                e.preventDefault();
-
-                if (!validateSessions()) {
-                    return;
+                .selected-group button {
+                    padding: 0.25rem 0.5rem;
+                    margin-left: 0.5rem;
+                    color: #dc3545;
+                    border: none;
+                    background: none;
+                    transition: color 0.2s ease;
                 }
-
-                // Create FormData object
-                const formData = new FormData(this);
-
-                // Add group IDs to formData
-                selectedGroupIds.forEach(groupId => {
-                    formData.append('group_ids[]', groupId);
-                });
-
-                // Add schedule data to formData
-                formData.append('schedule', JSON.stringify(getValidSessions()));
-
-                // Send POST request
-                try {
-                    const response = await fetch('save_timetable.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-                    const data = await response.json();
-
-                    if (data.success) {
-                        alert('Class scheduled successfully');
-                        // Reset form
-                        this.reset();
-                        clearSelections();
-                        // Reload schedule
-                        loadSchedule();
-                    } else {
-                        alert(data.message || 'Error scheduling class');
-                    }
-                } catch (error) {
-                    console.error('Error:', error);
-                    alert('Error scheduling class: ' + error.message);
+                .selected-group button:hover {
+                    color: #bd2130;
                 }
-            });
-
-            // Function to load schedule
-            async function loadSchedule() {
-                const academicYearId = document.getElementById('academicYear').value;
-                const semester = document.getElementById('semester').value;
-
-                if (!academicYearId || !semester) {
-                    return;
+                #selectedGroupsDisplay {
+                    font-weight: 500;
+                    color: #0d6efd;
                 }
-
-                try {
-                    const response = await fetch(`get_schedule.php?academic_year=${academicYearId}&semester=${semester}`);
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const schedule = await response.json();
-
-                    // Update schedule display
-                    const scheduleContainer = document.querySelector('#scheduleDisplay');
-                    if (scheduleContainer) {
-                        // Clear existing content
-                        scheduleContainer.innerHTML = '';
-
-                        if (schedule.length === 0) {
-                            scheduleContainer.innerHTML = '<div class="alert alert-info">No classes scheduled for this period</div>';
-                            return;
-                        }
-
-                        // Create schedule table
-                        const table = document.createElement('table');
-                        table.className = 'table table-bordered table-hover';
-                        table.innerHTML = `
-                        <thead>
-                            <tr>
-                                <th>Module</th>
-                                <th>Groups</th>
-                                <th>Lecturer</th>
-                                <th>Facility</th>
-                                <th>Schedule</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    `;
-
-                        const tbody = table.querySelector('tbody');
-                        schedule.forEach(item => {
-                            const row = document.createElement('tr');
-                            row.innerHTML = `
-                            <td>
-                                <strong>${item.module_code}</strong><br>
-                                <small class="text-muted">${item.module_name}</small>
-                            </td>
-                            <td>${item.groups.join(', ')}</td>
-                            <td>${item.lecturer_name}</td>
-                            <td>
-                                ${item.facility_name}<br>
-                                <small class="text-muted">${item.facility_type} (${item.facility_capacity} seats)</small>
-                            </td>
-                            <td>
-                                ${item.sessions.map(session =>
-                                `${session.day}<br>${formatTimeForDisplay(session.start_time)} - ${formatTimeForDisplay(session.end_time)}`
-                            ).join('<br>')}
-                            </td>
-                        `;
-                            tbody.appendChild(row);
-                        });
-
-                        scheduleContainer.appendChild(table);
-                    }
-                } catch (error) {
-                    console.error('Error loading schedule:', error);
-                    const scheduleContainer = document.querySelector('#scheduleDisplay');
-                    if (scheduleContainer) {
-                        scheduleContainer.innerHTML = `
-                        <div class="alert alert-danger">
-                            Error loading schedule. Please try again.
-                        </div>
-                    `;
-                    }
-                }
-            }
+            `;
+            document.head.appendChild(style);
         });
     </script>
       <script src="assets/js/main.js"></script>

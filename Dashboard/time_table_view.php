@@ -97,8 +97,12 @@ include("./includes/menu.php");
                             <div class="step-label">Program</div>
                         </div>
                         <div class="step" data-step="intake">
-                            <div class="step-icon"><i class="bi bi-people"></i></div>
+                            <div class="step-icon"><i class="bi bi-calendar"></i></div>
                             <div class="step-label">Intake</div>
+                        </div>
+                        <div class="step" data-step="group">
+                            <div class="step-icon"><i class="bi bi-people"></i></div>
+                            <div class="step-label">Group</div>
                         </div>
                     </div>
                 </div>
@@ -159,9 +163,19 @@ include("./includes/menu.php");
                         <!-- Intake Step -->
                         <div class="filter-step" id="intake-step">
                             <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-people"></i> Select Intake</label>
+                                <label class="form-label"><i class="bi bi-calendar"></i> Select Intake</label>
                                 <select class="form-select" id="intake_id" name="intake_id">
                                     <option value="">All Intakes</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Group Step -->
+                        <div class="filter-step" id="group-step">
+                            <div class="filter-group">
+                                <label class="form-label"><i class="bi bi-people"></i> Select Group</label>
+                                <select class="form-select" id="group_id" name="group_id">
+                                    <option value="">All Groups</option>
                                 </select>
                             </div>
                         </div>
@@ -228,10 +242,17 @@ include("./includes/menu.php");
 <script>
 $(document).ready(function() {
     let currentStep = 0;
-    const steps = ['campus', 'college', 'school', 'department', 'program', 'intake'];
+    const steps = ['campus', 'college', 'school', 'department', 'program', 'intake', 'group'];
     
     // Initialize Select2 for all select elements
     $('.form-select').select2({
+        width: '100%'
+    });
+    
+    // Initialize Select2 for group filter
+    $('#group_id').select2({
+        placeholder: "Select groups",
+        allowClear: true,
         width: '100%'
     });
     
@@ -256,6 +277,8 @@ $(document).ready(function() {
                 handleDepartmentChange();
             } else if (currentField === 'program') {
                 handleProgramChange();
+            } else if (currentField === 'intake') {
+                handleIntakeChange();
             }
             
             // Move to next step
@@ -325,6 +348,7 @@ $(document).ready(function() {
         $('#nextBtn').show();
         $('#applyBtn').hide();
         $('.form-select').val('').trigger('change');
+        $('#group_id').val(null).trigger('change');
         loadTimetable();
     }
     
@@ -358,6 +382,12 @@ $(document).ready(function() {
     });
     
     $('#intake_id').on('change', function() {
+        handleIntakeChange();
+        loadTimetable();
+    });
+
+    // Add group change handler
+    $('#group_id').on('change', function() {
         loadTimetable();
     });
 });
@@ -535,9 +565,11 @@ function handleProgramChange() {
     const departmentId = $('#department_id').val();
     const programId = $('#program_id').val();
     const intakeSelect = $('#intake_id');
+    const groupSelect = $('#group_id');
     
-    // Reset intake dropdown
+    // Reset dropdowns
     intakeSelect.empty().append('<option value="">All Intakes</option>');
+    groupSelect.empty().append('<option value="">All Groups</option>');
     
     if (campusId && collegeId && schoolId && departmentId && programId) {
         $.ajax({
@@ -555,10 +587,66 @@ function handleProgramChange() {
                                 const department = school.departments.find(d => d.id === parseInt(departmentId));
                                 if (department) {
                                     const program = department.programs.find(p => p.id === parseInt(programId));
-                                    if (program && program.intakes) {
-                                        program.intakes.forEach(intake => {
-                                            intakeSelect.append(`<option value="${intake.id}">${intake.year}/${intake.month}</option>`);
-                                        });
+                                    if (program) {
+                                        // Load intakes
+                                        if (program.intakes) {
+                                            program.intakes.forEach(intake => {
+                                                intakeSelect.append(`<option value="${intake.id}">${intake.year}/${intake.month}</option>`);
+                                            });
+                                        }
+                                        
+                                        // Load groups
+                                        if (program.groups) {
+                                            program.groups.forEach(group => {
+                                                groupSelect.append(`<option value="${group.id}">${group.name} (${group.size})</option>`);
+                                            });
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+function handleIntakeChange() {
+    const campusId = $('#campus_id').val();
+    const collegeId = $('#college_id').val();
+    const schoolId = $('#school_id').val();
+    const departmentId = $('#department_id').val();
+    const programId = $('#program_id').val();
+    const intakeId = $('#intake_id').val();
+    const groupSelect = $('#group_id');
+    
+    // Reset group dropdown
+    groupSelect.empty().append('<option value="">All Groups</option>');
+    
+    if (campusId && collegeId && schoolId && departmentId && programId && intakeId) {
+        $.ajax({
+            url: 'get_organization_structure.php',
+            method: 'GET',
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    const campus = response.data.find(c => c.id === campusId);
+                    if (campus) {
+                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
+                        if (college) {
+                            const school = college.schools.find(s => s.id === parseInt(schoolId));
+                            if (school) {
+                                const department = school.departments.find(d => d.id === parseInt(departmentId));
+                                if (department) {
+                                    const program = department.programs.find(p => p.id === parseInt(programId));
+                                    if (program) {
+                                        const intake = program.intakes.find(i => i.id === parseInt(intakeId));
+                                        if (intake && intake.groups) {
+                                            intake.groups.forEach(group => {
+                                                groupSelect.append(`<option value="${group.id}">${group.name}</option>`);
+                                            });
+                                        }
                                     }
                                 }
                             }
@@ -583,6 +671,7 @@ function loadTimetable() {
         department_id: $('#department_id').val(),
         program_id: $('#program_id').val(),
         intake_id: $('#intake_id').val(),
+        group_id: $('#group_id').val(),
         academic_year_id: academicYearId,
         semester: semester
     };

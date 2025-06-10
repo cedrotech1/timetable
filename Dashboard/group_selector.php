@@ -10,8 +10,7 @@ $groups_query = "SELECT sg.*, i.year, i.month, p.name as program_name
 $groups_result = mysqli_query($connection, $groups_query);
 ?>
 
-<!-- Groups Modal -->
-<div class="modal fade" id="groupsModal" tabindex="-1" aria-labelledby="groupsModalLabel" aria-hidden="true">
+<!-- Groups Modal --><div class="modal fade" id="groupsModal" tabindex="-1" aria-labelledby="groupsModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
@@ -131,8 +130,8 @@ $groups_result = mysqli_query($connection, $groups_query);
 
 <script>
 // Make selectedGroupIds globally accessible
-let selectedGroupIds = new Set();
-let selectedGroupsData = new Map(); // Store group data for preview
+window.selectedGroupIds = window.selectedGroupIds || new Set();
+window.selectedGroupsData = window.selectedGroupsData || new Map();
 
 // Define updateSelectedGroupsCount in the global scope
 function updateSelectedGroupsCount() {
@@ -146,15 +145,49 @@ function updateSelectedGroupsCount() {
 // Update selected groups preview
 function updateSelectedGroupsPreview() {
     const preview = document.getElementById('selectedGroupsPreview');
+    if (!preview) return;
+    
     preview.innerHTML = '';
     
-    selectedGroupsData.forEach((data, id) => {
+    if (!window.selectedGroupsData || window.selectedGroupsData.size === 0) {
+        preview.innerHTML = '<div class="text-muted text-center">No groups selected</div>';
+        return;
+    }
+    
+    // Calculate total size
+    let totalSize = 0;
+    window.selectedGroupsData.forEach((data, id) => {
+        console.log('Processing group data for preview:', { id, data });
+        if (data.size) {
+            totalSize += parseInt(data.size);
+        }
+    });
+    
+    console.log('Total size for preview:', totalSize);
+    
+    // Add summary at the top
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'selected-groups-summary mb-3 p-2 bg-light rounded';
+    summaryDiv.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${window.selectedGroupsData.size} Groups Selected</strong>
+            </div>
+            <div>
+                <strong>Total Size: ${totalSize} Students</strong>
+            </div>
+        </div>
+    `;
+    preview.appendChild(summaryDiv);
+    
+    // Add individual groups
+    window.selectedGroupsData.forEach((data, id) => {
         const groupDiv = document.createElement('div');
         groupDiv.className = 'selected-group';
         
         // Format group info
         const infoParts = [];
-        if (data.size) infoParts.push(`Size: ${data.size}`);
+        if (data.size) infoParts.push(`Size: ${data.size} students`);
         if (data.program_name) infoParts.push(data.program_name);
         if (data.intake_year && data.intake_month) {
             infoParts.push(`${data.intake_year}/${data.intake_month}`);
@@ -162,12 +195,12 @@ function updateSelectedGroupsPreview() {
         
         groupDiv.innerHTML = `
             <div>
-                <div>${data.name}</div>
+                <div class="group-name">${data.name}</div>
                 <div class="group-info">
                     ${infoParts.join(' | ')}
                 </div>
             </div>
-            <button type="button" onclick="removeGroupFromPreview('${id}')" title="Remove group">
+            <button type="button" class="remove-group" data-group-id="${id}" title="Remove group">
                 <i class="fas fa-times"></i>
             </button>
         `;
@@ -175,17 +208,253 @@ function updateSelectedGroupsPreview() {
     });
 }
 
-// Remove group from preview
-function removeGroupFromPreview(groupId) {
-    selectedGroupIds.delete(groupId);
-    selectedGroupsData.delete(groupId);
+// Handle group selection
+function handleGroupSelection(groupId, isChecked, groupData) {
+    console.log('Handling group selection:', { groupId, isChecked, groupData });
+    
+    if (isChecked) {
+        window.selectedGroupIds.add(groupId);
+        // Ensure size is properly stored as a number
+        const size = parseInt(groupData.size) || 0;
+        window.selectedGroupsData.set(groupId, {
+            name: groupData.name,
+            size: size.toString(),
+            program_name: groupData.program_name,
+            intake_year: groupData.intake_year,
+            intake_month: groupData.intake_month
+        });
+    } else {
+        window.selectedGroupIds.delete(groupId);
+        window.selectedGroupsData.delete(groupId);
+    }
+    
     updateSelectedGroupsPreview();
     updateSelectedGroupsCount();
+    
+    // Update facility button state
+    if (typeof window.updateFacilityButton === 'function') {
+        console.log('Triggering facility button update from group selection');
+        window.updateFacilityButton();
+    }
+}
+
+// Add event listener for group checkboxes
+document.addEventListener('change', function(e) {
+    if (e.target.classList.contains('group-checkbox')) {
+        const groupId = e.target.value;
+        const groupData = {
+            name: e.target.dataset.name,
+            size: e.target.dataset.size || '0',
+            program_name: e.target.dataset.program,
+            intake_year: e.target.dataset.intakeYear,
+            intake_month: e.target.dataset.intakeMonth
+        };
+        console.log('Group checkbox changed:', { groupId, groupData });
+        handleGroupSelection(groupId, e.target.checked, groupData);
+    }
+});
+
+// Add event listener for group removal
+document.addEventListener('click', function(e) {
+    if (e.target.closest('.remove-group')) {
+        const groupId = e.target.closest('.remove-group').dataset.groupId;
+        removeGroupFromPreview(groupId);
+    }
+});
+
+// Remove group from preview
+function removeGroupFromPreview(groupId) {
+    console.log('Removing group from preview:', groupId);
+    window.selectedGroupIds.delete(groupId);
+    window.selectedGroupsData.delete(groupId);
     
     // Update checkbox in table if visible
     const checkbox = document.querySelector(`.group-checkbox[value="${groupId}"]`);
     if (checkbox) {
         checkbox.checked = false;
+    }
+    
+    updateSelectedGroupsPreview();
+    updateSelectedGroupsCount();
+}
+
+// Handle confirm selection
+document.getElementById('confirmGroups').addEventListener('click', function() {
+    console.log('Confirming group selection:', {
+        selectedGroups: Array.from(window.selectedGroupIds),
+        groupData: Object.fromEntries(window.selectedGroupsData)
+    });
+    
+    // Update the main display
+    if (typeof window.updateSelectedGroupsDisplay === 'function') {
+        window.updateSelectedGroupsDisplay();
+    }
+    
+    // Update facility button state
+    if (typeof window.updateFacilityButton === 'function') {
+        console.log('Triggering facility button update from confirm selection');
+        window.updateFacilityButton();
+    }
+    
+    // Close the modal
+    const modal = bootstrap.Modal.getInstance(document.getElementById('groupsModal'));
+    if (modal) {
+        modal.hide();
+    }
+});
+
+// Add event listener for modal show
+document.getElementById('groupsModal').addEventListener('show.bs.modal', function() {
+    console.log('Modal showing, current selection:', {
+        selectedGroups: Array.from(window.selectedGroupIds),
+        groupData: Object.fromEntries(window.selectedGroupsData)
+    });
+    
+    // Update checkboxes to match current selection state
+    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
+        checkbox.checked = window.selectedGroupIds.has(checkbox.value);
+    });
+    
+    // Update the preview
+    updateSelectedGroupsPreview();
+    updateSelectedGroupsCount();
+});
+
+// Add event listener for modal hidden
+document.getElementById('groupsModal').addEventListener('hidden.bs.modal', function() {
+    console.log('Modal hidden, final selection:', {
+        selectedGroups: Array.from(window.selectedGroupIds),
+        groupData: Object.fromEntries(window.selectedGroupsData)
+    });
+});
+
+// Handle clear all selections
+document.getElementById('clearAllSelections').addEventListener('click', function() {
+    console.log('Clearing all selections');
+    window.selectedGroupIds.clear();
+    window.selectedGroupsData.clear();
+    
+    // Uncheck all checkboxes
+    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    updateSelectedGroupsPreview();
+    updateSelectedGroupsCount();
+    
+    // Update the main display if the function exists
+    if (typeof window.updateSelectedGroupsDisplay === 'function') {
+        window.updateSelectedGroupsDisplay();
+    }
+    
+    // Update facility button state
+    if (typeof window.updateFacilityButton === 'function') {
+        console.log('Triggering facility button update from clear all');
+        window.updateFacilityButton();
+    }
+});
+
+// Update selected groups display
+function updateSelectedGroupsDisplay() {
+    const selectedGroupsDiv = document.getElementById('selectedGroups');
+    if (!selectedGroupsDiv) return;
+    
+    selectedGroupsDiv.innerHTML = '';
+
+    if (window.selectedGroupsData.size === 0) {
+        selectedGroupsDiv.innerHTML = '<div class="text-muted text-center">No groups selected</div>';
+        return;
+    }
+
+    // Calculate total size
+    let totalSize = 0;
+    window.selectedGroupsData.forEach((data, id) => {
+        console.log('Processing group data for main display:', { id, data });
+        if (data.size) {
+            totalSize += parseInt(data.size);
+        }
+    });
+
+    console.log('Total size for main display:', totalSize);
+
+    // Add summary at the top
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'selected-groups-summary mb-3 p-2 bg-light rounded';
+    summaryDiv.innerHTML = `
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>${window.selectedGroupsData.size} Groups Selected</strong>
+            </div>
+            <div>
+                <strong>Total Size: ${totalSize} Students</strong>
+            </div>
+        </div>
+    `;
+    selectedGroupsDiv.appendChild(summaryDiv);
+
+    // Add individual groups
+    window.selectedGroupsData.forEach((data, id) => {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'selected-group';
+        
+        // Format group info
+        const infoParts = [];
+        if (data.size) infoParts.push(`Size: ${data.size} students`);
+        if (data.program_name) infoParts.push(data.program_name);
+        if (data.intake_year && data.intake_month) {
+            infoParts.push(`${data.intake_year}/${data.intake_month}`);
+        }
+        
+        groupDiv.innerHTML = `
+            <div>
+                <div class="group-name">${data.name}</div>
+                <div class="group-info">
+                    ${infoParts.join(' | ')}
+                </div>
+            </div>
+            <button type="button" class="remove-group" data-group-id="${id}" title="Remove group">
+                <i class="fas fa-times"></i>
+            </button>
+            <input type="hidden" name="group_ids[]" value="${id}">
+        `;
+        selectedGroupsDiv.appendChild(groupDiv);
+    });
+
+    // Update display text
+    const displayInput = document.getElementById('selectedGroupsDisplay');
+    if (displayInput) {
+        displayInput.value = window.selectedGroupsData.size > 0 ? 
+            `${window.selectedGroupsData.size} group(s) selected - Total: ${totalSize} students` : '';
+    }
+
+    // Update facility button state
+    updateFacilityButton();
+}
+
+// Update facility button state
+function updateFacilityButton() {
+    const facilityButton = document.getElementById('facilityButton');
+    if (facilityButton) {
+        const hasGroups = window.selectedGroupIds.size > 0;
+        const hasValidSchedule = document.querySelectorAll('.session-entry').length > 0 && 
+            Array.from(document.querySelectorAll('.session-entry')).every(entry => {
+                const day = entry.querySelector('.session-day').value;
+                const startTime = entry.querySelector('.session-start').value;
+                const endTime = entry.querySelector('.session-end').value;
+                return day && startTime && endTime;
+            });
+        
+        facilityButton.disabled = !(hasValidSchedule && hasGroups);
+        
+        // Add tooltip to explain why button is disabled
+        if (facilityButton.disabled) {
+            const reason = !hasValidSchedule ? 'Please complete schedule first' : 
+                         !hasGroups ? 'Please select groups first' : 
+                         'Please complete all required fields';
+            facilityButton.title = reason;
+        } else {
+            facilityButton.title = 'Select a facility';
+        }
     }
 }
 
@@ -241,140 +510,139 @@ document.getElementById('intake').addEventListener('change', function() {
     }
 });
 
-// Add event listener for group checkboxes
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('group-checkbox')) {
-        const groupId = e.target.value;
-        const groupName = e.target.dataset.name;
-        const groupSize = e.target.dataset.size || '';
-        const programName = e.target.dataset.program || '';
-        const intakeYear = e.target.dataset.intakeYear || '';
-        const intakeMonth = e.target.dataset.intakeMonth || '';
-
-        if (e.target.checked) {
-            selectedGroupIds.add(groupId);
-            selectedGroupsData.set(groupId, {
-                name: groupName,
-                size: groupSize,
-                program_name: programName,
-                intake_year: intakeYear,
-                intake_month: intakeMonth
-            });
-        } else {
-            selectedGroupIds.delete(groupId);
-            selectedGroupsData.delete(groupId);
-        }
-        updateSelectedGroupsCount();
-        updateSelectedGroupsPreview();
-    }
-});
-
-// Select All checkbox      
-document.getElementById('selectAllCheckbox').addEventListener('change', function() {
-    const checkboxes = document.querySelectorAll('.group-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-    });
-    updateSelectedGroupsCount();
-});
-
-// Select All button
-document.getElementById('selectAllGroups').addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('.group-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = true;
-    });
-    document.getElementById('selectAllCheckbox').checked = true;
-    updateSelectedGroupsCount();
-});
-
-// Deselect All button
-document.getElementById('deselectAllGroups').addEventListener('click', function() {
-    const checkboxes = document.querySelectorAll('.group-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    document.getElementById('selectAllCheckbox').checked = false;
-    updateSelectedGroupsCount();
-});
-
-// Group search
-document.getElementById('groupSearch').addEventListener('input', function(e) {
-    const searchText = e.target.value.toLowerCase();
+// Add event listener for search
+document.getElementById('groupSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
     const rows = document.querySelectorAll('#groupsTableBody tr');
+    
     rows.forEach(row => {
-        const text = row.textContent.toLowerCase();
-        row.style.display = text.includes(searchText) ? '' : 'none';
+        const groupName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
+        const programName = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
+        const intake = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
+        
+        if (groupName.includes(searchTerm) || programName.includes(searchTerm) || intake.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
     });
 });
 
-// Clear search
+// Add event listener for clear search
 document.getElementById('clearSearch').addEventListener('click', function() {
     document.getElementById('groupSearch').value = '';
-    const rows = document.querySelectorAll('#groupsTableBody tr');
-    rows.forEach(row => {
+    document.querySelectorAll('#groupsTableBody tr').forEach(row => {
         row.style.display = '';
     });
 });
 
-// Clear all selections button
-document.getElementById('clearAllSelections').addEventListener('click', function() {
-    selectedGroupIds.clear();
-    selectedGroupsData.clear();
-    updateSelectedGroupsPreview();
-    updateSelectedGroupsCount();
+// Add event listeners for select all/deselect all
+document.getElementById('selectAllGroups').addEventListener('click', function() {
+    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
+        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
     
-    // Update all checkboxes
-    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
+    visibleCheckboxes.forEach(checkbox => {
+        if (!checkbox.checked) {
+            checkbox.checked = true;
+            const groupId = checkbox.value;
+            const groupData = {
+                name: checkbox.dataset.name,
+                size: checkbox.dataset.size,
+                program_name: checkbox.dataset.program,
+                intake_year: checkbox.dataset.intakeYear,
+                intake_month: checkbox.dataset.intakeMonth
+            };
+            handleGroupSelection(groupId, true, groupData);
+        }
     });
-    document.getElementById('selectAllCheckbox').checked = false;
+});
+
+document.getElementById('deselectAllGroups').addEventListener('click', function() {
+    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
+        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
+    
+    visibleCheckboxes.forEach(checkbox => {
+        if (checkbox.checked) {
+            checkbox.checked = false;
+            const groupId = checkbox.value;
+            handleGroupSelection(groupId, false);
+        }
+    });
+});
+
+// Add event listener for select all checkbox
+document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
+        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
+    
+    visibleCheckboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+        const groupId = checkbox.value;
+        const groupData = {
+            name: checkbox.dataset.name,
+            size: checkbox.dataset.size,
+            program_name: checkbox.dataset.program,
+            intake_year: checkbox.dataset.intakeYear,
+            intake_month: checkbox.dataset.intakeMonth
+        };
+        handleGroupSelection(groupId, this.checked, groupData);
+    });
+});
+
+// Add event listener for modal show
+document.getElementById('groupsModal').addEventListener('show.bs.modal', function() {
+    // Update checkboxes to match current selection state
+    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
+        checkbox.checked = window.selectedGroupIds.has(checkbox.value);
+    });
 });
 
 // Update loadGroups function
 function loadGroups(intakeId) {
     console.log('Loading groups for intake:', intakeId);
     fetch(`selectors/get_groups.php?intake_id=${intakeId}`)
-        .then(response => {
-            console.log('Groups response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
+        .then(response => response.json())
         .then(data => {
             console.log('Groups data:', data);
             if (data.success) {
                 const tbody = document.getElementById('groupsTableBody');
                 tbody.innerHTML = '';
+                
+                if (!data.data || data.data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">
+                                No groups available for this selection
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
                 data.data.forEach(group => {
                     const row = document.createElement('tr');
                     row.className = 'group-row';
-                    const isSelected = selectedGroupIds.has(group.id);
+                    const isSelected = window.selectedGroupIds.has(group.id);
                     
                     // Format group info for data attributes
                     const programName = group.program_name || '';
                     const intakeYear = group.intake_year || '';
                     const intakeMonth = group.intake_month || '';
+                    const groupSize = group.size || '0';
                     
                     row.innerHTML = `
                         <td>
                             <input type="checkbox" class="form-check-input group-checkbox" 
                                    value="${group.id}" 
                                    data-name="${group.name}"
-                                   data-size="${group.size || ''}"
+                                   data-size="${groupSize}"
                                    data-program="${programName}"
                                    data-intake-year="${intakeYear}"
                                    data-intake-month="${intakeMonth}"
                                    ${isSelected ? 'checked' : ''}>
                         </td>
                         <td>${group.name}</td>
-                        <td>${group.size || ''}</td>
+                        <td>${groupSize} students</td>
                         <td>${programName}</td>
                         <td>${intakeYear && intakeMonth ? `${intakeYear}/${intakeMonth}` : ''}</td>
                         <td>
@@ -396,78 +664,6 @@ function loadGroups(intakeId) {
             console.error('Error in loadGroups:', error);
             alert('Error loading groups: ' + error.message);
         });
-}
-
-// Update confirm groups button
-document.getElementById('confirmGroups').addEventListener('click', function() {
-    if (selectedGroupIds.size === 0) {
-        alert('Please select at least one group');
-        return;
-    }
-
-    const selectedGroupsDiv = document.getElementById('selectedGroups');
-    selectedGroupsDiv.innerHTML = '';
-
-    selectedGroupsData.forEach((data, id) => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'selected-group';
-        
-        // Format group info
-        const infoParts = [];
-        if (data.size) infoParts.push(`Size: ${data.size}`);
-        if (data.program_name) infoParts.push(data.program_name);
-        if (data.intake_year && data.intake_month) {
-            infoParts.push(`${data.intake_year}/${data.intake_month}`);
-        }
-        
-        groupDiv.innerHTML = `
-            <div>
-                <div>${data.name}</div>
-                <div class="group-info">
-                    ${infoParts.join(' | ')}
-                </div>
-            </div>
-            <button type="button" onclick="removeGroup('${id}')" title="Remove group">
-                <i class="fas fa-times"></i>
-            </button>
-            <input type="hidden" name="group_ids[]" value="${id}">
-        `;
-        selectedGroupsDiv.appendChild(groupDiv);
-    });
-
-    // Update display
-    document.getElementById('selectedGroupsDisplay').value = 
-        selectedGroupIds.size > 0 ? `${selectedGroupIds.size} group(s) selected` : '';
-
-    // Close modal
-    bootstrap.Modal.getInstance(document.getElementById('groupsModal')).hide();
-    
-    // Update facility button state
-    if (typeof window.updateFacilityButton === 'function') {
-        window.updateFacilityButton();
-    }
-
-    // Update submit button state
-    if (typeof window.updateSubmitButton === 'function') {
-        window.updateSubmitButton();
-    }
-});
-
-function removeGroup(groupId) {
-    const groupElement = document.querySelector(`input[value="${groupId}"]`).parentElement;
-    groupElement.remove();
-    selectedGroupIds.delete(groupId);
-    
-    // Update display
-    const selectedGroupsDisplay = document.getElementById('selectedGroupsDisplay');
-    selectedGroupsDisplay.value = selectedGroupIds.size > 0 
-        ? `${selectedGroupIds.size} group(s) selected` 
-        : '';
-        
-    // Call updateFacilityButton to update facility button state
-    if (typeof window.updateFacilityButton === 'function') {
-        window.updateFacilityButton();
-    }
 }
 
 function resetSelects(selectIds) {
@@ -527,7 +723,7 @@ function loadColleges(campusId) {
                     throw new Error('Invalid JSON response: ' + e.message);
                 }
             });
-        })
+        })  
         .then(data => {
             console.log('Colleges data:', data);
             if (data.success) {
@@ -687,4 +883,49 @@ function loadIntakes(programId) {
             alert('Error loading intakes: ' + error.message);
         });
 }
+
+// Add event listener for schedule changes
+document.addEventListener('change', function(e) {
+    if (e.target.matches('.session-day, .session-start, .session-end')) {
+        const sessionEntry = e.target.closest('.session-entry');
+        const day = sessionEntry.querySelector('.session-day').value;
+        const startTime = sessionEntry.querySelector('.session-start').value;
+        const endTime = sessionEntry.querySelector('.session-end').value;
+        
+        // Update facility button state based on schedule completion
+        updateFacilityButton();
+    }
+});
+
+// Add styles for the summary
+const style = document.createElement('style');
+style.textContent = `
+    .selected-groups-summary {
+        border: 1px solid #dee2e6;
+        background-color: #f8f9fa;
+        margin-bottom: 1rem;
+    }
+    .selected-groups-summary strong {
+        color: #0d6efd;
+    }
+    .selected-group {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        margin-bottom: 0.5rem;
+        background-color: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+    }
+    .selected-group .group-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .selected-group button {
+        padding: 0.25rem 0.5rem;
+        margin-left: 0.5rem;
+    }
+`;
+document.head.appendChild(style);
 </script> 

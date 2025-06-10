@@ -31,8 +31,11 @@ $query = "
         m.id as module_id,
         m.name as module_name,
         m.code as module_code,
+        m.credits as module_credit,
         u.id as lecturer_id,
         u.names as lecturer_name,
+        u.phone as lecturer_phone,
+        u.email as lecturer_email,
         f.id as facility_id,
         f.name as facility_name,
         f.location as facility_location,
@@ -155,11 +158,14 @@ while ($row = mysqli_fetch_assoc($result)) {
                 'module' => [
                     'id' => $row['module_id'],
                     'name' => $row['module_name'],
-                    'code' => $row['module_code']
+                    'code' => $row['module_code'],
+                    'credits'=> $row['module_credit'],
                 ],
                 'lecturer' => [
                     'id' => $row['lecturer_id'],
-                    'name' => $row['lecturer_name']
+                    'name' => $row['lecturer_name'],
+                    'phone'=>$row['lecturer_phone'],
+                    'email'=> $row['lecturer_email'],
                 ],
                 'facility' => [
                     'id' => $row['facility_id'],

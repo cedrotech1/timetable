@@ -33,10 +33,42 @@ try {
     $group_ids = isset($_POST['group_ids']) ? $_POST['group_ids'] : [];
     $schedule = isset($_POST['schedule']) ? json_decode($_POST['schedule'], true) : null;
 
+    // Remove any duplicate group IDs
+    $group_ids = array_unique($group_ids);
+
     // Validate required fields
     if (!$facility_id || !$module_id || !$lecturer_id || !$academic_year_id || !$semester || empty($group_ids) || !$schedule) {
         sendJsonResponse(false, 'Missing required fields');
     }
+
+    // Validate group IDs are integers
+    foreach ($group_ids as $group_id) {
+        if (!is_numeric($group_id) || intval($group_id) <= 0) {
+            sendJsonResponse(false, 'Invalid group ID provided');
+        }
+    }
+
+    // Check if groups exist and are active
+    $group_query = "SELECT id, size FROM student_group WHERE id IN (" . implode(',', array_fill(0, count($group_ids), '?')) . ")";
+    $stmt = mysqli_prepare($connection, $group_query);
+    mysqli_stmt_bind_param($stmt, str_repeat('i', count($group_ids)), ...$group_ids);
+    mysqli_stmt_execute($stmt);
+    $group_result = mysqli_stmt_get_result($stmt);
+    
+    $valid_groups = [];
+    $total_students = 0;
+    while ($group = mysqli_fetch_assoc($group_result)) {
+        $valid_groups[] = $group['id'];
+        $total_students += $group['size'];
+    }
+
+    // Check if all provided group IDs are valid
+    if (count($valid_groups) !== count($group_ids)) {
+        sendJsonResponse(false, 'One or more selected groups are invalid or inactive');
+    }
+
+    // Update group_ids to only include valid groups
+    $group_ids = $valid_groups;
 
     // Get facility capacity
     $facility_query = "SELECT capacity FROM facility WHERE id = ?";
@@ -48,18 +80,6 @@ try {
 
     if (!$facility) {
         sendJsonResponse(false, 'Selected facility not found');
-    }
-
-    // Calculate total group size
-    $total_students = 0;
-    $group_query = "SELECT size FROM student_group WHERE id IN (" . implode(',', array_fill(0, count($group_ids), '?')) . ")";
-    $stmt = mysqli_prepare($connection, $group_query);
-    mysqli_stmt_bind_param($stmt, str_repeat('i', count($group_ids)), ...$group_ids);
-    mysqli_stmt_execute($stmt);
-    $group_result = mysqli_stmt_get_result($stmt);
-
-    while ($group = mysqli_fetch_assoc($group_result)) {
-        $total_students += $group['size'];
     }
 
     // Check if facility has sufficient capacity

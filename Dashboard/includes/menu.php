@@ -133,6 +133,12 @@
                     <i class="bi bi-building"></i><span>time table view</span>
                 </a>
             </li>
+            <!-- facility view -->
+            <li class="nav-item">
+                <a class="nav-link collapsed" href="facility_view.php">
+                    <i class="bi bi-building"></i><span>manage facility</span>
+                </a>
+            </li>
 
           
              <a class="nav-link collapsed" data-bs-target="#icons-nav10" data-bs-toggle="collapse" href="#">
