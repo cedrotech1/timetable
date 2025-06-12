@@ -184,17 +184,17 @@ if (isset($_POST["login"])) {
             </div>
             <hr>
             <div class="demo-account mb-3">
-              <h6><i class="bi bi-person"></i> Huye welfare  Account</h6>
-              <p class="mb-1"><strong>Email:</strong> cedrickhakuzimana75@gmail.com</p>
+              <h6><i class="bi bi-person"></i> Huye admin  Account</h6>
+              <p class="mb-1"><strong>Email:</strong>adminhuye@gmail.com</p>
                 <p class="mb-1"><strong>Password:</strong> 1234</p>
-                <button class="btn btn-sm btn-primary use-demo" data-email="cedrickhakuzimana75@gmail.com" data-pass="1234">Use This Account</button>
-            </div>
+                <button class="btn btn-sm btn-primary use-demo" data-email="adminhuye@gmail.com" data-pass="1234">Use This Account</button>
+            </div>  
             <hr>
             <div class="demo-account mb-3">
-              <h6><i class="bi bi-person"></i> remera welfare  Account</h6>
-              <p class="mb-1"><strong>Email:</strong> akimana@gmail.com</p>
+              <h6><i class="bi bi-person"></i> huye time tabling officer Account</h6>
+              <p class="mb-1"><strong>Email:</strong>timetable_officer@gmail.com</p>
                 <p class="mb-1"><strong>Password:</strong> 1234</p>
-                <button class="btn btn-sm btn-primary use-demo" data-email="akimana@gmail.com" data-pass="1234">Use This Account</button>
+                <button class="btn btn-sm btn-primary use-demo" data-email="timetable_officer@gmail.com" data-pass="1234">Use This Account</button>
             </div>
           </div>
         </div>
