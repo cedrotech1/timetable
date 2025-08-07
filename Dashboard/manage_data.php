@@ -24,7 +24,7 @@ $role = $row['role'];
 $active_tab = isset($_GET['tab']) ? $_GET['tab'] : 'facilities';
 
 // Get all campuses for selection
-if($role === 'warefare'){       
+if($role !== 'admin'){       
     $campuses_query = mysqli_query($connection, "SELECT * FROM campus WHERE id = $mycampus ORDER BY name");
 } else {
     $campuses_query = mysqli_query($connection, "SELECT * FROM campus ORDER BY name");

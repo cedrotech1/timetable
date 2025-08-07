@@ -10,7 +10,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 include('connection.php');
-include('./includes/auth.php');
+// include('./includes/auth.php');
 
 // Get user's role and campus
 $id = $_SESSION['id'];

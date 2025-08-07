@@ -1017,22 +1017,22 @@ $modules_result = mysqli_query($connection, $modules_query);
                 }
 
                 // Use the selectedGroupIds Set
-                if (selectedGroupIds.size === 0) {
-                    // Clear facility selection if no groups are selected
-                    facilityDisplay.value = '';
-                    facilityInput.value = '';
-                    const facilityTable = document.querySelector('#facilityModal .table tbody');
-                    if (facilityTable) {
-                        facilityTable.innerHTML = `
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">
-                                Please select student groups first
-                            </td>
-                        </tr>
-                    `;
-                    }
-                    return;
-                }
+                // if (selectedGroupIds.size === 0) {
+                //     // Clear facility selection if no groups are selected
+                //     facilityDisplay.value = '';
+                //     facilityInput.value = '';
+                //     const facilityTable = document.querySelector('#facilityModal .table tbody');
+                //     if (facilityTable) {
+                //         facilityTable.innerHTML = `
+                //         <tr>
+                //             <td colspan="5" class="text-center text-muted">
+                //                 Please select student groups first
+                //             </td>
+                //         </tr>
+                //     `;
+                //     }
+                //     return;
+                // }
 
                 // Check facility availability
                 try {

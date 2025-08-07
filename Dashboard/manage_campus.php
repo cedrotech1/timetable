@@ -484,13 +484,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-if($role === 'warefare'){       
-    // Get campuses for warefare role - only their assigned campus
-    $campuses_query = mysqli_query($connection, "SELECT * FROM campus WHERE id = $mycampus ORDER BY name");
-} else {
+// if($role === 'warefare'){       
+//     // Get campuses for warefare role - only their assigned campus
+//     $campuses_query = mysqli_query($connection, "SELECT * FROM campus WHERE id = $mycampus ORDER BY name");
+// } else {
     // Get all campuses for other roles
-    $campuses_query = mysqli_query($connection, "SELECT * FROM campus ORDER BY name");
-}
+    $campuses_query = mysqli_query($connection, "SELECT * FROM campus WHERE id = $mycampus ORDER BY name");
+// }
 ?>
 
 <!DOCTYPE html>

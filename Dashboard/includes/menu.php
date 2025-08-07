@@ -47,12 +47,14 @@
                             <i class="bi <?php echo $info['icon']; ?> fs-4 text-<?php echo $info['color']; ?>"></i>
                         </div>
                         <div>
-                            <h6 class="mb-0 fw-bold text-<?php echo $info['color']; ?>"><?php echo ucfirst($role); ?></h6>
+                            <h6 class="mb-0 fw-bold text-<?php echo $info['color']; ?>"><?php echo ucfirst($role); ?>
+                            </h6>
                             <small class="text-muted"><?php echo $info['title']; ?></small>
                         </div>
                     </div>
                     <div class="progress" style="height: 4px;">
-                        <div class="progress-bar bg-<?php echo $info['color']; ?>" role="progressbar" style="width: 100%"></div>
+                        <div class="progress-bar bg-<?php echo $info['color']; ?>" role="progressbar"
+                            style="width: 100%"></div>
                     </div>
                 </div>
             </div>
@@ -64,25 +66,31 @@
                 backdrop-filter: blur(10px);
                 background-color: rgba(16, 63, 133, 0.95) !important;
             }
+
             .role-card:hover {
                 transform: translateY(-3px);
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1) !important;
+                box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1) !important;
                 background-color: rgba(255, 255, 255, 1) !important;
             }
+
             .role-icon {
                 transition: all 0.3s ease;
             }
+
             .role-card:hover .role-icon {
                 transform: scale(1.1);
             }
+
             .progress-bar {
                 transition: all 0.3s ease;
             }
+
             .role-card:hover .progress-bar {
                 opacity: 0.8;
             }
+
             .card-body {
-                background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(255,255,255,0.95));
+                background: linear-gradient(145deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.95));
             }
         </style>
 
@@ -93,13 +101,20 @@
                     <i class="bi bi-speedometer2"></i><span>Dashboard</span>
                 </a>
             </li>
-
-            <!-- User Management -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="add_user.php">
-                    <i class="bi bi-people"></i><span>Manage Users</span>
+            <li>
+                <a class="nav-link collapsed" href="manage_campus.php">
+                    <i class="bi bi-building"></i><span>Manage Campus</span>
                 </a>
             </li>
+              <!-- Facilities -->
+              <li class="nav-item">
+                <a class="nav-link collapsed" href="facility_view.php">
+                    <i class="bi bi-geo-alt"></i><span>Manage Facilities</span>
+                </a>
+            </li>
+
+
+
 
             <li class="nav-item">
                 <a class="nav-link collapsed" data-bs-target="#timetable-nav" data-bs-toggle="collapse" href="#">
@@ -139,25 +154,8 @@
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link collapsed" data-bs-target="#reset-nav" data-bs-toggle="collapse" href="#">
-                    <i class="bi bi-exclamation-triangle text-danger"></i><span class="text-danger">Danger Zone</span><i
-                        class="bi bi-chevron-down ms-auto"></i>
-                </a>
-                <ul id="reset-nav" class="nav-content collapse" data-bs-parent="#sidebar-nav">
-                    <li>
-                        <a class="nav-link collapsed text-danger" href="Reset_structure_data.php">
-                            <i class="bi bi-trash"></i><span>Reset Structure Data</span>
-                        </a>
-                    </li>
-                    <li>
-                        <a class="nav-link collapsed text-danger" href="Reset_docs_data.php">
-                            <i class="bi bi-trash"></i><span>Reset Docs Data</span>
-                        </a>
-                    </li>
-                </ul>
-            </li>
 
+         
 
 
         <?php } ?>
@@ -193,6 +191,11 @@
                             <i class="bi bi-building"></i><span>Manage Campus</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link collapsed" href="organization_structure.php">
+                            <i class="bi bi-diagram-3"></i><span>Organization Structure</span>
+                        </a>
+                    </li>
                 </ul>
             </li>
 
@@ -216,7 +219,7 @@
             </li>
 
             <!-- Data Management -->
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link collapsed" data-bs-target="#data-nav" data-bs-toggle="collapse" href="#">
                     <i class="bi bi-database"></i><span>Data Management</span><i class="bi bi-chevron-down ms-auto"></i>
                 </a>
@@ -231,16 +234,12 @@
                             <i class="bi bi-pencil-square"></i><span>Manage Campus (Form)</span>
                         </a>
                     </li>
-                    <li>
-                        <a class="nav-link collapsed" href="manage_campus.php">
-                            <i class="bi bi-building"></i><span>Manage Campus</span>
-                        </a>
-                    </li>
+                
                 </ul>
-            </li>
+            </li> -->
 
             <!-- Timetable Management -->
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link collapsed" data-bs-target="#timetable-nav" data-bs-toggle="collapse" href="#">
                     <i class="bi bi-calendar3"></i><span>Timetable</span><i class="bi bi-chevron-down ms-auto"></i>
                 </a>
@@ -261,21 +260,16 @@
                         </a>
                     </li>
                 </ul>
-            </li>
+            </li> -->
 
             <!-- Organization -->
             <li class="nav-item">
                 <a class="nav-link collapsed" href="organization_structure.php">
-                    <i class="bi bi-diagram-3"></i><span>Organization Structure</span>
+                    <i class="bi bi-diagram-3"></i><span>Campus Tree</span>
                 </a>
             </li>
 
-            <!-- Facilities -->
-            <li class="nav-item">
-                <a class="nav-link collapsed" href="facility_view.php">
-                    <i class="bi bi-geo-alt"></i><span>Manage Facilities</span>
-                </a>
-            </li>
+          
 
             <!-- System Settings -->
             <li class="nav-item">

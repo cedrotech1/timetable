@@ -254,7 +254,7 @@ include('connection.php');
                     <!-- Complete Structure View -->
                     <div class="card">
                         <div class="card-body">
-                            <h5 class="card-title">Complete Organization Structure</h5>
+                            <h5 class="card-title">Complete Organization Structure  <?php echo $campus; ?></h5>
                             <button type="button" class="reset-btn" id="resetTreeView">
                                 <i class="bi bi-arrow-counterclockwise"></i>
                                 Reset View

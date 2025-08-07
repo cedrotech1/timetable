@@ -1,4 +1,5 @@
 <?php
+session_start();
 // Prevent any output before JSON response
 ob_start();
 
@@ -31,12 +32,12 @@ try {
     if (!file_exists('connection.php')) {
         throw new Exception('Database connection file not found');
     }
-    if (!file_exists('./includes/auth.php')) {
-        throw new Exception('Authentication file not found');
-    }
+    // if (!file_exists('./includes/auth.php')) {
+    //     throw new Exception('Authentication file not found');
+    // }
 
     include('connection.php');
-    include('./includes/auth.php');
+    // include('./includes/auth.php');
 
     // Check user role
     if (!isset($_SESSION['id'])) {

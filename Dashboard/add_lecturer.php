@@ -1,5 +1,5 @@
 <?php
-
+session_start();
 include('connection.php');
 
 // Get user's role and campus

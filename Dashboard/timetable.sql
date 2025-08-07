@@ -103,9 +103,6 @@ CREATE TABLE timetable_sessions (
 );
 
 
-
-
-
 CREATE TABLE `timetable_groups` (
   `id` int(11) NOT NULL,
   `timetable_id` int(11) NOT NULL,

@@ -1,4 +1,5 @@
 <?php
+session_start();
 // Prevent any output before JSON response
 ob_start();
 
@@ -8,18 +9,18 @@ set_time_limit(300); // 5 minutes
 
 // Include files
 include('connection.php');
-include('./includes/auth.php');
+// include('./includes/auth.php');
 
 // Check user role
-if (!isset($_SESSION['id'])) {
-    header('Content-Type: application/json');
-    echo json_encode([
-        'status' => 'error',
-        'message' => 'User not authenticated',
-        'data' => ['errors' => ['Authentication required']]
-    ]);
-    exit;
-}
+// if (!isset($_SESSION['id'])) {
+//     header('Content-Type: application/json');
+//     echo json_encode([
+//         'status' => 'error',
+//         'message' => 'User not authenticated',
+//         'data' => ['errors' => ['Authentication required']]
+//     ]);
+//     exit;
+// }
 
 // Clear any output buffers
 ob_end_clean();

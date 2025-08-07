@@ -1417,13 +1417,20 @@ function displayTimetables(timetables) {
     timetables.forEach(timetable => {
         const card = `
             <div class="col-md-6 col-lg-4">
-                <div class="card shadow-sm border-0 mb-4">
+                <div class="card shadow-sm border-0 mb-4 position-relative">
+                    <button type="button" class="btn btn-sm btn-danger position-absolute" 
+                            style="top: 10px; right: 10px; z-index: 1; padding: 0.25rem 0.5rem;"
+                            onclick="deleteTimetableCard(${timetable.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
                     <div class="card-header" style="background-color: #05204a; color: white; border-bottom-0 pt-4">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <h5 class="card-title text-white mb-0">${timetable.module.name}</h5>
-                            <span class="badge" style="background-color: white; color: #05204a">${timetable.module.credits} Credits</span>
                         </div>
-                        <p class="text-white-50 mb-0">${timetable.module.code}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <p class="text-white-50 mb-0">${timetable.module.code}</p>
+                            <span class="badge" style="background-color: white; color: #05204a; font-size: 0.9rem;">${timetable.module.credits} Credits</span>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="mb-4">
@@ -1447,8 +1454,6 @@ function displayTimetables(timetables) {
                                 </div>
                             </div>
                         </div>
-
-                      
 
                         <div class="mb-4">
                             <h6 class="mb-3" style="color: #05204a;">
@@ -1475,7 +1480,7 @@ function displayTimetables(timetables) {
                                 </button>
                             </div>
                             ${timetable.groups.map(group => `
-                                <div class="card mb-2" style="background-color: rgba(5, 32, 74, 0.1);">
+                                <div class="card mb-2" style="background-color: rgb(1, 10, 26);">
                                     <div class="card-body p-3">
                                         <div class="d-flex justify-content-between align-items-start">
                                             <div>
@@ -1604,6 +1609,29 @@ function removeGroup(timetableId, groupId) {
                     response: xhr.responseText
                 });
                 alert('Error removing group: ' + error);
+            }
+        });
+    }
+}
+
+function deleteTimetableCard(timetableId) {
+    if (confirm('Are you sure you want to delete this timetable?')) {
+        $.ajax({
+            url: 'api_delete_timetable.php',
+            method: 'POST',
+            data: {
+                timetable_id: timetableId
+            },
+            success: function(response) {
+                if (response.success) {
+                    alert('Timetable deleted successfully!');
+                    loadTimetables(); // Reload the timetables
+                } else {
+                    alert('Error deleting timetable: ' + response.message);
+                }
+            },
+            error: function() {
+                alert('Error deleting timetable. Please try again.');
             }
         });
     }

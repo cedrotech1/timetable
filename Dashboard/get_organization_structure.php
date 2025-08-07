@@ -1,4 +1,5 @@
 <?php
+session_start();
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
@@ -14,10 +15,23 @@ function getOrganizationStructure($connection) {
     ];
 
     try {
+        $c=$_SESSION['campus'];
+
         // Get all campuses with their colleges
         $campuses = [];
-        $campusQuery = "SELECT id, name FROM campus ORDER BY name";
-        $campusResult = mysqli_query($connection, $campusQuery);
+       
+       
+        // Modify campus query based on user role
+        if ($c) {
+            $campusQuery = "SELECT id, name FROM campus WHERE id =$c ORDER BY name";
+            $campusResult = mysqli_query($connection, $campusQuery);
+        }
+        
+        
+         else {
+            $campusQuery = "SELECT id, name FROM campus ORDER BY name";
+            $campusResult = mysqli_query($connection, $campusQuery);
+        }
 
         while ($campus = mysqli_fetch_assoc($campusResult)) {
             $campusId = $campus['id'];
