@@ -126,7 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all'])) {
 }
 
 // Fetch all programs from database
-$query = "SELECT id, name FROM all_programs";
+$query = "SELECT id, name FROM all_programs ORDER BY name";
 $result = mysqli_query($connection, $query);
 if ($result) {
     while ($row = mysqli_fetch_assoc($result)) {
@@ -135,8 +135,19 @@ if ($result) {
     mysqli_free_result($result);
 }
 
-// Close connection
-mysqli_close($connection);
+// Match all_programs names to program rows that already have modules (same idea as campus.php)
+$programsWithModules = []; // lower(name) => program.id
+$moduleQuery = "SELECT DISTINCT p.id, LOWER(TRIM(p.name)) AS lname
+                FROM program p
+                INNER JOIN module m ON m.program_id = p.id
+                WHERE p.name IS NOT NULL AND TRIM(p.name) <> ''";
+$moduleResult = mysqli_query($connection, $moduleQuery);
+if ($moduleResult) {
+    while ($row = mysqli_fetch_assoc($moduleResult)) {
+        $programsWithModules[$row['lname']] = (int)$row['id'];
+    }
+    mysqli_free_result($moduleResult);
+}
 ?>
 
 <!DOCTYPE html>
@@ -225,14 +236,37 @@ mysqli_close($connection);
                             <tr>
                                 <th>ID</th>
                                 <th>Name</th>
+                                <th>Modules</th>
                                 <th>Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($programs as $program): ?>
+                                <?php
+                                $lname = strtolower(trim($program['name']));
+                                $hasModules = isset($programsWithModules[$lname]);
+                                $linkedProgramId = $hasModules ? $programsWithModules[$lname] : 0;
+                                ?>
                                 <tr>
                                     <td><?php echo htmlspecialchars($program['id']); ?></td>
                                     <td><?php echo htmlspecialchars($program['name']); ?></td>
+                                    <td>
+                                        <?php if ($hasModules): ?>
+                                            <button type="button"
+                                                    class="btn btn-link p-0 view-modules"
+                                                    data-program-id="<?php echo (int)$linkedProgramId; ?>"
+                                                    data-program-name="<?php echo htmlspecialchars($program['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                    title="View all modules">
+                                                <i class="bi bi-check-circle-fill text-success"></i>
+                                                <span class="text-success ms-1">Has modules</span>
+                                            </button>
+                                        <?php else: ?>
+                                            <span class="text-muted" title="No modules assigned">
+                                                <i class="bi bi-x-circle text-danger"></i>
+                                                <span class="ms-1">No modules</span>
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
                                     <td>
                                         <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete <?php echo htmlspecialchars($program['name']); ?>?');">
                                             <input type="hidden" name="delete_id" value="<?php echo htmlspecialchars($program['id']); ?>">
@@ -247,8 +281,155 @@ mysqli_close($connection);
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="modulesModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modulesModalLabel">Program Modules</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modulesModalLoading" class="text-center py-4 d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <p class="mt-2 mb-0">Loading modules...</p>
+                    </div>
+                    <div id="modulesModalError" class="alert alert-danger d-none"></div>
+                    <div id="modulesModalList" class="d-none"></div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Bootstrap JS via CDN -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const modalElement = document.getElementById('modulesModal');
+        if (!modalElement) {
+            return;
+        }
+
+        const modulesModal = new bootstrap.Modal(modalElement);
+        const modulesModalLabel = document.getElementById('modulesModalLabel');
+        const modulesModalLoading = document.getElementById('modulesModalLoading');
+        const modulesModalError = document.getElementById('modulesModalError');
+        const modulesModalList = document.getElementById('modulesModalList');
+
+        function setModalState({ loading = false, error = '', items = [] }) {
+            modulesModalLoading.classList.toggle('d-none', !loading);
+
+            if (error) {
+                modulesModalError.classList.remove('d-none');
+                modulesModalError.textContent = error;
+            } else {
+                modulesModalError.classList.add('d-none');
+                modulesModalError.textContent = '';
+            }
+
+            if (items.length) {
+                const groups = new Map();
+                items.forEach((module) => {
+                    const rawYear = module.year ?? 'N/A';
+                    const yearKey = rawYear && rawYear !== 'N/A' ? String(rawYear) : 'Unspecified';
+                    if (!groups.has(yearKey)) {
+                        groups.set(yearKey, []);
+                    }
+                    groups.get(yearKey).push(module);
+                });
+
+                const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+                    const numA = Number(a);
+                    const numB = Number(b);
+                    const isNumA = !Number.isNaN(numA);
+                    const isNumB = !Number.isNaN(numB);
+                    if (isNumA && isNumB) {
+                        return numB - numA;
+                    }
+                    if (isNumA) return -1;
+                    if (isNumB) return 1;
+                    return a.localeCompare(b);
+                });
+
+                const fragment = document.createDocumentFragment();
+                sortedKeys.forEach((year) => {
+                    const section = document.createElement('div');
+                    section.className = 'mb-3';
+
+                    const header = document.createElement('div');
+                    header.className = 'fw-bold text-primary mb-2';
+                    header.textContent = year === 'Unspecified' ? 'Year not set' : `Year ${year}`;
+                    section.appendChild(header);
+
+                    const list = document.createElement('ul');
+                    list.className = 'list-group';
+
+                    groups.get(year).forEach((module) => {
+                        const li = document.createElement('li');
+                        li.className = 'list-group-item';
+                        li.innerHTML = `
+                            <div class="fw-semibold">${module.code ? module.code + ' — ' : ''}${module.name}</div>
+                            <div class="small text-muted">Semester ${module.semester ?? 'N/A'} · ${module.credits ?? '0'} credits</div>
+                        `;
+                        list.appendChild(li);
+                    });
+
+                    section.appendChild(list);
+                    fragment.appendChild(section);
+                });
+
+                modulesModalList.innerHTML = '';
+                modulesModalList.appendChild(fragment);
+                modulesModalList.classList.remove('d-none');
+            } else {
+                modulesModalList.classList.add('d-none');
+                modulesModalList.innerHTML = '';
+            }
+        }
+
+        document.addEventListener('click', function(event) {
+            const trigger = event.target.closest('.view-modules');
+            if (!trigger) {
+                return;
+            }
+
+            const programId = trigger.getAttribute('data-program-id');
+            const programName = trigger.getAttribute('data-program-name') || 'Program Modules';
+            if (!programId) {
+                return;
+            }
+
+            modulesModalLabel.textContent = `Modules for ${programName}`;
+            setModalState({ loading: true });
+            modulesModal.show();
+
+            const params = new URLSearchParams({ program_id: programId, perPage: 500, page: 1, sort: 'name' });
+
+            fetch(`api_get_modules.php?${params.toString()}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && Array.isArray(data.data)) {
+                        if (data.data.length) {
+                            const modules = data.data.map(module => ({
+                                name: module.name || 'Untitled module',
+                                code: module.code || '',
+                                credits: module.credits || 0,
+                                year: module.year || 'N/A',
+                                semester: module.semester || 'N/A'
+                            }));
+                            setModalState({ items: modules });
+                        } else {
+                            setModalState({ error: 'No modules found for this program.' });
+                        }
+                    } else {
+                        setModalState({ error: data.message || 'Failed to load modules.' });
+                    }
+                })
+                .catch(() => {
+                    setModalState({ error: 'A network error occurred while loading modules.' });
+                });
+        });
+    });
+    </script>
 </body>
 </html>
