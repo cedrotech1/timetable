@@ -1,321 +1,359 @@
-<?php
-include('connection.php');
+<!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Facility Selector with Sorting & Filtering</title>
 
-// Get the schedule from POST data
-$schedule = isset($_POST['schedule']) ? json_decode($_POST['schedule'], true) : [];
-$academic_year_id = isset($_POST['academic_year_id']) ? intval($_POST['academic_year_id']) : null;
-$semester = isset($_POST['semester']) ? intval($_POST['semester']) : null;
+        <!-- Tailwind CSS CDN -->
+        <script src="https://cdn.tailwindcss.com"></script>
+        <!-- Bootstrap Icons -->
+        <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css" rel="stylesheet">
+        <!-- DataTables CSS -->
+        <link href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css" rel="stylesheet">
+        <!-- jQuery -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <!-- DataTables JS -->
+        <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+        <!-- Bootstrap JS for modals (if needed) -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-// Base query to get all facilities
-$facilities_query = "SELECT DISTINCT f.*, c.name as campus_name 
-                    FROM facility f 
-                    LEFT JOIN campus c ON f.campus_id = c.id";
+        <style>
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+            .fade-in {
+                animation: fadeIn 0.3s ease-out;
+            }
+            .hover-scale {
+                transition: transform 0.2s ease;
+            }
+            .hover-scale:hover {
+                transform: scale(1.05);
+            }
+            .dataTables_wrapper .dataTables_paginate .paginate_button {
+                @apply px-3 py-1 mx-1 rounded-md bg-gray-100 text-gray-700 hover:bg-blue-100 hover:text-blue-700;
+            }
+            .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+                @apply bg-blue-600 text-white;
+            }
+            .dataTables_wrapper .dataTables_info {
+                @apply text-sm text-gray-600 mt-2;
+            }
+            .dataTables_wrapper .dataTables_length {
+                @apply text-sm text-gray-600 mb-2;
+            }
+            .capacity-ok {
+                background-color: #f0fdf4 !important;
+            }
+            .capacity-warning {
+                background-color: #fffbeb !important;
+            }
+            .capacity-over {
+                background-color: #fef2f2 !important;
+            }
+        </style>
+    </head>
+    <body class="bg-gray-100 font-sans antialiased">
+        <div class="">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6 fade-in">Select Facility</h2>
 
-// If we have schedule data, check for conflicts
-if (!empty($schedule) && $academic_year_id && $semester) {
-    $facilities_query .= " WHERE f.id NOT IN (
-        SELECT DISTINCT t.facility_id
-        FROM timetable t
-        JOIN timetable_sessions ts ON t.id = ts.timetable_id
-        WHERE t.academic_year_id = ? 
-        AND t.semester = ?
-        AND (";
-    
-    $conditions = [];
-    $params = [];
-    $types = "ii"; // academic_year_id and semester are integers
-    
-    foreach ($schedule as $session) {
-        $conditions[] = "(ts.day = ? AND (
-            (ts.start_time <= ? AND ts.end_time > ?) OR
-            (ts.start_time < ? AND ts.end_time >= ?) OR
-            (ts.start_time >= ? AND ts.end_time <= ?)
-        ))";
-        $params[] = $session['day'];
-        $params[] = $session['end_time'];
-        $params[] = $session['start_time'];
-        $params[] = $session['end_time'];
-        $params[] = $session['start_time'];
-        $params[] = $session['start_time'];
-        $params[] = $session['end_time'];
-        $types .= "sssssss"; // 7 string parameters for each session
-    }
-    
-    $facilities_query .= implode(" OR ", $conditions) . "))";
-    
-    // Prepare and execute the query with parameters
-    $stmt = mysqli_prepare($connection, $facilities_query);
-    if ($stmt) {
-        mysqli_stmt_bind_param($stmt, $types, $academic_year_id, $semester, ...$params);
-        mysqli_stmt_execute($stmt);
-        $facilities_result = mysqli_stmt_get_result($stmt);
-    } else {
-        $facilities_result = mysqli_query($connection, $facilities_query);
-    }
-} else {
-    $facilities_result = mysqli_query($connection, $facilities_query);
-}
-?>
-
-<!-- Facility Selection Modal -->
-<div class="modal fade" id="facilityModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Select Facility</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            <!-- Selected Facility Card -->
+            <div id="selectedFacilityCard" class="bg-white rounded-xl shadow-lg p-6 mb-6 hidden fade-in">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h5 class="text-xl font-semibold text-gray-800" id="selectedFacilityName"></h5>
+                        <p class="text-gray-600 mt-2"><i class="bi bi-building mr-2"></i><strong>Type:</strong> <span id="selectedFacilityType"></span></p>
+                        <p class="text-gray-600"><i class="bi bi-people mr-2"></i><strong>Capacity:</strong> <span id="selectedFacilityCapacity"></span> students</p>
+                        <p class="text-gray-600"><i class="bi bi-geo-alt mr-2"></i><strong>Site:</strong> <span id="selectedFacilitySiteName"></span></p>
+                        <p class="text-gray-600"><i class="bi bi-building mr-2"></i><strong>Building:</strong> <span id="selectedFacilityBuilding"></span></p>
+                    </div>
+                    <button id="changeFacilityBtn" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 hover-scale flex items-center">
+                        <i class="bi bi-arrow-left-right mr-2"></i> Change Facility
+                    </button>
+                </div>
             </div>
-            <div class="modal-body">
-                <div class="filter-controls mb-3">
-                    <div class="row g-3">
-                        <div class="col-md-4">
-                            <input type="text" class="form-control" id="facilitySearch" placeholder="Search by name...">
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="facilityType">
-                                <option value="">All Types</option>
-                                <?php 
-                                $types = [];
-                                while($facility = mysqli_fetch_assoc($facilities_result)) {
-                                    if (!in_array($facility['type'], $types)) {
-                                        $types[] = $facility['type'];
-                                        echo "<option value='" . htmlspecialchars($facility['type']) . "'>" . htmlspecialchars($facility['type']) . "</option>";
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <select class="form-select" id="facilityLocation">
-                                <option value="">All Locations</option>
-                                <?php 
-                                $locations = [];
-                                mysqli_data_seek($facilities_result, 0);
-                                while($facility = mysqli_fetch_assoc($facilities_result)) {
-                                    if (!in_array($facility['location'], $locations)) {
-                                        $locations[] = $facility['location'];
-                                        echo "<option value='" . htmlspecialchars($facility['location']) . "'>" . htmlspecialchars($facility['location']) . "</option>";
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select class="form-select" id="facilityCampus">
-                                <option value="">All Campuses</option>
-                                <?php 
-                                $campuses = [];
-                                mysqli_data_seek($facilities_result, 0);
-                                while($facility = mysqli_fetch_assoc($facilities_result)) {
-                                    if (!in_array($facility['campus_name'], $campuses)) {
-                                        $campuses[] = $facility['campus_name'];
-                                        echo "<option value='" . htmlspecialchars($facility['campus_name']) . "'>" . htmlspecialchars($facility['campus_name']) . "</option>";
-                                    }
-                                }
-                                ?>
-                            </select>
-                        </div>
+
+            <!-- Facility Selector Table -->
+            <div id="facilitySelectorTable" class="bg-white rounded-xl shadow-lg p-6 fade-in">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                
+                    <div class="flex items-center">
+                        <span class="text-gray-600"><i class="bi bi-people mr-2"></i><strong>Required Capacity:</strong> <span id="requiredCapacity" class="font-semibold">0</span> students</span>
+                    </div>
+                    <div class="text-end">
+                        <button id="refreshBtn" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 hover-scale flex items-center">
+                            <i class="bi bi-arrow-clockwise mr-2"></i> Refresh
+                        </button>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
+
+                <div class="overflow-x-auto">
+                    <table id="facilitiesTable" class="min-w-full bg-white border border-gray-200 rounded-md">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Select</th>
-                                <th>Name</th>
-                                <th>Type</th>
-                                <th>Location</th>
-                                <th>Campus</th>
-                                <th>Capacity</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Building</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Capacity</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Site</th>
+
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <?php 
-                            mysqli_data_seek($facilities_result, 0);
-                            while($facility = mysqli_fetch_assoc($facilities_result)): 
-                            ?>
-                            <tr class="facility-row">
-                                <td>
-                                    <input type="radio" name="facility" value="<?php echo $facility['id']; ?>" class="facility-radio">
-                                </td>
-                                <td><?php echo htmlspecialchars($facility['name']); ?></td>
-                                <td><?php echo htmlspecialchars($facility['type']); ?></td>
-                                <td><?php echo htmlspecialchars($facility['location']); ?></td>
-                                <td><?php echo htmlspecialchars($facility['campus_name'] ?? 'N/A'); ?></td>
-                                <td>
-                                    <span class="badge bg-success">
-                                        <?php echo htmlspecialchars($facility['capacity']); ?> students
-                                    </span>
-                                </td>
-                            </tr>
-                            <?php endwhile; ?>
-                        </tbody>
+                        <tbody id="facilitiesTableBody"></tbody>
                     </table>
                 </div>
-                <div class="pagination-container d-flex justify-content-center mt-3"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="selectFacility">Select</button>
             </div>
         </div>
-    </div>
-</div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    const facilityModal = document.getElementById('facilityModal');
-    const selectFacilityBtn = document.getElementById('selectFacility');
-    const selectedFacilityDisplay = document.getElementById('selectedFacilityDisplay');
-    const facilityInput = document.getElementById('facility');
-    const facilityTable = document.querySelector('#facilityModal .table tbody');
-    const itemsPerPage = 10;
-
-    // Function to update facility display based on filters
-    function updateFacilityDisplay() {
-        const searchTerm = document.getElementById('facilitySearch')?.value.toLowerCase() || '';
-        const typeFilter = document.getElementById('facilityType')?.value || '';
-        const locationFilter = document.getElementById('facilityLocation')?.value || '';
-        const campusFilter = document.getElementById('facilityCampus')?.value || '';
-
-        const rows = facilityTable.querySelectorAll('tr');
-        let visibleCount = 0;
-
-        rows.forEach(row => {
-            const name = row.cells[1].textContent.toLowerCase();
-            const type = row.cells[2].textContent;
-            const location = row.cells[3].textContent;
-            const campus = row.cells[4].textContent;
-
-            const matchesSearch = name.includes(searchTerm);
-            const matchesType = !typeFilter || type === typeFilter;
-            const matchesLocation = !locationFilter || location === locationFilter;
-            const matchesCampus = !campusFilter || campus === campusFilter;
-
-            if (matchesSearch && matchesType && matchesLocation && matchesCampus) {
-                row.style.display = '';
-                visibleCount++;
-            } else {
-                row.style.display = 'none';
+        <script>
+        $(function() {
+            // Function to get selected groups from localStorage
+            function getSelectedGroups() {
+                return JSON.parse(localStorage.getItem('selectedGroups')) || [];
             }
-        });
+            
+            // Function to calculate the exact required capacity from selected groups
+            function getRequiredCapacity() {
+                const selectedGroups = getSelectedGroups();
+                if (selectedGroups.length === 0) return 0;
+                return selectedGroups.reduce((total, group) => total + (parseInt(group.size) || 0), 0);
+            }
 
-        updatePagination(visibleCount);
-    }
+            // Function to get capacity status
+            function getCapacityStatus(capacity, required) {
+                if (required === 0) return 'ok'; // If no capacity required, show as ok
+                if (capacity >= required * 1.2) return 'ok';
+                if (capacity >= required * 0.8) return 'warning';
+                return 'over';
+            }
 
-    // Function to update pagination
-    function updatePagination(totalItems) {
-        const paginationContainer = document.querySelector('.pagination-container');
-        const totalPages = Math.ceil(totalItems / itemsPerPage);
-
-        if (totalPages <= 1) {
-            paginationContainer.innerHTML = '';
-            return;
-        }
-
-        let paginationHTML = `
-            <nav aria-label="Facility pagination">
-                <ul class="pagination">
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="prev">&laquo;</a>
-                    </li>
-        `;
-
-        for (let i = 1; i <= totalPages; i++) {
-            paginationHTML += `
-                <li class="page-item">
-                    <a class="page-link" href="#" data-page="${i}">${i}</a>
-                </li>
-            `;
-        }
-
-        paginationHTML += `
-                    <li class="page-item">
-                        <a class="page-link" href="#" data-page="next">&raquo;</a>
-                    </li>
-                </ul>
-            </nav>
-        `;
-
-        paginationContainer.innerHTML = paginationHTML;
-
-        // Add click handlers for pagination
-        paginationContainer.querySelectorAll('.page-link').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const page = this.dataset.page;
-                const currentPage = parseInt(document.querySelector('.pagination .active')?.textContent || '1');
-                
-                let newPage;
-                if (page === 'prev') {
-                    newPage = Math.max(1, currentPage - 1);
-                } else if (page === 'next') {
-                    newPage = Math.min(totalPages, currentPage + 1);
-                } else {
-                    newPage = parseInt(page);
+            // Function to show/hide selected facility card
+            function showSelectedFacility() {
+                const selectedFacility = JSON.parse(localStorage.getItem('selectedFacility'));
+                if (!selectedFacility) {
+                    $('#selectedFacilityCard').addClass('hidden');
+                    $('#facilitySelectorTable').removeClass('hidden');
+                    return false;
                 }
 
-                // Update active page
-                document.querySelectorAll('.pagination .page-item').forEach(item => {
-                    item.classList.remove('active');
-                });
-                this.parentElement.classList.add('active');
+                $('#selectedFacilityName').text(selectedFacility.name);
+                $('#selectedFacilityType').text(selectedFacility.type);
+                $('#selectedFacilityCapacity').text(selectedFacility.capacity);
+                $('#selectedFacilitySiteName').text(selectedFacility.site_name || 'N/A');
+                $('#selectedFacilityBuilding').text(selectedFacility.buildname || 'N/A');
 
-                // Show the appropriate page of facilities
-                const startIndex = (newPage - 1) * itemsPerPage;
-                const endIndex = startIndex + itemsPerPage;
-                const rows = facilityTable.querySelectorAll('tr:not(:first-child)');
-                
-                rows.forEach((row, index) => {
-                    if (row.style.display !== 'none') {
-                        row.style.display = (index >= startIndex && index < endIndex) ? '' : 'none';
+                $('#selectedFacilityCard').removeClass('hidden');
+                $('#facilitySelectorTable').addClass('hidden');
+                return true;
+            }
+
+            // Update capacity display
+            function updateRequiredCapacity() {
+                const capacity = getRequiredCapacity();
+                $('#requiredCapacity').text(capacity);
+                if ($.fn.DataTable.isDataTable('#facilitiesTable')) {
+                    table.ajax.reload();
+                }
+            }
+
+            // Check if there are selected groups
+            const selectedGroups = getSelectedGroups();
+            
+            if (selectedGroups.length === 0) {
+                // Hide the table and show a message if no groups are selected
+                $('#facilitySelectorTable').html(`
+                    <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                        <div class="flex">
+                            <div class="flex-shrink-0">
+                                <i class="bi bi-exclamation-triangle text-yellow-400 text-xl"></i>
+                            </div>
+                            <div class="ml-3">
+                                <p class="text-sm text-yellow-700">
+                                    No groups selected. Please select groups first before choosing a facility. <a href="timetable_set.php#facilities" onclick="window.location.reload(); return false;" class="text-blue-600 hover:underline">Get facilities</a>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                return;
+            }
+
+            // Initialize DataTable with pagination
+            let table = $('#facilitiesTable').DataTable({
+                processing: true,
+                serverSide: true,
+                ajax: {
+                    url: 'get_facilities_with_site.php',
+                    type: 'GET',
+                    data: function(d) {
+                        // Add any additional parameters you need to send to the server
+                        d.draw = d.draw || 1;
+                        d.start = d.start || 0;
+                        d.length = d.length || 5; // Default to 5 items per page
+                        return {
+                            draw: d.draw,
+                            start: d.start,
+                            length: d.length,
+                            search: d.search,
+                            order: d.order,
+                            columns: d.columns
+                        };
+                    },
+                    dataSrc: function(json) {
+                        console.log('Server response:', json); // Debug log
+                        if (!json || !Array.isArray(json.data)) {
+                            console.error('Invalid data format from server:', json);
+                            return [];
+                        }
+                        return json.data;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', status, error);
+                        console.error('Response:', xhr.responseText);
+                        // Return empty data to prevent breaking the table
+                        return [];
                     }
-                });
+                },
+                createdRow: function(row, data) {
+                    const requiredCapacity = getRequiredCapacity();
+                    const status = getCapacityStatus(data.capacity, requiredCapacity);
+                    $(row).addClass(`capacity-${status}`);
+                },
+                columns: [
+                    { 
+                        data: 'buildname',
+                        render: function(data, type, row) {
+                            return data || 'N/A';
+                        }
+                    },
+                    { 
+                        data: 'name',
+                        render: function(data, type, row) {
+                            const requiredCapacity = getRequiredCapacity();
+                            const status = getCapacityStatus(row.capacity, requiredCapacity);
+                            const icons = {
+                                'ok': '<i class="bi bi-check-circle-fill text-green-500 mr-1"></i>',
+                                'warning': '<i class="bi bi-exclamation-triangle-fill text-yellow-500 mr-1"></i>',
+                                'over': '<i class="bi bi-x-circle-fill text-red-500 mr-1"></i>'
+                            };
+                            return `${icons[status] || ''} ${data}`;
+                        }
+                    },
+                    { 
+                        data: 'type',
+                        render: function(data) {
+                            return data || 'N/A';
+                        }
+                    },
+                    { 
+                        data: 'capacity',
+                        render: function(data, type, row) {
+                            const requiredCapacity = getRequiredCapacity();
+                            const status = getCapacityStatus(data, requiredCapacity);
+                            const textColors = {
+                                'ok': 'text-green-600',
+                                'warning': 'text-yellow-600',
+                                'over': 'text-red-600'
+                            };
+                            return `<span class="font-semibold ${textColors[status] || ''}">${data} <span class="text-gray-500">/ ${requiredCapacity}</span></span>`;
+                        }
+                    },
+                    { 
+                        data: 'site_name',
+                        render: function(data) {
+                            return data || 'N/A';
+                        }
+                    },
+                    {
+                        data: null,
+                        render: function(data, type, row) {
+                            const requiredCapacity = getRequiredCapacity();
+                            const status = getCapacityStatus(row.capacity, requiredCapacity);
+                            const statusText = {
+                                'ok': 'Adequate',
+                                'warning': 'Limited',
+                                'over': 'Insufficient'
+                            };
+                            const statusColors = {
+                                'ok': 'bg-green-100 text-green-800',
+                                'warning': 'bg-yellow-100 text-yellow-800',
+                                'over': 'bg-red-100 text-red-800'
+                            };
+                            return `<span class="px-2 py-1 text-xs font-medium rounded-full ${statusColors[status] || ''}">
+                                ${statusText[status] || 'Unknown'}
+                            </span>`;
+                        }
+                    },
+                    {
+                        data: null,
+                        orderable: false,
+                        searchable: false,
+                        render: function(data, type, row) {
+                            const requiredCapacity = getRequiredCapacity();
+                            const status = getCapacityStatus(row.capacity, requiredCapacity);
+                            const buttonClass = status === 'over' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700';
+                            return `<button class="${buttonClass} text-white px-3 py-1 rounded-md hover-scale selectFacilityBtn" 
+                                    data-fac='${JSON.stringify(row).replace(/'/g, "&apos;")}'
+                                    title="Select this facility">
+                                Select
+                            </button>`;
+                        }
+                    }
+                ],
+                paging: true,
+                pageLength: 5, // Show 5 records per page
+                lengthMenu: [5, 10, 25, 50], // Options for records per page
+                lengthChange: true,
+                searching: true,
+                ordering: true,
+                processing: true,
+                serverSide: true, // Using server-side processing for better performance
+                deferRender: true,
+                responsive: true,
+                autoWidth: false,
+                language: {
+                    processing: '<div class="flex justify-center"><svg class="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg></div>'
+                },
+                initComplete: function() {
+                    // Add custom search input
+                    $('#searchInput').on('keyup', function() {
+                        table.search(this.value).draw();
+                    });
+                }
             });
+
+            // Refresh button reloads the table data and updates capacity display
+            $('#refreshBtn').on('click', function() {
+                const selectedGroups = getSelectedGroups();
+                if (selectedGroups.length === 0) {
+                    window.location.reload(); // Reload the page to show the no groups message
+                } else {
+                    updateRequiredCapacity();
+                }
+            });
+
+            // Select facility button click
+            $('#facilitiesTable tbody').on('click', '.selectFacilityBtn', function() {
+                const facData = $(this).data('fac');
+                localStorage.setItem('selectedFacility', JSON.stringify(facData));
+                showSelectedFacility();
+            });
+
+            // Change facility button click
+            $('#changeFacilityBtn').on('click', function() {
+                localStorage.removeItem('selectedFacility');
+                showSelectedFacility();
+                updateRequiredCapacity();
+            });
+
+            // Initial setup
+            updateRequiredCapacity();
+            showSelectedFacility();
         });
-
-        // Activate first page
-        const firstPageLink = paginationContainer.querySelector('.page-link[data-page="1"]');
-        if (firstPageLink) {
-            firstPageLink.click();
-        }
-    }
-
-    // Add event listeners for filters
-    document.getElementById('facilitySearch')?.addEventListener('input', updateFacilityDisplay);
-    document.getElementById('facilityType')?.addEventListener('change', updateFacilityDisplay);
-    document.getElementById('facilityLocation')?.addEventListener('change', updateFacilityDisplay);
-    document.getElementById('facilityCampus')?.addEventListener('change', updateFacilityDisplay);
-
-    // Handle facility selection
-    selectFacilityBtn.addEventListener('click', function() {
-        const selectedFacility = document.querySelector('input[name="facility"]:checked');
-        if (selectedFacility) {
-            const row = selectedFacility.closest('tr');
-            const facilityName = row.cells[1].textContent;
-            const facilityType = row.cells[2].textContent;
-            const facilityCapacity = row.cells[5].textContent.trim();
-            const facilityCampus = row.cells[4].textContent;
-            
-            selectedFacilityDisplay.value = `${facilityName} (${facilityType}, ${facilityCapacity}, ${facilityCampus})`;
-            facilityInput.value = selectedFacility.value;
-            
-            const modal = bootstrap.Modal.getInstance(facilityModal);
-            modal.hide();
-        } else {
-            alert('Please select a facility');
-        }
-    });
-
-    // Clear facility selection when modal is closed
-    facilityModal.addEventListener('hidden.bs.modal', function() {
-        const selectedFacility = document.querySelector('input[name="facility"]:checked');
-        if (selectedFacility) {
-            selectedFacility.checked = false;
-        }
-    });
-
-    // Initial display
-    updateFacilityDisplay();
-});
-</script> 
+        </script>
+    </body>
+    </html>

@@ -13,7 +13,7 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
                     $image = $row["image"];
                     $phone = $row["phone"];
                     $email = $row["email"];
-                    $about = $row["about"];
+                    $ur_email = $row["ur_email"];
                     $role = $row["role"];
                     
                 }
@@ -119,11 +119,6 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
               <div class="tab-content pt-2">
 
                 <div class="tab-pane fade show active profile-overview" id="profile-overview">
-                  <h5 class="card-title">About</h5>
-                  <p class="small fst-italic">
-                  <?php echo $about;?>
-                  </p>
-
                   <h5 class="card-title">Profile Details</h5>
 
                   <div class="row">
@@ -149,6 +144,11 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
                   <div class="row">
                     <div class="col-lg-3 col-md-4 label">Email</div>
                     <div class="col-lg-9 col-md-8"><?php echo $email;?></div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-lg-3 col-md-4 label">UR Email</div>
+                    <div class="col-lg-9 col-md-8"><?php echo !empty($ur_email) ? $ur_email : 'Not set'; ?></div>
                   </div>
 
                 </div>
@@ -177,14 +177,6 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
                       </div>
                     </div>
 
-                    <div class="row mb-3">
-                      <label for="about" class="col-md-4 col-lg-3 col-form-label">About</label>
-                      <div class="col-md-8 col-lg-9">
-                        <textarea name="about" class="form-control" id="about" style="height: 100px">
-                        <?php echo $about;  ?>
-                      </textarea>
-                      </div>
-                    </div>
 
                    
 
@@ -200,13 +192,17 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
                     <div class="row mb-3">
                       <label for="Email" class="col-md-4 col-lg-3 col-form-label">Email</label>
                       <div class="col-md-8 col-lg-9">
-                        <input name="email" type="email" disabled class="form-control" id="Email" value="<?php echo $email  ?>">
+                        <input name="email" type="email" disabled class="form-control" id="Email" value="<?php echo $email; ?>">
                       </div>
                     </div>
 
-       
-
-             
+                    <div class="row mb-3">
+                      <label for="UrEmail" class="col-md-4 col-lg-3 col-form-label">UR Email</label>
+                      <div class="col-md-8 col-lg-9">
+                        <input name="ur_email" type="email" class="form-control" id="UrEmail" value="<?php echo !empty($ur_email) ? $ur_email : ''; ?>" disabled>
+                        <small class="text-muted">Your University of Rwanda email address (not editable)</small>
+                      </div>
+                    </div>
 
                     <div class="text-center">
                       <button type="submit" name="savechanges" class="btn btn-primary">Save Changes</button>
@@ -308,7 +304,6 @@ $ok1 = mysqli_query($connection, "select * from users where id=$id");
 if (isset($_POST['savechanges'])) {
     // Retrieve form data
     $names = $_POST['names'];
-    $about = $_POST['about'];
     $phone = $_POST['phone'];
     $email = $_POST['email'];
     $id = $_POST['id'];
@@ -352,7 +347,7 @@ if (isset($_POST['savechanges'])) {
             // Define image path
             $image_path = $target_file;
             // Your SQL update query
-            $sql = "UPDATE `users` SET `names`='$names', `image`='$image_path', `about`='$about', `phone`='$phone', `email`='$email' WHERE `id`='$id'";
+            $sql = "UPDATE `users` SET `names`='$names', `image`='$image_path', `phone`='$phone', `email`='$email' WHERE `id`='$id'";
 
             // Execute the query
             if (mysqli_query($connection, $sql)) {

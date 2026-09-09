@@ -1,931 +1,656 @@
 <?php
-include('connection.php');
+// session_start();
 
-// Get student groups
-$groups_query = "SELECT sg.*, i.year, i.month, p.name as program_name 
-                FROM student_group sg 
-                JOIN intake i ON sg.intake_id = i.id 
-                JOIN program p ON i.program_id = p.id 
-                ORDER BY i.year DESC, i.month DESC";
-$groups_result = mysqli_query($connection, $groups_query);
+// session_start();
+$user_id = $_SESSION['id'];
+$userRole = $_SESSION['role'] ?? '';
+
+if ($userRole === 'registrar_office') {
+    // For registrar_office role, set school to null to indicate all schools
+    $userSchoolId = null;
+} else {
+    // For other roles, get their assigned school
+    $stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $school = $result->fetch_assoc();
+    $userSchoolId = $school ? $school['school'] : null;
+    $stmt->close();
+}
 ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Select Program Groups</title>
+<!-- Bootstrap CSS -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-<!-- Groups Modal --><div class="modal fade" id="groupsModal" tabindex="-1" aria-labelledby="groupsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title" id="groupsModalLabel">Select Student Groups</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <!-- Left side: Selected Groups -->
-                    <div class="col-md-4 border-end">
-                        <div class="mb-4">
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold mb-0">Selected Groups</h6>
-                                <button type="button" class="btn btn-sm btn-outline-danger" id="clearAllSelections">
-                                    <i class="fas fa-trash"></i> Clear All
-                                </button>
-                            </div>
-                            <div id="selectedGroupsPreview" class="selected-groups-preview">
-                                <!-- Selected groups will be shown here -->
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <h6 class="fw-bold mb-3">Filters</h6>
-                            <div class="mb-3">
-                                <label for="campus" class="form-label">Campus</label>
-                                <select class="form-select" id="campus">
-                                    <option value="">Select Campus</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="college" class="form-label">College</label>
-                                <select class="form-select" id="college" disabled>
-                                    <option value="">Select College</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="school" class="form-label">School</label>
-                                <select class="form-select" id="school" disabled>
-                                    <option value="">Select School</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="department" class="form-label">Department</label>
-                                <select class="form-select" id="department" disabled>
-                                    <option value="">Select Department</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="modalProgram" class="form-label">Program</label>
-                                <select class="form-select" id="modalProgram" disabled>
-                                    <option value="">Select Program</option>
-                                </select>
-                            </div>
-                            <div class="mb-3">
-                                <label for="intake" class="form-label">Intake</label>
-                                <select class="form-select" id="intake" disabled>
-                                    <option value="">Select Intake</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="mb-4">
-                            <h6 class="fw-bold mb-3">Search</h6>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="groupSearch" placeholder="Search groups...">
-                                <button class="btn btn-outline-secondary" type="button" id="clearSearch">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Right side: Groups List -->
-                    <div class="col-md-8">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="fw-bold mb-0">Available Groups</h6>
-                            <div class="btn-group">
-                                <button type="button" class="btn btn-sm btn-outline-primary" id="selectAllGroups">Select All</button>
-                                <button type="button" class="btn btn-sm btn-outline-secondary" id="deselectAllGroups">Deselect All</button>
-                            </div>
-                        </div>
-                        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
-                            <table class="table table-hover">
-                                <thead class="sticky-top bg-light">
-                                    <tr>
-                                        <th style="width: 50px;">
-                                            <input type="checkbox" class="form-check-input" id="selectAllCheckbox">
-                                        </th>
-                                        <th>Group Name</th>
-                                        <th>Size</th>
-                                        <th>Program</th>
-                                        <th>Intake</th>
-                                        <th>Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="groupsTableBody">
-                                    <!-- Groups will be loaded here -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer bg-light">
-                <div class="d-flex justify-content-between align-items-center w-100">
-                    <div>
-                        <span class="badge bg-primary" id="selectedGroupsCount">0 groups selected</span>
-                    </div>
-                    <div>
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                        <button type="button" class="btn btn-primary" id="confirmGroups">Confirm Selection</button>
-                    </div>
-                </div>
-            </div>
-        </div>
+<style>
+  body {
+    background: #f8f9fa;
+  }
+
+  /* Selected groups cards styling */
+  #selectedGroupsList {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1rem;
+    width: 100%;
+  }
+  
+  #selectedGroupsList .card {
+    margin: 0;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    overflow: hidden;
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  }
+  
+  #selectedGroupsList .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  }
+  
+  #selectedGroupsList .card-header {
+    background-color: #4a6cf7;
+    color: white;
+    padding: 0.75rem 1.25rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-bottom: none;
+  }
+  
+  #selectedGroupsList .card-body {
+    padding: 1.25rem;
+  }
+  
+  .group-info {
+    width: 100%;
+  }
+  
+  .group-meta {
+    margin-bottom: 1rem;
+  }
+  
+  .group-meta-row {
+    display: flex;
+    margin-bottom: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .group-meta-label {
+    flex: 0 0 100px;
+    color: #6c757d;
+    font-weight: 500;
+  }
+  
+  .group-meta-value {
+    flex: 1;
+    color: #212529;
+    font-weight: 500;
+  }
+  
+  .group-size {
+    background-color: #f1f8ff;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-align: center;
+    font-weight: 600;
+    color: #0d6efd;
+    margin-top: 1rem;
+    border: 1px solid #d0e3ff;
+  }
+  
+  .remove-btn {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.9);
+    color: #dc3545;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  }
+  
+  .remove-btn:hover {
+    background-color: #dc3545;
+    color: white;
+    transform: scale(1.1);
+  }
+  label.form-check-label {
+    user-select: none;
+  }
+
+  #selectorsContainer > div.mb-3, #groupsSection {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+  }
+
+  #addGroupBtn {
+    margin-top: 10px;
+  }
+  
+  .click-counter {
+    background-color: #e9ecef;
+    border-radius: 6px;
+    padding: 8px 15px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    display: inline-block;
+    color: #495057;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 30px;
+    color: #6c757d;
+  }
+  
+  .empty-state .btn {
+    margin-top: 15px;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <h2 class="mb-4">Select Groups</h2>
+  
+  <!-- <div class="click-counter">Groups Selected: <span id="clickCount">0</span></div> -->
+
+  <!-- Setup Form (Hidden by default) -->
+  <div id="setupForm" class="card p-3 mb-4 d-none">
+    <h5 class="fw-semibold mb-3">Setup Group Selection</h5>
+    
+    <div id="selectorsContainer">
+      <div id="programSection" class="mb-3">
+        <label for="programSelect" class="form-label fw-semibold">Program</label>
+        <select id="programSelect" class="form-select">
+          <option value="">-- Select Program --</option>
+        </select>
+      </div>
+
+      <div id="intakeSection" class="mb-3 d-none">
+        <label for="intakeSelect" class="form-label fw-semibold">Intake</label>
+        <select id="intakeSelect" class="form-select">
+          <option value="">-- Select Intake --</option>
+        </select>
+      </div>
+
+      <div id="groupsSection" class="mb-4 d-none">
+        <h5 class="fw-semibold">Groups</h5>
+        <ul id="groupsList" class="list-group"></ul>
+      </div>
     </div>
+
+    <div class="d-flex justify-content-between">
+      <button id="cancelSetupBtn" class="btn btn-outline-secondary">Cancel</button>
+      <button id="setupCompleteBtn" class="btn btn-primary d-none">Complete Setup</button>
+    </div>
+  </div>
+
+  <!-- Group Information Section -->
+  <div id="groupInfoSection">
+   
+    <!-- Empty state when no groups selected -->
+    <div id="emptyState" class="empty-state">
+      <h5>No groups selected yet</h5>
+      <p>Click the button below to start selecting groups</p>
+      <button id="startSelectionBtn" class="btn btn-primary">Select Groups</button>
+    </div>
+    
+    <!-- Groups list when groups are selected -->
+    <div id="selectedGroupsContainer" class="d-none">
+      <div id="selectedGroupsList"></div>
+      <p class="fw-bold mt-3 fs-5" id="totalStudents">Total students in selected groups: 0</p>
+      <button id="addGroupBtn" class="btn btn-outline-primary">Add More Groups</button>
+    </div>
+  </div>
 </div>
 
 <script>
-// Make selectedGroupIds globally accessible
-window.selectedGroupIds = window.selectedGroupIds || new Set();
-window.selectedGroupsData = window.selectedGroupsData || new Map();
+$(function() {
+  const STUDENTS_PER_GROUP = 20;
+  const userSchoolId = <?= $userSchoolId !== null ? json_encode($userSchoolId) : 'null' ?>;
+  const isRegistrarOffice = <?= $userRole === 'registrar_office' ? 'true' : 'false' ?>;
+  let programs = [];
+  let selectedProgram = null;
+  let selectedIntake = null;
+  let clickCount = 0; // Track number of group selections
 
-// Define updateSelectedGroupsCount in the global scope
-function updateSelectedGroupsCount() {
-    const selectedCount = selectedGroupIds.size;
-    const countElement = document.getElementById('selectedGroupsCount');
-    if (countElement) {
-        countElement.textContent = `${selectedCount} groups selected`;
-    }
-}
+  // Load persisted groups or empty array
+  let selectedGroups = JSON.parse(localStorage.getItem('selectedGroups')) || [];
+  clickCount = selectedGroups.length; // Initialize click count with existing groups
 
-// Update selected groups preview
-function updateSelectedGroupsPreview() {
-    const preview = document.getElementById('selectedGroupsPreview');
-    if (!preview) return;
+  // Save selectedGroups to localStorage
+  function saveSelectedGroups() {
+    localStorage.setItem('selectedGroups', JSON.stringify(selectedGroups));
+  }
+
+  // Update click counter
+  function updateClickCounter() {
+    $('#clickCount').text(clickCount);
+  }
+
+  // Update total students count
+  function updateStudentCount() {
+    const total = selectedGroups.reduce((sum, group) => sum + (group.size || STUDENTS_PER_GROUP), 0);
+    $('#totalStudents').text(`Total students in selected groups: ${total}`);
+  }
+
+  // Show/hide setup form and group info
+  function updateUIState() {
+    if(selectedGroups.length > 0) {
+      // We have groups - show the groups list
+      $('#setupForm').addClass('d-none');
+      $('#emptyState').addClass('d-none');
+      $('#selectedGroupsContainer').removeClass('d-none');
+    } else {
+      // No groups - show empty state
+      $('#setupForm').addClass('d-none');
+      $('#emptyState').removeClass('d-none');
+      $('#selectedGroupsContainer').addClass('d-none');
+    }
+  }
+
+  // Reset all selectors
+  function resetSelectors() {
+    $('#programSection').removeClass('d-none');
+    $('#intakeSection, #groupsSection').addClass('d-none');
+    $('#programSelect, #intakeSelect').val('');
+    $('#groupsList').empty();
+    $('#setupCompleteBtn').addClass('d-none');
+    selectedProgram = null;
+    selectedIntake = null;
+  }
+
+  // Show setup form
+  function showSetupForm() {
+    $('#setupForm').removeClass('d-none');
+    resetSelectors();
+  }
+
+  // Hide setup form
+  function hideSetupForm() {
+    $('#setupForm').addClass('d-none');
+  }
+
+  // Render programs dropdown
+  function renderPrograms() {
+    const $sel = $('#programSelect').empty().append('<option value="">-- Select Program --</option>');
     
-    preview.innerHTML = '';
+    // Show all programs for registrar_office, otherwise filter by user's school
+    const filteredPrograms = isRegistrarOffice 
+      ? programs 
+      : programs.filter(p => p.school_id == userSchoolId);
     
-    if (!window.selectedGroupsData || window.selectedGroupsData.size === 0) {
-        preview.innerHTML = '<div class="text-muted text-center">No groups selected</div>';
-        return;
+    filteredPrograms.forEach(p => {
+      // Only show school name if it exists
+      const schoolInfo = p.school_name ? ` (${p.school_name})` : '';
+      const programCode = p.code ? ` [${p.code}]` : '';
+      
+      const hasNoIntake = !p.intakes?.length;
+      $sel.append(`<option value="${p.id}" 
+        data-has-intake="${!hasNoIntake}"
+        class="${hasNoIntake ? 'text-danger' : ''}"
+        ${hasNoIntake ? 'disabled' : ''}>
+        ${p.name}${programCode}${schoolInfo}${hasNoIntake ? ' (No student group found)' : ''}
+      </option>`);
+    }); 
+    
+    if (filteredPrograms.length === 0) {
+      $sel.append('<option value="" disabled>No programs available</option>');
     }
     
-    // Calculate total size
-    let totalSize = 0;
-    window.selectedGroupsData.forEach((data, id) => {
-        console.log('Processing group data for preview:', { id, data });
-        if (data.size) {
-            totalSize += parseInt(data.size);
-        }
+    $('#programSection').removeClass('d-none');
+  }
+
+  // Render intakes dropdown in 'Year X - Campus' format
+  function renderIntakes() {
+    const $sel = $('#intakeSelect').empty();
+    
+    // Always show the program name and indicate if no intakes
+    if (!selectedProgram || !selectedProgram.intakes?.length) {
+      $sel.append('<option value="">No intakes available (Program: ' + selectedProgram.name + ')</option>');
+      $('#intakeSection').removeClass('d-none');
+      return;
+    }
+    
+    $sel.append('<option value="">-- Select Intake --</option>');
+    
+    // Sort intakes by year of study (ascending) and then by campus name (A-Z)
+    const sortedIntakes = [...selectedProgram.intakes].sort((a, b) => {
+      if (a.year_of_study !== b.year_of_study) return a.year_of_study - b.year_of_study;
+      const campusA = (a.campus_name || (a.campus?.name || 'Unassigned')).toUpperCase();
+      const campusB = (b.campus_name || (b.campus?.name || 'Unassigned')).toUpperCase();
+      return campusA.localeCompare(campusB);
     });
     
-    console.log('Total size for preview:', totalSize);
+    // Add intakes to dropdown in 'Year X - Campus' format
+    sortedIntakes.forEach(intake => {
+      const year = intake.year_of_study || 1;
+      const campus = intake.campus_name || (intake.campus?.name || 'Unassigned');
+      $sel.append(`
+        <option value="${intake.id}">
+          Year ${year} - ${campus}
+        </option>
+      `);
+    });
     
-    // Add summary at the top
-    const summaryDiv = document.createElement('div');
-    summaryDiv.className = 'selected-groups-summary mb-3 p-2 bg-light rounded';
-    summaryDiv.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <strong>${window.selectedGroupsData.size} Groups Selected</strong>
-            </div>
-            <div>
-                <strong>Total Size: ${totalSize} Students</strong>
-            </div>
-        </div>
-    `;
-    preview.appendChild(summaryDiv);
-    
-    // Add individual groups
-    window.selectedGroupsData.forEach((data, id) => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'selected-group';
-        
-        // Format group info
-        const infoParts = [];
-        if (data.size) infoParts.push(`Size: ${data.size} students`);
-        if (data.program_name) infoParts.push(data.program_name);
-        if (data.intake_year && data.intake_month) {
-            infoParts.push(`${data.intake_year}/${data.intake_month}`);
-        }
-        
-        groupDiv.innerHTML = `
-            <div>
-                <div class="group-name">${data.name}</div>
-                <div class="group-info">
-                    ${infoParts.join(' | ')}
+    $('#intakeSection').removeClass('d-none');
+  }
+
+  // Render groups list with checkboxes
+  function renderGroups() {
+    if (!selectedIntake || !selectedIntake.groups?.length) return $('#groupsSection').addClass('d-none');
+
+    const $list = $('#groupsList').empty();
+    selectedIntake.groups.forEach(group => {
+      const isChecked = selectedGroups.some(g => g.id === group.id);
+      const li = $(`
+        <li class="list-group-item d-flex align-items-center">
+          <input class="form-check-input me-2" type="checkbox" id="grp${group.id}" value="${group.id}" ${isChecked ? 'checked' : ''}>
+          <label class="form-check-label flex-grow-1" for="grp${group.id}">${group.name} (${group.size || STUDENTS_PER_GROUP} students)</label>
+        </li>
+      `);
+      $list.append(li);
+    });
+    $('#groupsSection').removeClass('d-none');
+    $('#setupCompleteBtn').removeClass('d-none');
+  }
+
+  // Render selected groups cards with full info
+  function renderSelectedGroups() {
+    const $container = $('#selectedGroupsList').empty();
+    selectedGroups.forEach(group => {
+      const campusName = group.campusName || ''; // Provide empty string as fallback
+      const campusInitials = campusName.split(' ').map(word => word[0] || '').join('').toUpperCase();
+      const card = $(`
+        <div class="card">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <span>${group.name}</span>
+            <span class="badge bg-light text-dark">${campusInitials}</span>
+          </div>
+          <div class="card-body">
+            <div class="group-info">
+              <div class="group-meta">
+                <div class="group-meta-row">
+                  <div class="group-meta-label">Program:</div>
+                  <div class="group-meta-value">${group.programName}</div>
                 </div>
-            </div>
-            <button type="button" class="remove-group" data-group-id="${id}" title="Remove group">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        preview.appendChild(groupDiv);
-    });
-}
-
-// Handle group selection
-function handleGroupSelection(groupId, isChecked, groupData) {
-    console.log('Handling group selection:', { groupId, isChecked, groupData });
-    
-    if (isChecked) {
-        window.selectedGroupIds.add(groupId);
-        // Ensure size is properly stored as a number
-        const size = parseInt(groupData.size) || 0;
-        window.selectedGroupsData.set(groupId, {
-            name: groupData.name,
-            size: size.toString(),
-            program_name: groupData.program_name,
-            intake_year: groupData.intake_year,
-            intake_month: groupData.intake_month
-        });
-    } else {
-        window.selectedGroupIds.delete(groupId);
-        window.selectedGroupsData.delete(groupId);
-    }
-    
-    updateSelectedGroupsPreview();
-    updateSelectedGroupsCount();
-    
-    // Update facility button state
-    if (typeof window.updateFacilityButton === 'function') {
-        console.log('Triggering facility button update from group selection');
-        window.updateFacilityButton();
-    }
-}
-
-// Add event listener for group checkboxes
-document.addEventListener('change', function(e) {
-    if (e.target.classList.contains('group-checkbox')) {
-        const groupId = e.target.value;
-        const groupData = {
-            name: e.target.dataset.name,
-            size: e.target.dataset.size || '0',
-            program_name: e.target.dataset.program,
-            intake_year: e.target.dataset.intakeYear,
-            intake_month: e.target.dataset.intakeMonth
-        };
-        console.log('Group checkbox changed:', { groupId, groupData });
-        handleGroupSelection(groupId, e.target.checked, groupData);
-    }
-});
-
-// Add event listener for group removal
-document.addEventListener('click', function(e) {
-    if (e.target.closest('.remove-group')) {
-        const groupId = e.target.closest('.remove-group').dataset.groupId;
-        removeGroupFromPreview(groupId);
-    }
-});
-
-// Remove group from preview
-function removeGroupFromPreview(groupId) {
-    console.log('Removing group from preview:', groupId);
-    window.selectedGroupIds.delete(groupId);
-    window.selectedGroupsData.delete(groupId);
-    
-    // Update checkbox in table if visible
-    const checkbox = document.querySelector(`.group-checkbox[value="${groupId}"]`);
-    if (checkbox) {
-        checkbox.checked = false;
-    }
-    
-    updateSelectedGroupsPreview();
-    updateSelectedGroupsCount();
-}
-
-// Handle confirm selection
-document.getElementById('confirmGroups').addEventListener('click', function() {
-    console.log('Confirming group selection:', {
-        selectedGroups: Array.from(window.selectedGroupIds),
-        groupData: Object.fromEntries(window.selectedGroupsData)
-    });
-    
-    // Update the main display
-    if (typeof window.updateSelectedGroupsDisplay === 'function') {
-        window.updateSelectedGroupsDisplay();
-    }
-    
-    // Update facility button state
-    if (typeof window.updateFacilityButton === 'function') {
-        console.log('Triggering facility button update from confirm selection');
-        window.updateFacilityButton();
-    }
-    
-    // Close the modal
-    const modal = bootstrap.Modal.getInstance(document.getElementById('groupsModal'));
-    if (modal) {
-        modal.hide();
-    }
-});
-
-// Add event listener for modal show
-document.getElementById('groupsModal').addEventListener('show.bs.modal', function() {
-    console.log('Modal showing, current selection:', {
-        selectedGroups: Array.from(window.selectedGroupIds),
-        groupData: Object.fromEntries(window.selectedGroupsData)
-    });
-    
-    // Update checkboxes to match current selection state
-    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
-        checkbox.checked = window.selectedGroupIds.has(checkbox.value);
-    });
-    
-    // Update the preview
-    updateSelectedGroupsPreview();
-    updateSelectedGroupsCount();
-});
-
-// Add event listener for modal hidden
-document.getElementById('groupsModal').addEventListener('hidden.bs.modal', function() {
-    console.log('Modal hidden, final selection:', {
-        selectedGroups: Array.from(window.selectedGroupIds),
-        groupData: Object.fromEntries(window.selectedGroupsData)
-    });
-});
-
-// Handle clear all selections
-document.getElementById('clearAllSelections').addEventListener('click', function() {
-    console.log('Clearing all selections');
-    window.selectedGroupIds.clear();
-    window.selectedGroupsData.clear();
-    
-    // Uncheck all checkboxes
-    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    
-    updateSelectedGroupsPreview();
-    updateSelectedGroupsCount();
-    
-    // Update the main display if the function exists
-    if (typeof window.updateSelectedGroupsDisplay === 'function') {
-        window.updateSelectedGroupsDisplay();
-    }
-    
-    // Update facility button state
-    if (typeof window.updateFacilityButton === 'function') {
-        console.log('Triggering facility button update from clear all');
-        window.updateFacilityButton();
-    }
-});
-
-// Update selected groups display
-function updateSelectedGroupsDisplay() {
-    const selectedGroupsDiv = document.getElementById('selectedGroups');
-    if (!selectedGroupsDiv) return;
-    
-    selectedGroupsDiv.innerHTML = '';
-
-    if (window.selectedGroupsData.size === 0) {
-        selectedGroupsDiv.innerHTML = '<div class="text-muted text-center">No groups selected</div>';
-        return;
-    }
-
-    // Calculate total size
-    let totalSize = 0;
-    window.selectedGroupsData.forEach((data, id) => {
-        console.log('Processing group data for main display:', { id, data });
-        if (data.size) {
-            totalSize += parseInt(data.size);
-        }
-    });
-
-    console.log('Total size for main display:', totalSize);
-
-    // Add summary at the top
-    const summaryDiv = document.createElement('div');
-    summaryDiv.className = 'selected-groups-summary mb-3 p-2 bg-light rounded';
-    summaryDiv.innerHTML = `
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <strong>${window.selectedGroupsData.size} Groups Selected</strong>
-            </div>
-            <div>
-                <strong>Total Size: ${totalSize} Students</strong>
-            </div>
-        </div>
-    `;
-    selectedGroupsDiv.appendChild(summaryDiv);
-
-    // Add individual groups
-    window.selectedGroupsData.forEach((data, id) => {
-        const groupDiv = document.createElement('div');
-        groupDiv.className = 'selected-group';
-        
-        // Format group info
-        const infoParts = [];
-        if (data.size) infoParts.push(`Size: ${data.size} students`);
-        if (data.program_name) infoParts.push(data.program_name);
-        if (data.intake_year && data.intake_month) {
-            infoParts.push(`${data.intake_year}/${data.intake_month}`);
-        }
-        
-        groupDiv.innerHTML = `
-            <div>
-                <div class="group-name">${data.name}</div>
-                <div class="group-info">
-                    ${infoParts.join(' | ')}
+                <div class="group-meta-row">
+                  <div class="group-meta-label">Year of Study:</div>
+                  <div class="group-meta-value">
+                    <span class="badge bg-primary">Year ${group.yearOfStudy}</span>
+                  </div>
                 </div>
+                <div class="group-meta-row">
+                  <div class="group-meta-label">Campus:</div>
+                  <div class="group-meta-value">
+                    <i class="bi bi-geo-alt-fill me-1"></i> ${group.campusName}
+                  </div>
+                </div>
+              </div>
+              <div class="group-size">
+                <i class="bi bi-people-fill me-2"></i>${group.size || STUDENTS_PER_GROUP} Students
+              </div>
             </div>
-            <button type="button" class="remove-group" data-group-id="${id}" title="Remove group">
-                <i class="fas fa-times"></i>
-            </button>
-            <input type="hidden" name="group_ids[]" value="${id}">
-        `;
-        selectedGroupsDiv.appendChild(groupDiv);
+          </div>
+          <button type="button" class="remove-btn" data-id="${group.id}" title="Remove group">
+            &times;
+          </button>
+        </div>
+      `);
+      $container.append(card);
     });
+    updateStudentCount();
+    updateUIState();
+  }
 
-    // Update display text
-    const displayInput = document.getElementById('selectedGroupsDisplay');
-    if (displayInput) {
-        displayInput.value = window.selectedGroupsData.size > 0 ? 
-            `${window.selectedGroupsData.size} group(s) selected - Total: ${totalSize} students` : '';
+  // Add group to selectedGroups with only essential information
+  function addGroup(group, program, intake) {
+    if (!selectedGroups.some(g => g.id === group.id)) {
+      selectedGroups.push({
+        id: group.id,
+        name: group.name,
+        size: group.size,
+        programName: program.name,
+        yearOfStudy: intake.year_of_study || 1,
+        campusName: intake.campus_name || (intake.campus?.name || 'Unassigned')
+      });
+      clickCount++; // Increment click counter
+      updateClickCounter();
+      saveSelectedGroups();
     }
+  }
 
-    // Update facility button state
-    updateFacilityButton();
-}
+  // Remove group by id
+  function removeGroup(id) {
+    selectedGroups = selectedGroups.filter(g => g.id !== id);
+    clickCount--; // Decrement click counter
+    updateClickCounter();
+    saveSelectedGroups();
+  }
 
-// Update facility button state
-function updateFacilityButton() {
-    const facilityButton = document.getElementById('facilityButton');
-    if (facilityButton) {
-        const hasGroups = window.selectedGroupIds.size > 0;
-        const hasValidSchedule = document.querySelectorAll('.session-entry').length > 0 && 
-            Array.from(document.querySelectorAll('.session-entry')).every(entry => {
-                const day = entry.querySelector('.session-day').value;
-                const startTime = entry.querySelector('.session-start').value;
-                const endTime = entry.querySelector('.session-end').value;
-                return day && startTime && endTime;
+  // Find program by id
+  function findProgramById(progId) {
+    return programs.find(p => p.id == progId);
+  }
+
+  // Find intake by id inside program
+  function findIntakeById(prog, intakeId) {
+    return prog?.intakes?.find(i => i.id == intakeId);
+  }
+
+  // Load organization structure
+  function loadOrganizationStructure() {
+    $.ajax({
+      url: 'get_organization_structure.php',
+      method: 'GET',
+      dataType: 'json',
+      success: function(response) {
+        if (response.success && response.data?.colleges?.length) {
+          programs = [];
+          
+          // Process each college
+          response.data.colleges.forEach(college => {
+            // Process each school in the college
+            (college.schools || []).forEach(school => {
+              // Filter by user's school if specified
+              if(userSchoolId && school.id != userSchoolId) return;
+              
+              // Process all programs for this school
+              (school.all_programs || []).forEach(prog => {
+                // Process intakes for each program and add campus info
+                const programWithIntakes = {
+                  id: prog.id,
+                  name: prog.name,
+                  code: prog.code,
+                  department_id: prog.department_id,
+                  school_id: school.id,
+                  intakes: []
+                };
+
+                // Add intakes with campus information
+                (prog.intakes || []).forEach(intake => {
+                  // Handle both nested campus object and direct properties
+                  const campusId = intake.campus_id || (intake.campus?.id || null);
+                  const campusName = intake.campus_name || (intake.campus?.name || 'Unassigned');
+                  
+                  programWithIntakes.intakes.push({
+                    id: intake.id,
+                    year: intake.year,
+                    month: intake.month,
+                    campus_id: campusId,
+                    campus_name: campusName,
+                    groups: intake.groups || []
+                  });
+                });
+
+                programs.push(programWithIntakes);
+              });
             });
-        
-        facilityButton.disabled = !(hasValidSchedule && hasGroups);
-        
-        // Add tooltip to explain why button is disabled
-        if (facilityButton.disabled) {
-            const reason = !hasValidSchedule ? 'Please complete schedule first' : 
-                         !hasGroups ? 'Please select groups first' : 
-                         'Please complete all required fields';
-            facilityButton.title = reason;
+          });
+
+          renderPrograms();
+          renderSelectedGroups();
+          updateClickCounter(); // Initialize click counter
         } else {
-            facilityButton.title = 'Select a facility';
+          alert('No data found for your school.');
         }
-    }
-}
+      },
+      error: function(xhr, status, error) {
+        console.error('Error loading organization structure:', error);
+        alert('Failed to load organization structure. Please check console for details.');
+      }
+    });
+  }
 
-// Load initial campuses
-loadCampuses();
-
-// Add event listeners for all select elements
-document.getElementById('campus').addEventListener('change', function() {
-    if (this.value) {
-        loadColleges(this.value);
-    } else {
-        resetSelects(['college', 'school', 'department', 'modalProgram', 'intake', 'group']);
-    }
-});
-
-document.getElementById('college').addEventListener('change', function() {
-    if (this.value) {
-        loadSchools(this.value);
-    } else {
-        resetSelects(['school', 'department', 'modalProgram', 'intake', 'group']);
-    }
-});
-
-document.getElementById('school').addEventListener('change', function() {
-    if (this.value) {
-        loadDepartments(this.value);
-    } else {
-        resetSelects(['department', 'modalProgram', 'intake', 'group']);
-    }
-});
-
-document.getElementById('department').addEventListener('change', function() {
-    if (this.value) {
-        loadPrograms(this.value);
-    } else {
-        resetSelects(['modalProgram', 'intake', 'group']);
-    }
-});
-
-document.getElementById('modalProgram').addEventListener('change', function() {
-    if (this.value) {
-        loadIntakes(this.value);
-    } else {
-        resetSelects(['intake', 'group']);
-    }
-});
-
-document.getElementById('intake').addEventListener('change', function() {
-    if (this.value) {
-        loadGroups(this.value);
-    } else {
-        resetSelects(['group']);
-    }
-});
-
-// Add event listener for search
-document.getElementById('groupSearch').addEventListener('input', function() {
-    const searchTerm = this.value.toLowerCase();
-    const rows = document.querySelectorAll('#groupsTableBody tr');
-    
-    rows.forEach(row => {
-        const groupName = row.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        const programName = row.querySelector('td:nth-child(4)').textContent.toLowerCase();
-        const intake = row.querySelector('td:nth-child(5)').textContent.toLowerCase();
-        
-        if (groupName.includes(searchTerm) || programName.includes(searchTerm) || intake.includes(searchTerm)) {
-            row.style.display = '';
+  // Load intakes for a program
+  function loadIntakes(programId) {
+    $.ajax({
+      url: 'get_organization_structure.php',
+      method: 'GET',
+      data: { program_id: programId },
+      dataType: 'json',
+      success: function(response) {
+        if (response.success && response.intakes?.length) {
+          if (!selectedProgram) selectedProgram = {};
+          selectedProgram.intakes = response.intakes;
+          renderIntakes();
         } else {
-            row.style.display = 'none';
+          alert('No intakes found for this program.');
+          $('#intakeSection').addClass('d-none');
         }
+      },
+      error: function() {
+        alert('Failed to load intakes.');
+      }
     });
-});
+  }
 
-// Add event listener for clear search
-document.getElementById('clearSearch').addEventListener('click', function() {
-    document.getElementById('groupSearch').value = '';
-    document.querySelectorAll('#groupsTableBody tr').forEach(row => {
-        row.style.display = '';
-    });
-});
-
-// Add event listeners for select all/deselect all
-document.getElementById('selectAllGroups').addEventListener('click', function() {
-    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
-        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
-    
-    visibleCheckboxes.forEach(checkbox => {
-        if (!checkbox.checked) {
-            checkbox.checked = true;
-            const groupId = checkbox.value;
-            const groupData = {
-                name: checkbox.dataset.name,
-                size: checkbox.dataset.size,
-                program_name: checkbox.dataset.program,
-                intake_year: checkbox.dataset.intakeYear,
-                intake_month: checkbox.dataset.intakeMonth
-            };
-            handleGroupSelection(groupId, true, groupData);
+  // Load groups for an intake
+  function loadGroups(intakeId) {
+    $.ajax({
+      url: 'get_organization_structure.php',
+      method: 'GET',
+      data: { intake_id: intakeId },
+      dataType: 'json',
+      success: function(response) {
+        if (response.success && response.groups?.length) {
+          if (!selectedIntake) selectedIntake = {};
+          selectedIntake.groups = response.groups;
+          renderGroups();
+        } else {
+          alert('No groups found for this intake.');
+          $('#groupsSection').addClass('d-none');
         }
+      },
+      error: function() {
+        alert('Failed to load groups.');
+      }
     });
-});
+  }
 
-document.getElementById('deselectAllGroups').addEventListener('click', function() {
-    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
-        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
+  // Event handlers
+
+  $('#programSelect').on('change', function() {
+    const progId = $(this).val();
+    selectedProgram = findProgramById(progId);
+    selectedIntake = null;
+
+    $('#intakeSelect').val('');
+    $('#groupsList').empty();
+    $('#groupsSection').addClass('d-none');
+    $('#setupCompleteBtn').addClass('d-none');
+
+    if (selectedProgram) {
+      loadIntakes(selectedProgram.id);
+    }
+  });
+
+  $('#intakeSelect').on('change', function() {
+    const intakeId = $(this).val();
+    if (!selectedProgram || !intakeId) return;
     
-    visibleCheckboxes.forEach(checkbox => {
-        if (checkbox.checked) {
-            checkbox.checked = false;
-            const groupId = checkbox.value;
-            handleGroupSelection(groupId, false);
-        }
-    });
-});
+    selectedIntake = findIntakeById(selectedProgram, intakeId);
+    if (selectedIntake) {
+      loadGroups(selectedIntake.id);
+    }
+  });
 
-// Add event listener for select all checkbox
-document.getElementById('selectAllCheckbox').addEventListener('change', function() {
-    const visibleCheckboxes = Array.from(document.querySelectorAll('#groupsTableBody .group-checkbox'))
-        .filter(checkbox => checkbox.closest('tr').style.display !== 'none');
+  // Group checkbox change
+  $('#groupsList').on('change', 'input[type=checkbox]', function() {
+    const groupId = $(this).val();
+    const group = selectedIntake.groups.find(g => g.id == groupId);
+    if (!group) return;
+
+    if (this.checked) {
+      addGroup(group, selectedProgram, selectedIntake);
+    } else {
+      removeGroup(group.id);
+    }
+    renderSelectedGroups();
+  });
+
+  // Remove button on selected groups card
+  $('#selectedGroupsList').on('click', '.remove-btn', function(e) {
+    e.preventDefault();
+    const id = $(this).data('id');
+    removeGroup(id);
     
-    visibleCheckboxes.forEach(checkbox => {
-        checkbox.checked = this.checked;
-        const groupId = checkbox.value;
-        const groupData = {
-            name: checkbox.dataset.name,
-            size: checkbox.dataset.size,
-            program_name: checkbox.dataset.program,
-            intake_year: checkbox.dataset.intakeYear,
-            intake_month: checkbox.dataset.intakeMonth
-        };
-        handleGroupSelection(groupId, this.checked, groupData);
-    });
+    // Save changes and refresh the page
+    const selectedGroups = JSON.parse(localStorage.getItem('selectedGroups') || '[]');
+    const updatedGroups = selectedGroups.filter(group => group.id !== id);
+    localStorage.setItem('selectedGroups', JSON.stringify(updatedGroups));
+    
+    // Refresh the page to reflect changes
+    window.location.reload();
+  });
+
+  // Setup Complete button click
+  $('#setupCompleteBtn').on('click', function() {
+    hideSetupForm();
+    updateUIState();
+  });
+
+  // Cancel Setup button click
+  $('#cancelSetupBtn').on('click', function() {
+    hideSetupForm();
+    updateUIState();
+  });
+
+  // Start Selection button click (from empty state)
+  $('#startSelectionBtn').on('click', function() {
+    showSetupForm();
+  });
+
+  // Add More Groups button click
+  $('#addGroupBtn').on('click', function() {
+    showSetupForm();
+  });
+  
+  // Initial load
+  loadOrganizationStructure();
 });
+</script>
 
-// Add event listener for modal show
-document.getElementById('groupsModal').addEventListener('show.bs.modal', function() {
-    // Update checkboxes to match current selection state
-    document.querySelectorAll('.group-checkbox').forEach(checkbox => {
-        checkbox.checked = window.selectedGroupIds.has(checkbox.value);
-    });
-});
+<!-- Bootstrap Bundle JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-// Update loadGroups function
-function loadGroups(intakeId) {
-    console.log('Loading groups for intake:', intakeId);
-    fetch(`selectors/get_groups.php?intake_id=${intakeId}`)
-        .then(response => response.json())
-        .then(data => {
-            console.log('Groups data:', data);
-            if (data.success) {
-                const tbody = document.getElementById('groupsTableBody');
-                tbody.innerHTML = '';
-                
-                if (!data.data || data.data.length === 0) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">
-                                No groups available for this selection
-                            </td>
-                        </tr>
-                    `;
-                    return;
-                }
-                
-                data.data.forEach(group => {
-                    const row = document.createElement('tr');
-                    row.className = 'group-row';
-                    const isSelected = window.selectedGroupIds.has(group.id);
-                    
-                    // Format group info for data attributes
-                    const programName = group.program_name || '';
-                    const intakeYear = group.intake_year || '';
-                    const intakeMonth = group.intake_month || '';
-                    const groupSize = group.size || '0';
-                    
-                    row.innerHTML = `
-                        <td>
-                            <input type="checkbox" class="form-check-input group-checkbox" 
-                                   value="${group.id}" 
-                                   data-name="${group.name}"
-                                   data-size="${groupSize}"
-                                   data-program="${programName}"
-                                   data-intake-year="${intakeYear}"
-                                   data-intake-month="${intakeMonth}"
-                                   ${isSelected ? 'checked' : ''}>
-                        </td>
-                        <td>${group.name}</td>
-                        <td>${groupSize} students</td>
-                        <td>${programName}</td>
-                        <td>${intakeYear && intakeMonth ? `${intakeYear}/${intakeMonth}` : ''}</td>
-                        <td>
-                            <button type="button" class="btn btn-sm btn-outline-primary view-group" 
-                                    data-group-id="${group.id}">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
-                    `;
-                    tbody.appendChild(row);
-                });
-                updateSelectedGroupsCount();
-            } else {
-                console.error('Error loading groups:', data.message);
-                alert('Error loading groups: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadGroups:', error);
-            alert('Error loading groups: ' + error.message);
-        });
-}
-
-function resetSelects(selectIds) {
-    selectIds.forEach(id => {
-        const select = document.getElementById(id);
-        select.innerHTML = `<option value="">Select ${id.charAt(0).toUpperCase() + id.slice(1)}</option>`;
-        select.disabled = true;
-    });
-}
-
-function loadCampuses() {
-    console.log('Loading campuses...');
-    fetch('selectors/get_campuses.php')
-        .then(response => {
-            console.log('Campuses response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            console.log('Campuses data:', data);
-            if (data.success) {
-                const select = document.getElementById('campus');
-                select.innerHTML = '<option value="">Select Campus</option>';
-                data.data.forEach(campus => {
-                    select.innerHTML += `<option value="${campus.id}">${campus.name}</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading campuses:', data.message);
-                alert('Error loading campuses: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadCampuses:', error);
-            alert('Error loading campuses: ' + error.message);
-        });
-}
-
-function loadColleges(campusId) {
-    console.log('Loading colleges for campus:', campusId);
-    fetch(`selectors/get_colleges.php?campus_id=${campusId}`)
-        .then(response => {
-            console.log('Colleges response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })  
-        .then(data => {
-            console.log('Colleges data:', data);
-            if (data.success) {
-                const select = document.getElementById('college');
-                select.innerHTML = '<option value="">Select College</option>';
-                data.data.forEach(college => {
-                    select.innerHTML += `<option value="${college.id}">${college.name}</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading colleges:', data.message);
-                alert('Error loading colleges: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadColleges:', error);
-            alert('Error loading colleges: ' + error.message);
-        });
-}
-
-function loadSchools(collegeId) {
-    console.log('Loading schools for college:', collegeId);
-    fetch(`selectors/get_schools.php?college_id=${collegeId}`)
-        .then(response => {
-            console.log('Schools response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            console.log('Schools data:', data);
-            if (data.success) {
-                const select = document.getElementById('school');
-                select.innerHTML = '<option value="">Select School</option>';
-                data.data.forEach(school => {
-                    select.innerHTML += `<option value="${school.id}">${school.name} (${school.college_name})</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading schools:', data.message);
-                alert('Error loading schools: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadSchools:', error);
-            alert('Error loading schools: ' + error.message);
-        });
-}
-
-function loadDepartments(schoolId) {
-    console.log('Loading departments for school:', schoolId);
-    fetch(`selectors/get_departments.php?school_id=${schoolId}`)
-        .then(response => {
-            console.log('Departments response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            console.log('Departments data:', data);
-            if (data.success) {
-                const select = document.getElementById('department');
-                select.innerHTML = '<option value="">Select Department</option>';
-                data.data.forEach(department => {
-                    select.innerHTML += `<option value="${department.id}">${department.name} (${department.school_name})</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading departments:', data.message);
-                alert('Error loading departments: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadDepartments:', error);
-            alert('Error loading departments: ' + error.message);
-        });
-}
-
-function loadPrograms(departmentId) {
-    console.log('Loading programs for department:', departmentId);
-    fetch(`selectors/get_programs.php?department_id=${departmentId}`)
-        .then(response => {
-            console.log('Programs response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            console.log('Programs data:', data);
-            if (data.success) {
-                const select = document.getElementById('modalProgram');
-                select.innerHTML = '<option value="">Select Program</option>';
-                data.data.forEach(program => {
-                    select.innerHTML += `<option value="${program.id}">${program.name} (${program.code}) - ${program.department_name}</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading programs:', data.message);
-                alert('Error loading programs: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadPrograms:', error);
-            alert('Error loading programs: ' + error.message);
-        });
-}
-
-function loadIntakes(programId) {
-    console.log('Loading intakes for program:', programId);
-    fetch(`selectors/get_intakes.php?program_id=${programId}`)
-        .then(response => {
-            console.log('Intakes response status:', response.status);
-            return response.text().then(text => {
-                console.log('Raw response:', text);
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('JSON parse error:', e);
-                    throw new Error('Invalid JSON response: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            console.log('Intakes data:', data);
-            if (data.success) {
-                const select = document.getElementById('intake');
-                select.innerHTML = '<option value="">Select Intake</option>';
-                data.data.forEach(intake => {
-                    select.innerHTML += `<option value="${intake.id}">${intake.year}/${intake.month} (Size: ${intake.size})</option>`;
-                });
-                select.disabled = false;
-            } else {
-                console.error('Error loading intakes:', data.message);
-                alert('Error loading intakes: ' + data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Error in loadIntakes:', error);
-            alert('Error loading intakes: ' + error.message);
-        });
-}
-
-// Add event listener for schedule changes
-document.addEventListener('change', function(e) {
-    if (e.target.matches('.session-day, .session-start, .session-end')) {
-        const sessionEntry = e.target.closest('.session-entry');
-        const day = sessionEntry.querySelector('.session-day').value;
-        const startTime = sessionEntry.querySelector('.session-start').value;
-        const endTime = sessionEntry.querySelector('.session-end').value;
-        
-        // Update facility button state based on schedule completion
-        updateFacilityButton();
-    }
-});
-
-// Add styles for the summary
-const style = document.createElement('style');
-style.textContent = `
-    .selected-groups-summary {
-        border: 1px solid #dee2e6;
-        background-color: #f8f9fa;
-        margin-bottom: 1rem;
-    }
-    .selected-groups-summary strong {
-        color: #0d6efd;
-    }
-    .selected-group {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 0.5rem;
-        margin-bottom: 0.5rem;
-        background-color: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 0.25rem;
-    }
-    .selected-group .group-info {
-        font-size: 0.875rem;
-        color: #6c757d;
-    }
-    .selected-group button {
-        padding: 0.25rem 0.5rem;
-        margin-left: 0.5rem;
-    }
-`;
-document.head.appendChild(style);
-</script> 
+</body>
+</html>

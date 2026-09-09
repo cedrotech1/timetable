@@ -1,0 +1,31 @@
+# Enable error handling
+ErrorDocument 400 /hostelms/400.php
+ErrorDocument 401 /hostelms/401.php
+ErrorDocument 403 /hostelms/403.php
+ErrorDocument 404 /hostelms/404.php
+ErrorDocument 500 /hostelms/500.php
+ErrorDocument 503 /hostelms/503.php
+
+# Prevent directory listing
+Options -Indexes
+
+# Handle errors
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    
+    # Allow direct access to error pages
+    RewriteCond %{REQUEST_URI} !^/hostelms/(400|401|403|404|500|503)\.php$
+    
+    # Handle 404 errors for non-existent files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteRule ^(.*)$ 404.php [L]
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule> 

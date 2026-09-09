@@ -1,0 +1,13 @@
+name,type,capacity,location
+cl001,classroom,30,batima
+clab001,computer lab,25,batima
+mlab001,medicine lab,20,batima
+cl002,classroom,35,mpamba
+clab002,computer lab,30,mpamba
+mlab002,medicine lab,25,mpamba
+cl003,classroom,40,nyarugenge
+clab003,computer lab,35,nyarugenge
+mlab003,medicine lab,30,nyarugenge
+cl004,classroom,45,kicukiro
+clab004,computer lab,40,kicukiro
+mlab004,medicine lab,35,kicukiro 

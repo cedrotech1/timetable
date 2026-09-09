@@ -1,1958 +1,566 @@
-<?php
-session_start();
-include('connection.php');
+<?php 
+    session_start();
+    include('connection.php');
 
-// Get current system settings
-$system_query = "SELECT s.*, ay.year_label 
-                FROM system s 
-                LEFT JOIN academic_year ay ON s.accademic_year_id = ay.id 
-                LIMIT 1";
-$system_result = mysqli_query($connection, $system_query);
-$system_data = mysqli_fetch_assoc($system_result);
+    // Get academic year from session or use defaults
+    $academic_year_id = $_SESSION['academic_year_id'] ?? null;
+    $semester = $_SESSION['semester'] ?? 1; // Default to first semester if not set
+    $academic_year_label = $_SESSION['academic_year_label'] ?? date('Y') . '/' . (date('Y') + 1);
 
-// Get all campuses
-$campuses = [];
-$res = mysqli_query($connection, "SELECT id, name FROM campus ORDER BY name");
-while ($row = mysqli_fetch_assoc($res)) $campuses[] = $row;
+    // Get campus from URL or use default (first campus)
+    $campusId = $_GET['campus'] ?? null;
+    $role = 'public';
+    
+    // If no campus is selected, get the first available campus
+    if (!$campusId) {
+        $result = $connection->query("SELECT id FROM campus ORDER BY id LIMIT 1");
+        if ($result && $row = $result->fetch_assoc()) {
+            $campusId = $row['id'];
+        }
+    }
 
-// Get academic years
-$years = [];
-$res = mysqli_query($connection, "SELECT id, year_label FROM academic_year ORDER BY year_label DESC");
-while ($row = mysqli_fetch_assoc($res)) $years[] = $row;
+    // Fetch all campuses for the filter
+    $campuses = [];
+    $campusResult = $connection->query("SELECT * FROM campus ORDER BY name");
+    if ($campusResult) {
+        while($row = $campusResult->fetch_assoc()) {
+            $campuses[] = $row;
+        }
+    }
 
-$semesters = ['1', '2', '3'];
-?>
+    // fetch selected campus info
+    $campus = null;
+    if ($campusId) {
+        $stmt = $connection->prepare("SELECT * FROM campus WHERE id = ?");
+        $stmt->bind_param("i", $campusId);
+        $stmt->execute();
+        $campus = $stmt->get_result()->fetch_assoc();
+    }
+    ?>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset="utf-8">
-<meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <meta charset="UTF-8" />
+    <title>University Timetable - <?php echo htmlspecialchars($campus['name'] ?? 'All Campuses'); ?></title>
+    <meta content="" name="description">
+    <meta content="" name="keywords">
 
-<title>UR-TIMETABLE</title>
-<meta content="" name="description">
-<meta content="" name="keywords">
+    <!-- Favicons -->
+    <link href="assets/img/icon1.png" rel="icon">
+    <link href="assets/img/icon1.png" rel="apple-touch-icon">
 
-<!-- Favicons -->
-<link href="assets/img/icon1.png" rel="icon">
-<link href="assets/img/icon1.png" rel="apple-touch-icon">
+    <!-- Google Fonts -->
+    <link href="https://fonts.gstatic.com" rel="preconnect">
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i" rel="stylesheet">
 
-<!-- Google Fonts -->
-<link href="https://fonts.gstatic.com" rel="preconnect">
-<link
-    href="https://fonts.googleapis.com/css?family=Open+Sans:300,300i,400,400i,600,600i,700,700i|Nunito:300,300i,400,400i,600,600i,700,700i|Poppins:300,300i,400,400i,500,500i,600,600i,700,700i"
-    rel="stylesheet">
-
-<!-- Vendor CSS Files -->
-<link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
-<link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
-<link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
-<link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
-<link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
-<link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
-<link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
-
+    <!-- Vendor CSS Files -->
+    <link href="assets/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="assets/vendor/bootstrap-icons/bootstrap-icons.css" rel="stylesheet">
+    <link href="assets/vendor/boxicons/css/boxicons.min.css" rel="stylesheet">
+    <link href="assets/vendor/quill/quill.snow.css" rel="stylesheet">
+    <link href="assets/vendor/quill/quill.bubble.css" rel="stylesheet">
+    <link href="assets/vendor/remixicon/remixicon.css" rel="stylesheet">
+    <link href="assets/vendor/simple-datatables/style.css" rel="stylesheet">
     <link href="assets/css/style.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        body {
+            background-color: #f4f6f8;
+            padding-top: 100px; /* Space for fixed navbar */
+        }
+
+        /* Fixed Navbar */
+        .fixed-top-navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1030;
+            background-color: #031f50;
+            padding: 1.2rem 2rem;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .staff-login-btn {
+            font-size: 1.25rem !important;
+            padding: 0.6cm !important;
+        }
+
+        main { font-size: 12px; }
+        table { background: white; border-collapse: collapse; width: 100%; font-size: 12px; }
+        th, td { padding: 2px 4px; border: 1px solid #ddd; vertical-align: middle; white-space: nowrap; text-align: center; }
+        h2 { font-size: 16px; margin-bottom: 10px; padding: 5px; }
+        .table-dark { background-color: #031f50 !important; color: white; font-size: 12px; }
+        .badge { font-size: 10px; padding: 2px 4px; }
+        .btn-sm { padding: 2px 5px; font-size: 11px; }
+        .card { margin-bottom: 5px; padding: 5px; font-size: 12px; }
+        .card-body { padding: 5px; }
+        select.form-select { font-size: 12px; padding: 2px 4px; }
+        .btn { font-size: 12px; padding: 2px 5px; }
+        #currentView { font-size: 13px; }
+        .filter-container {
+            background: #f8f9fa;
+            border: 0px solid #dee2e6;
+            padding: 12px 15px;
+            border-radius: 6px;
+        }
+        .filter-container label { font-size: 0.85rem; margin-bottom: 4px; }
+        .filter-container select { font-size: 0.85rem; }
+        .table-card { background: #fff !important; padding: 12px 15px; border-radius: 6px; }
+        .timetable-title {
+            font-size: 20px;
+            text-align: justify;
+            margin-bottom: 10px;
+            padding: 5px;
+            font-weight: bold;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #031f50;
+            border-bottom: 1px solid #ddd;
+            width: 100%;
+        }
+        .btn-primary {
+            background-color: #031f50 !important;
+            color: white !important;
+            font-size: 12px !important;
+            padding: 2px 5px !important;
+        }
+
+        /* Help Tip Card */
+        .card-header h5 { font-size: 1.1rem; }
+        .card-body ol { padding-left: 1.2rem; }
+        .card-body li { margin-bottom: 0.5rem; }
+        .alert { font-size: 0.9rem; }
+
+        /* Loading Spinner */
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 9999;
+        }
+        .spinner-border { width: 3rem; height: 3rem; color: #031f50; }
+        .loading-text { margin-top: 1rem; font-size: 1.2rem; color: #031f50; font-weight: 500; }
+
+        #timetableTable { opacity: 0; transition: opacity 0.3s ease-in-out; }
+        #timetableTable.loaded { opacity: 1; }
+    </style>
 </head>
 <body>
 
-<?php
+    <!-- FIXED NAVBAR -->
+    <nav class="navbar navbar-dark fixed-top-navbar">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <!-- Logo + University Name -->
+            <a class="navbar-brand d-flex align-items-center text-white text-decoration-none" href="#">
+                <img src="icon1.png" alt="Logo" width="50" height="50" class="me-3">
+                <span class="fw-bold fs-4">University of Rwanda</span>
+            </a>
 
-?>
-
-
-
-<main id="main" class="main">
-<div class="container-fluid py-4">
-    <!-- <h2 class="mb-4">Time Table</h2> -->
-    
-    <!-- Filters Section -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form id="filterForm" class="row g-3">
-                <div class="col-12">
-                    <h5 class="filter-title"><i class="bi bi-funnel"></i> Filter Timetable</h5>
-                </div>
-
-                <!-- Academic Period Filters -->
-                <div class="col-12">
-                    <div class="academic-period-filters">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="filter-group">
-                                    <label class="form-label"><i class="bi bi-calendar2-week"></i> Academic Year</label>
-                                    <select class="form-select" id="academic_year_id" name="academic_year_id">
-                                        <option value="">All Academic Years</option>
-                                        <?php foreach ($years as $year): ?>
-                                            <option value="<?php echo $year['id']; ?>">
-                                                <?php echo $year['year_label']; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="filter-group">
-                                    <label class="form-label"><i class="bi bi-calendar3"></i> Semester</label>
-                                    <select class="form-select" id="semester" name="semester">
-                                        <option value="">All Semesters</option>
-                                        <?php foreach ($semesters as $sem): ?>
-                                            <option value="<?php echo $sem; ?>">
-                                                Semester <?php echo $sem; ?>
-                                            </option>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Step Indicator -->
-                <div class="col-12">
-                    <div class="step-indicator">
-                        <div class="step active" data-step="campus">
-                            <div class="step-icon"><i class="bi bi-geo-alt"></i></div>
-                            <div class="step-label">Campus</div>
-                        </div>
-                        <div class="step" data-step="college">
-                            <div class="step-icon"><i class="bi bi-building"></i></div>
-                            <div class="step-label">College</div>
-                        </div>
-                        <div class="step" data-step="school">
-                            <div class="step-icon"><i class="bi bi-bank"></i></div>
-                            <div class="step-label">School</div>
-                        </div>
-                        <div class="step" data-step="department">
-                            <div class="step-icon"><i class="bi bi-diagram-3"></i></div>
-                            <div class="step-label">Department</div>
-                        </div>
-                        <div class="step" data-step="program">
-                            <div class="step-icon"><i class="bi bi-mortarboard"></i></div>
-                            <div class="step-label">Program</div>
-                        </div>
-                        <div class="step" data-step="intake">
-                            <div class="step-icon"><i class="bi bi-calendar"></i></div>
-                            <div class="step-label">Intake</div>
-                        </div>
-                        <div class="step" data-step="group">
-                            <div class="step-icon"><i class="bi bi-people"></i></div>
-                            <div class="step-label">Group</div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Filter Steps -->
-                <div class="col-12" style="margin-top:'-2cm'">
-                    <div class="filter-steps">
-                        <!-- Campus Step -->
-                        <div class="filter-step active" id="campus-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-geo-alt"></i> Select Campus</label>
-                                <select class="form-select" id="campus_id" name="campus_id">
-                                    <option value="">All Campuses</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- College Step -->
-                        <div class="filter-step" id="college-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-building"></i> Select College</label>
-                                <select class="form-select" id="college_id" name="college_id">
-                                    <option value="">All Colleges</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- School Step -->
-                        <div class="filter-step" id="school-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-bank"></i> Select School</label>
-                                <select class="form-select" id="school_id" name="school_id">
-                                    <option value="">All Schools</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Department Step -->
-                        <div class="filter-step" id="department-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-diagram-3"></i> Select Department</label>
-                                <select class="form-select" id="department_id" name="department_id">
-                                    <option value="">All Departments</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Program Step -->
-                        <div class="filter-step" id="program-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-mortarboard"></i> Select Program</label>
-                                <select class="form-select" id="program_id" name="program_id">
-                                    <option value="">All Programs</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Intake Step -->
-                        <div class="filter-step" id="intake-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-calendar"></i> Select Intake</label>
-                                <select class="form-select" id="intake_id" name="intake_id">
-                                    <option value="">All Intakes</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <!-- Group Step -->
-                        <div class="filter-step" id="group-step">
-                            <div class="filter-group">
-                                <label class="form-label"><i class="bi bi-people"></i> Select Group</label>
-                                <select class="form-select" id="group_id" name="group_id">
-                                    <option value="">All Groups</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Navigation Buttons -->
-                <div class="col-12" style="margin-top:-0.5cm">
-                    <div class="filter-actions">
-                        <button type="button" class="btn btn-secondary" id="prevBtn" style="display: none;">
-                            <i class="bi bi-arrow-left"></i> Previous
-                        </button>
-                        <button type="button" class="btn btn-primary" id="nextBtn">
-                            Next <i class="bi bi-arrow-right"></i>
-                        </button>
-                        <button type="submit" class="btn btn-success" id="applyBtn" style="display: none;">
-                            <i class="bi bi-search"></i> Apply Filters
-                        </button>
-                        <button type="button" class="btn btn-danger" onclick="resetFilters()">
-                            <i class="bi bi-x-circle"></i> Reset
-                        </button>
-                    </div>
-                </div>
-            </form>
+            <!-- Big Staff Login Button -->
+            <a href="login.php" class="btn  btn-lg " style="padding:0.3cm;font-size:0.5cm;color:white;border:3px solid white">
+                Staff Login
+            </a>
         </div>
-    </div>
+    </nav>
 
-    <!-- Timetable Grid -->
-    <div class="timetable-container">
-        <div class="table-responsive">
-            <table class="table table-striped" id="timetableTable">
-                <thead>
-                    <tr>
-                        <th>Day</th>
-                        <th>Time</th>
-                        <th>Module</th>
-                        <th>Lecturer</th>
-                        <th>Campus</th>
-                        <th>College</th>
-                        <th>School</th>
-                        <th>Department</th>
-                        <th>Program</th>
-                        <th>Group</th>
-                        <th>Intake</th>
-                        <th>Facility</th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
-        </div>
-    </div>
-</div>
+    <!-- Main Content -->
+    <div class="container-fluid py-3">
 
-<div class="loading" id="loadingIndicator" style="display: none;">
-    <div class="spinner-border text-primary" role="status">
-        <span class="visually-hidden">Loading...</span>
-    </div>
-</div>
-
-<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<script>
-$(document).ready(function() {
-    let currentStep = 0;
-    const steps = ['campus', 'college', 'school', 'department', 'program', 'intake', 'group'];
-    
-    // Initialize Select2 for all select elements
-    $('.form-select').select2({
-        width: '100%'
-    });
-    
-    // Initialize Select2 for group filter
-    $('#group_id').select2({
-        placeholder: "Select groups",
-        allowClear: true,
-        width: '100%'
-    });
-    
-    // Load initial data and timetable
-    loadCampuses();
-    loadTimetable(); // Load all timetable data initially
-    
-    // Add change event listeners for academic period filters
-    $('#academic_year_id').on('change', function() {
-        loadTimetable();
-    });
-    
-    $('#semester').on('change', function() {
-        loadTimetable();
-    });
-    
-    // Handle next button click
-    $('#nextBtn').click(function() {
-        if (currentStep < steps.length - 1) {
-            const currentField = steps[currentStep];
-            const nextField = steps[currentStep + 1];
-            
-            // Load dependent data before moving to next step
-            if (currentField === 'campus') {
-                handleCampusChange();
-            } else if (currentField === 'college') {
-                handleCollegeChange();
-            } else if (currentField === 'school') {
-                handleSchoolChange();
-            } else if (currentField === 'department') {
-                handleDepartmentChange();
-            } else if (currentField === 'program') {
-                handleProgramChange();
-            } else if (currentField === 'intake') {
-                handleIntakeChange();
-            }
-            
-            // Move to next step
-            $('.filter-step').removeClass('active');
-            $(`#${nextField}-step`).addClass('active');
-            
-            // Update step indicator
-            $(`.step[data-step="${currentField}"]`).addClass('completed');
-            $(`.step[data-step="${nextField}"]`).addClass('active');
-            
-            // Show/hide navigation buttons
-            $('#prevBtn').show();
-            if (currentStep + 1 === steps.length - 1) {
-                $('#nextBtn').hide();
-                $('#applyBtn').show();
-            }
-            
-            currentStep++;
-            
-            // Load timetable with current filters
-            loadTimetable();
-        }
-    });
-    
-    // Handle previous button click
-    $('#prevBtn').click(function() {
-        if (currentStep > 0) {
-            const currentField = steps[currentStep];
-            const prevField = steps[currentStep - 1];
-            
-            // Move to previous step
-            $('.filter-step').removeClass('active');
-            $(`#${prevField}-step`).addClass('active');
-            
-            // Update step indicator
-            $(`.step[data-step="${currentField}"]`).removeClass('active completed');
-            $(`.step[data-step="${prevField}"]`).addClass('active');
-            
-            // Show/hide navigation buttons
-            $('#nextBtn').show();
-            $('#applyBtn').hide();
-            if (currentStep - 1 === 0) {
-                $('#prevBtn').hide();
-            }
-            
-            currentStep--;
-            
-            // Load timetable with current filters
-            loadTimetable();
-        }
-    });
-    
-    // Handle form submission
-    $('#filterForm').on('submit', function(e) {
-        e.preventDefault();
-        loadTimetable();
-    });
-    
-    // Handle reset
-    function resetFilters() {
-        currentStep = 0;
-        $('.filter-step').removeClass('active');
-        $('#campus-step').addClass('active');
-        $('.step').removeClass('active completed');
-        $('.step[data-step="campus"]').addClass('active');
-        $('#prevBtn').hide();
-        $('#nextBtn').show();
-        $('#applyBtn').hide();
-        $('.form-select').val('').trigger('change');
-        $('#group_id').val(null).trigger('change');
-        
-        // Reset academic year and semester to empty values
-        $('#academic_year_id').val('').trigger('change');
-        $('#semester').val('').trigger('change');
-        
-        loadTimetable();
-    }
-    
-    // Make resetFilters available globally
-    window.resetFilters = resetFilters;
-    
-    // Add change event listeners for all select elements
-    $('#campus_id').on('change', function() {
-        handleCampusChange();
-        loadTimetable();
-    });
-    
-    $('#college_id').on('change', function() {
-        handleCollegeChange();
-        loadTimetable();
-    });
-    
-    $('#school_id').on('change', function() {
-        handleSchoolChange();
-        loadTimetable();
-    });
-    
-    $('#department_id').on('change', function() {
-        handleDepartmentChange();
-        loadTimetable();
-    });
-    
-    $('#program_id').on('change', function() {
-        handleProgramChange();
-        loadTimetable();
-    });
-    
-    $('#intake_id').on('change', function() {
-        handleIntakeChange();
-        loadTimetable();
-    });
-
-    // Add group change handler
-    $('#group_id').on('change', function() {
-        loadTimetable();
-    });
-});
-
-function showLoading() {
-    $('#loadingIndicator').show();
-}
-
-function hideLoading() {
-    $('#loadingIndicator').hide();
-}
-
-function loadCampuses() {
-    $.ajax({
-        url: 'Dashboard/get_organization_structure.php',
-        method: 'GET',
-        dataType: 'json',
-        success: function(response) {
-            if (response.success && response.data) {
-                const campusSelect = $('#campus_id');
-                campusSelect.empty().append('<option value="">All Campuses</option>');
-                response.data.forEach(campus => {
-                    campusSelect.append(`<option value="${campus.id}">${campus.name}</option>`);
-                });
-            }
-        },
-        error: function(xhr, status, error) {
-            console.error('Error loading campuses:', error);
-        }
-    });
-}
-
-function handleCampusChange() {
-    const campusId = $('#campus_id').val();
-    const collegeSelect = $('#college_id');
-    
-    // Reset dependent dropdowns
-    collegeSelect.empty().append('<option value="">All Colleges</option>');
-    $('#school_id').empty().append('<option value="">All Schools</option>');
-    $('#department_id').empty().append('<option value="">All Departments</option>');
-    $('#program_id').empty().append('<option value="">All Programs</option>');
-    $('#intake_id').empty().append('<option value="">All Intakes</option>');
-    
-    if (campusId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus && campus.colleges) {
-                        campus.colleges.forEach(college => {
-                            collegeSelect.append(`<option value="${college.id}">${college.name}</option>`);
-                        });
-                    }
-                }
-            }
-        });
-    }
-}
-
-function handleCollegeChange() {
-    const campusId = $('#campus_id').val();
-    const collegeId = $('#college_id').val();
-    const schoolSelect = $('#school_id');
-    
-    // Reset dependent dropdowns
-    schoolSelect.empty().append('<option value="">All Schools</option>');
-    $('#department_id').empty().append('<option value="">All Departments</option>');
-    $('#program_id').empty().append('<option value="">All Programs</option>');
-    $('#intake_id').empty().append('<option value="">All Intakes</option>');
-    
-    if (campusId && collegeId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus) {
-                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
-                        if (college && college.schools) {
-                            college.schools.forEach(school => {
-                                schoolSelect.append(`<option value="${school.id}">${school.name}</option>`);
-                            });
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-function handleSchoolChange() {
-    const campusId = $('#campus_id').val();
-    const collegeId = $('#college_id').val();
-    const schoolId = $('#school_id').val();
-    const departmentSelect = $('#department_id');
-    
-    // Reset dependent dropdowns
-    departmentSelect.empty().append('<option value="">All Departments</option>');
-    $('#program_id').empty().append('<option value="">All Programs</option>');
-    $('#intake_id').empty().append('<option value="">All Intakes</option>');
-    
-    if (campusId && collegeId && schoolId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus) {
-                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
-                        if (college) {
-                            const school = college.schools.find(s => s.id === parseInt(schoolId));
-                            if (school && school.departments) {
-                                school.departments.forEach(department => {
-                                    departmentSelect.append(`<option value="${department.id}">${department.name}</option>`);
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-function handleDepartmentChange() {
-    const campusId = $('#campus_id').val();
-    const collegeId = $('#college_id').val();
-    const schoolId = $('#school_id').val();
-    const departmentId = $('#department_id').val();
-    const programSelect = $('#program_id');
-    
-    // Reset dependent dropdowns
-    programSelect.empty().append('<option value="">All Programs</option>');
-    $('#intake_id').empty().append('<option value="">All Intakes</option>');
-    
-    if (campusId && collegeId && schoolId && departmentId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus) {
-                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
-                        if (college) {
-                            const school = college.schools.find(s => s.id === parseInt(schoolId));
-                            if (school) {
-                                const department = school.departments.find(d => d.id === parseInt(departmentId));
-                                if (department && department.programs) {
-                                    department.programs.forEach(program => {
-                                        programSelect.append(`<option value="${program.id}">${program.name}</option>`);
-                                    });
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-function handleProgramChange() {
-    const campusId = $('#campus_id').val();
-    const collegeId = $('#college_id').val();
-    const schoolId = $('#school_id').val();
-    const departmentId = $('#department_id').val();
-    const programId = $('#program_id').val();
-    const intakeSelect = $('#intake_id');
-    const groupSelect = $('#group_id');
-    
-    // Reset dropdowns
-    intakeSelect.empty().append('<option value="">All Intakes</option>');
-    groupSelect.empty().append('<option value="">All Groups</option>');
-    
-    if (campusId && collegeId && schoolId && departmentId && programId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus) {
-                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
-                        if (college) {
-                            const school = college.schools.find(s => s.id === parseInt(schoolId));
-                            if (school) {
-                                const department = school.departments.find(d => d.id === parseInt(departmentId));
-                                if (department) {
-                                    const program = department.programs.find(p => p.id === parseInt(programId));
-                                    if (program) {
-                                        // Load intakes
-                                        if (program.intakes) {
-                                            program.intakes.forEach(intake => {
-                                                intakeSelect.append(`<option value="${intake.id}">${intake.year}/${intake.month}</option>`);
-                                            });
-                                        }
-                                        
-                                        // Load groups
-                                        if (program.groups) {
-                                            program.groups.forEach(group => {
-                                                groupSelect.append(`<option value="${group.id}">${group.name} (${group.size})</option>`);
-                                            });
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-function handleIntakeChange() {
-    const campusId = $('#campus_id').val();
-    const collegeId = $('#college_id').val();
-    const schoolId = $('#school_id').val();
-    const departmentId = $('#department_id').val();
-    const programId = $('#program_id').val();
-    const intakeId = $('#intake_id').val();
-    const groupSelect = $('#group_id');
-    
-    // Reset group dropdown
-    groupSelect.empty().append('<option value="">All Groups</option>');
-    
-    if (campusId && collegeId && schoolId && departmentId && programId && intakeId) {
-        $.ajax({
-            url: 'Dashboard/get_organization_structure.php',
-            method: 'GET',
-            dataType: 'json',
-            success: function(response) {
-                if (response.success && response.data) {
-                    const campus = response.data.find(c => c.id === campusId);
-                    if (campus) {
-                        const college = campus.colleges.find(c => c.id === parseInt(collegeId));
-                        if (college) {
-                            const school = college.schools.find(s => s.id === parseInt(schoolId));
-                            if (school) {
-                                const department = school.departments.find(d => d.id === parseInt(departmentId));
-                                if (department) {
-                                    const program = department.programs.find(p => p.id === parseInt(programId));
-                                    if (program) {
-                                        const intake = program.intakes.find(i => i.id === parseInt(intakeId));
-                                        if (intake && intake.groups) {
-                                            intake.groups.forEach(group => {
-                                                groupSelect.append(`<option value="${group.id}">${group.name}</option>`);
-                                            });
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-}
-
-function loadTimetable() {
-    showLoading();
-    
-    // Get all current filter values
-    const filters = {
-        campus_id: $('#campus_id').val(),
-        college_id: $('#college_id').val(),
-        school_id: $('#school_id').val(),
-        department_id: $('#department_id').val(),
-        program_id: $('#program_id').val(),
-        intake_id: $('#intake_id').val(),
-        group_id: $('#group_id').val(),
-        academic_year_id: $('#academic_year_id').val(),
-        semester: $('#semester').val()
-    };
-    
-    $.ajax({
-        url: 'Dashboard/get_timetable.php',
-        method: 'GET',
-        data: filters,
-        dataType: 'json',
-        success: function(response) {
-            hideLoading();
-            const container = $('.timetable-container');
-            container.empty();
-
-            if (response.success) {
-                if (response.data && response.data.length > 0) {
-                    displayTimetable(response.data);
-                } else {
-                    // Show no data message with current filters
-                    const activeFilters = Object.entries(filters)
-                        .filter(([key, value]) => value)
-                        .map(([key, value]) => {
-                            const select = $(`#${key}`);
-                            const text = select.find('option:selected').text();
-                            return `<div><strong>${key.replace('_id', '').replace(/\b\w/g, l => l.toUpperCase())}:</strong> ${text}</div>`;
-                        })
-                        .join('');
-
-                    container.html(`
-                        <div class="no-data-message">
-                            <div class="alert alert-info">
-                                <h4><i class="bi bi-info-circle"></i> No Timetable Found</h4>
-                                <p>Current filters:</p>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <h6 class="text-muted mb-2">Organization Structure</h6>
-                                        ${activeFilters}
-                                    </div>
-                                </div>
-                                <div class="mt-3">
-                                    <button type="button" class="btn btn-primary" onclick="resetFilters()">
-                                        <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    `);
-                }
-            } else {
-                container.html(`
-                    <div class="alert alert-danger">
-                        <h4><i class="bi bi-exclamation-triangle"></i> Error</h4>
-                        <p>${response.error || 'An error occurred while loading the timetable.'}</p>
-                    </div>
-                `);
-            }
-        },
-        error: function(xhr, status, error) {
-            hideLoading();
-            const container = $('.timetable-container');
-            container.html(`
-                <div class="alert alert-danger">
-                    <h4><i class="bi bi-exclamation-triangle"></i> Error</h4>
-                    <p>Failed to load timetable data. Please try again later.</p>
-                    <small class="text-muted">Error details: ${error}</small>
-                </div>
-            `);
-        }
-    });
-}
-
-function displayTimetable(data) {
-    const container = $('.timetable-container');
-    container.empty();
-    
-    // Get selected filter values
-    const campus = $('#campus_id option:selected').text();
-    const college = $('#college_id option:selected').text();
-    const school = $('#school_id option:selected').text();
-    const department = $('#department_id option:selected').text();
-    const program = $('#program_id option:selected').text();
-    const intake = $('#intake_id option:selected').text();
-    const academicYear = $('#academic_year_id option:selected').text();
-    const semester = $('#semester option:selected').text();
-
-    // Add organization structure and academic details header
-    container.append(`
-        <div class="timetable-header p-3">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="header-section">
-                        <h4><i class="bi bi-building"></i> Organization Structure</h4>
-                        <div class="header-content">
-                            ${campus !== 'All Campuses' ? `<div><strong>Campus:</strong> ${campus}</div>` : ''}
-                            ${college !== 'All Colleges' ? `<div><strong>College:</strong> ${college}</div>` : ''}
-                            ${school !== 'All Schools' ? `<div><strong>School:</strong> ${school}</div>` : ''}
-                            ${department !== 'All Departments' ? `<div><strong>Department:</strong> ${department}</div>` : ''}
-                            ${program !== 'All Programs' ? `<div><strong>Program:</strong> ${program}</div>` : ''}
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="header-section">
-                        <h4><i class="bi bi-calendar-check"></i> Academic Details</h4>
-                        <div class="header-content">
-                            ${intake !== 'All Intakes' ? `<div><strong>Intake:</strong> ${intake}</div>` : ''}
-                            ${academicYear !== 'All Academic Years' ? `<div><strong>Academic Year:</strong> ${academicYear}</div>` : ''}
-                            ${semester !== 'All Semesters' ? `<div><strong>Semester:</strong> ${semester}</div>` : ''}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `);
-
-    // Group sessions by their unique combination of day, time, module, and lecturer
-    const groupedSessions = {};
-    data.forEach(session => {
-        const key = `${session.session.day}_${session.session.start_time}_${session.session.end_time}_${session.timetable.module.id}_${session.timetable.lecturer.id}`;
-        if (!groupedSessions[key]) {
-            groupedSessions[key] = {
-                session: session.session,
-                timetable: session.timetable,
-                groups: []
-            };
-        }
-        groupedSessions[key].groups = groupedSessions[key].groups.concat(session.timetable.groups);
-    });
-
-    // Create cards container
-    const cardsContainer = $('<div class="timetable-cards"></div>');
-
-    // Add sessions as cards
-    Object.values(groupedSessions).forEach((groupedSession, index) => {
-        const { session, timetable, groups } = groupedSession;
-        
-        // Create card for each session
-        const card = $(`
-            <div class="timetable-card">
-                <div class="card-header">
-                    <div class="session-time">
-                        <i class="bi bi-clock"></i> ${session.start_time} - ${session.end_time}
-                    </div>
-                    <div class="session-day">
-                        <i class="bi bi-calendar"></i> ${session.day}
-                    </div>
+        <div class="table-card">
+            <!-- Help Tip Card -->
+            <div class="card mb-4 border-primary">
+                <div class="card-header text-white d-flex justify-content-between align-items-center" style="background-color: #031f50;">
+                    <h5 class="card-title mb-0">How to find your timetable</h5>
+                    <button type="button" class="btn-close btn-close-white" onclick="this.closest('.card').style.display='none'"></button>
                 </div>
                 <div class="card-body">
-                    <div class="module-info">
-                        <div class="module-header">
-                            <div class="module-main">
-                               <div class="module-period">
-                                    <div class="period-item">
-                                        <i class="bi bi-calendar3"></i>
-                                        <span>Semester ${timetable.semester}</span>
-                                    </div>
-                                    <div class="period-item">
-                                        <i class="bi bi-calendar-check"></i>
-                                        <span>${timetable.academic_year}</span>
-                                    </div>
-                                </div>
-                                <div class="module-basic">
-                                
-                                    <div class="module-code-badge">
-                                        <span class="code-label">Code</span>
-                                        <span class="code-value">${timetable.module.code}</span>
-                                    </div>
-                                    <div class="module-title-section">
-                                        <h5 class="module-title">${timetable.module.name}</h5>
-                                        <div class="module-credits">
-                                            <i class="bi bi-book"></i>
-                                            <span>${timetable.module.credits} Credits</span>
-                                        </div>
-                                    </div>
-                                </div>
-                             
+                    <div class="row">
+                    <div class="col-md-8">
+                                <h6 class="text-primary">Follow these steps to see your specific timetable:</h6>
+                                <ol class="mb-0">
+                                    <li>Select your <strong>Campus</strong> from the dropdown</li>
+                                    <li>Choose your <strong>College</strong> from the list</li>
+                                    <li>Select your <strong>School</strong></li>
+                                    <li>Pick your <strong>Program</strong> of study</li>
+                                    <li>Select your <strong>Year of Study</strong></li>
+                                    <li>Choose your specific <strong>Group</strong> (if applicable)</li>
+                                </ol>
                             </div>
-                        </div>
-                    </div>
-                    <div class="lecturer-info compact">
-                        <div class="info-icon"><i class="bi bi-person-circle"></i></div>
-                        <div class="info-content">
-                            <div class="lecturer-details">
-                                <div class="detail-item">
-                                    <span class="detail-name">${timetable.lecturer.name}</span>
-                                </div>
-                                <div class="contact-info">
-                                    <div class="contact-item">
-                                        <i class="bi bi-envelope"></i>
-                                        <a href="mailto:${timetable.lecturer.email}" class="contact-link">
-                                            ${timetable.lecturer.email}
-                                        </a>
-                                    </div>
-                                    <div class="contact-item">
-                                        <i class="bi bi-telephone"></i>
-                                        <a href="tel:${timetable.lecturer.phone}" class="contact-link">
-                                            ${timetable.lecturer.phone}
-                                        </a>
-                                    </div>
+                            <div class="col-md-4 d-flex align-items-center">
+                                <div class="alert alert-info mb-0 w-100">
+                                    <strong>Tip:</strong> For the most accurate results, start by selecting your campus and work your way through the filters from left to right.<br>
+                                    <strong>You can go straight to Group and find Program, Year of Study, etc. automatically!</strong>
                                 </div>
                             </div>
-                        </div>
-                    </div>
-                    <div class="facility-info compact">
-                        <div class="info-icon"><i class="bi bi-building"></i></div>
-                        <div class="info-content">
-                            <div class="facility-details">
-                                <div class="facility-header">
-                                    <span class="facility-name">${timetable.facility.name}</span>
-                                    <span class="facility-type">${timetable.facility.type}</span>
-                                </div>
-                                <div class="facility-meta">
-                                    <span class="facility-location" title="${timetable.facility.location}">
-                                        <i class="bi bi-geo-alt"></i> ${timetable.facility.location}
-                                    </span>
-                                    <span class="facility-capacity">
-                                        <i class="bi bi-people"></i> ${timetable.facility.capacity}
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="groups-info">
-                        <div class="groups-header" data-bs-toggle="collapse" data-bs-target="#groups-${index}" aria-expanded="false">
-                            <h6 class="mb-0">
-                                <i class="bi bi-people"></i> Groups (${groups.length})
-                                <i class="bi bi-chevron-down ms-2"></i>
-                            </h6>
-                        </div>
-                        <div class="collapse" id="groups-${index}">
-                            <div class="groups-list">
-                                ${groups.map(group => `
-                                    <div class="group-item">
-                                        <div class="group-header">
-                                            <div class="group-name">${group.name}</div>
-                                            <div class="group-size">Size: ${group.size}</div>
-                                        </div>
-                                        <div class="group-details">
-                                            <div class="detail-row">
-                                                <i class="bi bi-geo-alt"></i>
-                                                <span>Campus: ${group.campus.name}</span>
-                                            </div>
-                                            <div class="detail-row">
-                                                <i class="bi bi-building"></i>
-                                                <span>College: ${group.college.name}</span>
-                                            </div>
-                                            <div class="detail-row">
-                                                <i class="bi bi-bank"></i>
-                                                <span>School: ${group.school.name}</span>
-                                            </div>
-                                            <div class="detail-row">
-                                                <i class="bi bi-diagram-3"></i>
-                                                <span>Department: ${group.department.name}</span>
-                                            </div>
-                                            <div class="detail-row">
-                                                <i class="bi bi-mortarboard"></i>
-                                                <span>Program: ${group.program.name} (${group.program.code})</span>
-                                            </div>
-                                            <div class="detail-row">
-                                                <i class="bi bi-calendar-date"></i>
-                                                <span>Intake: ${group.intake.year}/${group.intake.month}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>
-        `);
-        
-        cardsContainer.append(card);
-    });
 
-    container.append(cardsContainer);
+            <!-- Nested Filters -->
+            <div class="filter-container mb-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-2 col-sm-4">
+                        <form method="get" action="" class="campus-filter">
+                            <label for="campus" class="form-label">Filter by Campus:</label>
+                            <select name="campus" id="campus" class="form-select" onchange="this.form.submit()">
+                                <option value="">All Campuses</option>
+                                <?php foreach ($campuses as $c): ?>
+                                    <option value="<?php echo $c['id']; ?>" <?php echo ($c['id'] == $campusId) ? 'selected' : ''; ?>>
+                                        <?php echo htmlspecialchars($c['name']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </form>
+                    </div>
+                    <div class="col-md-2 col-sm-4">
+                        <label for="collegeFilter" class="form-label fw-semibold">College</label>
+                        <select id="collegeFilter" class="form-select form-select-sm">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-4">
+                        <label for="schoolFilter" class="form-label fw-semibold">School</label>
+                        <select id="schoolFilter" class="form-select form-select-sm">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-4">
+                        <label for="programFilter" class="form-label fw-semibold">Program</label>
+                        <select id="programFilter" class="form-select form-select-sm">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-4">
+                        <label for="yearOfStudyFilter" class="form-label fw-semibold">Year of Study</label>
+                        <select id="yearOfStudyFilter" class="form-select form-select-sm">
+                            <option value="">All</option>
+                            <option value="1">Year 1</option>
+                            <option value="2">Year 2</option>
+                            <option value="3">Year 3</option>
+                            <option value="4">Year 4</option>
+                            <option value="5">Year 5</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2 col-sm-4">
+                        <label for="groupFilter" class="form-label fw-semibold">Group</label>
+                        <select id="groupFilter" class="form-select form-select-sm">
+                            <option value="">All</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
 
-    // Update event listeners for collapse functionality
-    $('.groups-header').on('click', function(e) {
-        e.preventDefault();
-        const target = $(this).data('bs-target');
-        const icon = $(this).find('.bi-chevron-down');
-        const collapseElement = $(target);
-        
-        // Toggle the collapse state
-        if (collapseElement.hasClass('show')) {
-            collapseElement.removeClass('show');
-            icon.removeClass('rotate-icon');
-        } else {
-            // Close all other open collapses first
-            $('.collapse.show').removeClass('show');
-            $('.bi-chevron-down.rotate-icon').removeClass('rotate-icon');
-            
-            // Open the clicked one
-            collapseElement.addClass('show');
-            icon.addClass('rotate-icon');
+            <button id="resetFilters" class="btn btn-primary">Reset Filters</button>
+            <button id="exportBtn" class="btn btn-success">Export to Excel</button>
+
+            <br><br>
+
+            <!-- Loading Overlay -->
+            <div id="loadingOverlay" class="loading-overlay">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <div class="loading-text">Loading timetable data...</div>
+            </div>
+
+            <!-- Dynamic view info -->
+            <h2 class="fw-semibold timetable-title mt-2">Timetable</h2>
+            <div id="currentView" style="font-size:13px; line-height:1.4; margin-bottom:10px; padding:0;">
+                Preparing your timetable view...
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-bordered table-striped" id="timetableTable">
+                    <thead class="table-dark">
+                        <tr>
+                            <th rowspan="2" style="background-color:rgb(99, 124, 167);color: white;">Day</th>
+                            <th rowspan="2" style="background-color:rgb(99, 124, 167);color: white;">Time</th>
+                            <th rowspan="2" style="background-color:rgb(99, 124, 167);color: white;">Course</th>
+                            <th rowspan="2" style="background-color:rgb(99, 124, 167);color: white;">Credits</th>
+                            <th rowspan="2" style="background-color:rgb(99, 124, 167);color: white;">Facility</th>
+                            <th colspan="6" style="background-color:rgb(99, 124, 167);color: white;">Group Details</th>
+                        </tr>
+                        <tr>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">Group</th>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">Year of Study</th>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">Program</th>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">School</th>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">Campus</th>
+                            <th style="background-color:rgb(99, 124, 167);color: white;">College</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <script>
+        let apiData = [];
+        const tableBody = document.querySelector('#timetableTable tbody');
+
+        const filters = {
+            college: document.getElementById('collegeFilter'),
+            school: document.getElementById('schoolFilter'),
+            program: document.getElementById('programFilter'),
+            yearOfStudy: document.getElementById('yearOfStudyFilter'),
+            group: document.getElementById('groupFilter')
+        };
+
+        const currentViewEl = document.getElementById('currentView');
+
+        function setOptions(select, items, getId = id => id, getText = obj => obj.name) {
+            const val = select.value;
+            select.innerHTML = '<option value="">All</option>';
+            [...new Map(items.map(i => [getId(i), i]))].forEach(([id, obj]) => {
+                select.innerHTML += `<option value="${id}">${getText(obj)}</option>`;
+            });
+            if ([...select.options].some(o => o.value === val)) select.value = val;
         }
-    });
-}
-</script>
-
-
-<a href="#" class="back-to-top d-flex align-items-center justify-content-center"><i
-    class="bi bi-arrow-up-short"></i></a>
-
-<!-- Vendor JS Files -->
-<script src="assets/vendor/apexcharts/apexcharts.min.js"></script>
-<script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-<script src="assets/vendor/chart.js/chart.umd.js"></script>
-<script src="assets/vendor/echarts/echarts.min.js"></script>
-<script src="assets/vendor/quill/quill.min.js"></script>
-<script src="assets/vendor/simple-datatables/simple-datatables.js"></script>
-<script src="assets/vendor/tinymce/tinymce.min.js"></script>
-<script src="assets/vendor/php-email-form/validate.js"></script>
-
-<!-- Template Main JS File -->
-<script src="assets/js/main.js"></script>
-
-<style>
-/* Main Container */
-.main {
-    padding: 15px;
-    background: #f8f9fa;
-}
-
-/* Card Styling */
-.card {
-    margin-bottom: 15px;
-    border: none;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-.card-body {
-    padding: 15px;
-}
-
-/* Filter Title */
-.filter-title {
-    color: #012970;
-    font-size: 1.1rem;
-    font-weight: 600;
-    margin-bottom: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.filter-title i {
-    margin-right: 0.5rem;
-    color: #012970; 
-}
-
-/* Step Indicator */
-.step-indicator {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    position: relative;
-}
-
-.step-indicator::before {
-    content: '';
-    position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #e9ecef;
-    z-index: 1;
-}
-
-.step {
-    position: relative;
-    z-index: 2;
-    text-align: center;
-    width: 80px;
-}
-
-.step-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: #fff;
-    border: 2px solid #e9ecef;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin: 0 auto 0.25rem;
-    transition: all 0.3s ease;
-}
-
-.step.active .step-icon {
-    background: #012970;
-    border-color: #012970;
-    color: #fff;
-}
-
-.step.completed .step-icon {
-    background: #28a745;
-    border-color: #28a745;
-    color: #fff;
-}
-
-.step-label {
-    font-size: 0.75rem;
-    color: #6c757d;
-    font-weight: 500;
-}
-
-.step.active .step-label {
-    color: #012970;
-    font-weight: 600;
-}
-
-/* Filter Steps */
-.filter-steps {
-    position: relative;
-    min-height: 120px;
-}
-
-.filter-step {
-    display: none;
-    animation: fadeIn 0.3s ease;
-}
-
-.filter-step.active {
-    display: block;
-}
-
-.filter-group {
-    background: #f8f9fa;
-    padding: 0.75rem;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-    margin-bottom: 0.5rem;
-}
-
-.filter-group:hover {
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    border-color: #012970;
-}
-
-.filter-group .form-label {
-    color: #012970;
-    font-weight: 500;
-    margin-bottom: 0.25rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-    font-size: 0.9rem;
-}
-
-.filter-group .form-label i {
-    font-size: 1rem;
-}
-
-/* Navigation Buttons */
-.filter-actions {
-    display: flex;
-    gap: 0.5rem;
-    justify-content: center;
-    padding-top: 0.5rem;
-    border-top: 1px solid #e9ecef;
-    margin-top: 0.5rem;
-}
-
-.filter-actions .btn {
-    padding: 0.375rem 0.75rem;
-    font-size: 0.875rem;
-    min-width: 100px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.25rem;
-}
-
-.filter-actions .btn-primary {
-    background: #012970;
-    border-color: #012970;
-}
-
-.filter-actions .btn-primary:hover {
-    background: #011f57;
-    border-color: #011f57;
-}
-
-.filter-actions .btn-secondary {
-    background: #6c757d;
-    border-color: #6c757d;
-}
-
-.filter-actions .btn-secondary:hover {
-    background: #5a6268;
-    border-color: #5a6268;
-}
-
-.filter-actions .btn-success {
-    background: #28a745;
-    border-color: #28a745;
-}
-
-.filter-actions .btn-success:hover {
-    background: #218838;
-    border-color: #218838;
-}
-
-.filter-actions .btn-danger {
-    background: #dc3545;
-    border-color: #dc3545;
-}
-
-.filter-actions .btn-danger:hover {
-    background: #c82333;
-    border-color: #bd2130;
-}
-
-/* Select2 Custom Styling */
-.select2-container--default .select2-selection--single {
-    height: 32px;
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    margin-bottom: 0;
-}
-
-.select2-container {
-    margin-bottom: 0;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__rendered {
-    line-height: 32px;
-    padding-left: 10px;
-    font-size: 0.875rem;
-    color: #495057;
-}
-
-.select2-container--default .select2-selection--single .select2-selection__arrow {
-    height: 30px;
-}
-
-.select2-container--default .select2-results__option--highlighted[aria-selected] {
-    background-color: #012970;
-}
-
-.select2-dropdown {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-/* Timetable Container */
-.timetable-container {
-    margin-top: 15px;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-}
-
-/* Table Styling */
-.timetable-table {
-    font-size: 0.875rem;
-    width: 100%;
-    margin-bottom: 0;
-}
-
-.timetable-table th {
-    background-color: #012970;
-    color: #fff;
-    font-weight: 500;
-    padding: 8px;
-    border: 1px solid #dee2e6;
-}
-
-.timetable-table td {
-    padding: 8px;
-    border: 1px solid #dee2e6;
-    vertical-align: middle;
-}
-
-.timetable-table tbody tr:hover {
-    background-color: #f8f9fa;
-}
-
-.timetable-table .session-header {
-    background-color: #f8f9fa;
-}
-
-.timetable-table strong {
-    color: #012970;
-    font-weight: 600;
-}
-
-/* Organization Structure and Academic Details */
-.header-section {
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    margin-bottom: 10px;
-}
-
-.header-section h4 {
-    color: #012970;
-    font-size: 1rem;
-    margin-bottom: 10px;
-    padding-bottom: 5px;
-    border-bottom: 1px solid #dee2e6;
-}
-
-.header-content {
-    font-size: 0.875rem;
-    color: #495057;
-}
-
-.header-content div {
-    margin-bottom: 5px;
-}
-
-.header-content strong {
-    color: #012970;
-    font-weight: 500;
-}
-
-/* No Data Message */
-.no-data-message {
-    padding: 15px;
-}
-
-.no-data-message .alert {
-    margin-bottom: 0;
-}
-
-.no-data-message h4 {
-    color: #012970;
-    font-size: 1.1rem;
-    margin-bottom: 10px;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.no-data-message h4 i {
-    color: #012970;
-}
-
-.no-data-message p {
-    margin-bottom: 10px;
-    color: #495057;
-}
-
-.no-data-message h6 {
-    color: #6c757d;
-    font-size: 0.875rem;
-    margin-bottom: 5px;
-}
-
-.no-data-message div {
-    font-size: 0.875rem;
-    margin-bottom: 3px;
-    color: #495057;
-}
-
-.no-data-message strong {
-    color: #012970;
-    font-weight: 500;
-}
-
-/* Loading Indicator */
-.loading {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(255, 255, 255, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-}
-
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-    .step-indicator {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-    
-    .step {
-        width: calc(33.333% - 0.5rem);
-    }
-    
-    .step-indicator::before {
-        display: none;
-    }
-    
-    .filter-actions {
-        flex-wrap: wrap;
-    }
-    
-    .filter-actions .btn {
-        width: 100%;
-    }
-}
-
-/* Add these styles to your existing CSS */
-.timetable-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-    gap: 1.5rem;
-    padding: 1.5rem;
-}
-
-.timetable-card {
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-    overflow: visible;
-    height: fit-content;
-}
-
-.timetable-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-.timetable-card .card-header {
-    background: #012970;
-    color: #fff;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.timetable-card .session-time,
-.timetable-card .session-day {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-}
-
-.timetable-card .card-body {
-    padding: 1.5rem;
-    position: relative;
-}
-
-.timetable-card .module-info {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.timetable-card .module-header {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.timetable-card .module-main {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.timetable-card .module-basic {
-    display: flex;
-    gap: 1rem;
-    align-items: flex-start;
-}
-
-.timetable-card .module-code-badge {
-    display: flex;
-    flex-direction: column;
-    background: #012970;
-    color: #fff;
-    padding: 0.5rem;
-    border-radius: 6px;
-    min-width: 80px;
-    text-align: center;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.timetable-card .code-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    opacity: 0.8;
-    margin-bottom: 0.25rem;
-}
-
-.timetable-card .code-value {
-    font-size: 1.1rem;
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-.timetable-card .module-title-section {
-    flex: 1;
-}
-
-.timetable-card .module-title {
-    color: #2c3e50;
-    font-size: 1.2rem;
-    margin: 0 0 0.5rem 0;
-    font-weight: 600;
-    line-height: 1.4;
-}
-
-.timetable-card .module-credits {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #6c757d;
-    font-size: 0.9rem;
-    background: #fff;
-    padding: 0.35rem 0.75rem;
-    border-radius: 4px;
-    border: 1px solid #e9ecef;
-}
-
-.timetable-card .module-credits i {
-    color: #012970;
-}
-
-.timetable-card .module-period {
-    display: flex;
-    gap: 1rem;
-    padding-bottom: 0.5rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.timetable-card .period-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    color: #495057;
-    font-size: 0.9rem;
-    background: #fff;
-    padding: 0.35rem 0.75rem;
-    border-radius: 4px;
-    border: 1px solid #e9ecef;
-}
-
-.timetable-card .period-item i {
-    color: #012970;
-    font-size: 1rem;
-}
-
-.timetable-card .lecturer-info,
-.timetable-card .facility-info {
-    display: flex;
-    align-items: flex-start;
-    gap: 1rem;
-    margin-bottom: 1rem;
-    padding: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-
-.timetable-card .lecturer-info:hover,
-.timetable-card .facility-info:hover {
-    background: #e9ecef;
-}
-
-.timetable-card .info-icon {
-    color: #012970;
-    font-size: 1.25rem;
-    display: flex;
-    align-items: center;
-}
-
-.timetable-card .info-content {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.timetable-card .info-label {
-    font-size: 0.8rem;
-    color: #6c757d;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.timetable-card .info-value {
-    font-size: 0.95rem;
-    color: #2c3e50;
-    font-weight: 500;
-}
-
-.timetable-card .facility-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.timetable-card .facility-name {
-    font-size: 0.95rem;
-    color: #2c3e50;
-    font-weight: 500;
-}
-
-.timetable-card .facility-type {
-    font-size: 0.85rem;
-    color: #6c757d;
-    background: #e9ecef;
-    padding: 0.15rem 0.5rem;
-    border-radius: 4px;
-    width: fit-content;
-}
-
-.timetable-card .facility-capacity {
-    font-size: 0.85rem;
-    color: #6c757d;
-}
-
-.timetable-card .groups-info {
-    border-top: 1px solid #e9ecef;
-    padding-top: 1rem;
-    margin-top: 1rem;
-    position: relative;
-}
-
-.timetable-card .groups-info h6 {
-    color: #012970;
-    font-size: 1rem;
-    margin-bottom: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.timetable-card .groups-list {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.timetable-card .group-item {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 8px;
-    border: 1px solid #e9ecef;
-}
-
-.timetable-card .group-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e9ecef;
-}
-
-.timetable-card .group-name {
-    font-weight: 600;
-    color: #012970;
-    font-size: 1rem;
-}
-
-.timetable-card .group-size {
-    background: #e9ecef;
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.85rem;
-    color: #495057;
-}
-
-.timetable-card .group-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.timetable-card .detail-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: #495057;
-}
-
-.timetable-card .detail-row i {
-    color: #012970;
-    font-size: 1rem;
-}
-
-@media (max-width: 768px) {
-    .timetable-cards {
-        grid-template-columns: 1fr;
-        padding: 1rem;
-    }
-    
-    .timetable-card .card-body {
-        padding: 1rem;
-    }
-    
-    .timetable-card .group-header {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 0.5rem;
-    }
-}
-
-/* Add these styles to your existing CSS */
-.academic-period-filters {
-    background: #f8f9fa;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1.5rem;
-    border: 1px solid #e9ecef;
-}
-
-.academic-period-filters .filter-group {
-    background: #fff;
-    padding: 1rem;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    transition: all 0.3s ease;
-}
-
-.academic-period-filters .filter-group:hover {
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    border-color: #012970;
-}
-
-.academic-period-filters .form-label {
-    color: #012970;
-    font-weight: 500;
-    margin-bottom: 0.5rem;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.academic-period-filters .form-label i {
-    font-size: 1.1rem;
-}
-
-.academic-period-filters .form-select {
-    border: 1px solid #dee2e6;
-    border-radius: 4px;
-    padding: 0.5rem;
-    font-size: 0.95rem;
-    color: #495057;
-    transition: border-color 0.3s ease;
-}
-
-.academic-period-filters .form-select:focus {
-    border-color: #012970;
-    box-shadow: 0 0 0 0.2rem rgba(1, 41, 112, 0.1);
-}
-
-@media (max-width: 768px) {
-    .academic-period-filters {
-        padding: 0.75rem;
-    }
-    
-    .academic-period-filters .filter-group {
-        padding: 0.75rem;
-    }
-}
-
-/* Add these styles to your existing CSS */
-.groups-header {
-    cursor: pointer;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 6px;
-    transition: background-color 0.3s ease;
-    margin-bottom: 0;
-    user-select: none;
-}
-
-.groups-header:hover {
-    background: #e9ecef;
-}
-
-.groups-header h6 {
-    display: flex;
-    align-items: center;
-    color: #012970;
-    margin: 0;
-}
-
-.groups-header .bi-chevron-down {
-    transition: transform 0.3s ease;
-}
-
-.groups-header .bi-chevron-down.rotate-icon {
-    transform: rotate(180deg);
-}
-
-.groups-list {
-    max-height: 400px;
-    overflow-y: auto;
-    padding: 10px;
-    background: #fff;
-    border-radius: 6px;
-    margin-top: 10px;
-}
-
-/* Add scrollbar styling */
-.groups-list::-webkit-scrollbar {
-    width: 6px;
-}
-
-.groups-list::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.groups-list::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-
-.groups-list::-webkit-scrollbar-thumb:hover {
-    background: #555;
-}
-
-/* Update collapse animation */
-.collapse {
-    position: absolute;
-    width: 100%;
-    z-index: 1;
-    background: #fff;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    border-radius: 6px;
-    display: none;
-    transition: all 0.3s ease;
-}
-
-.collapse.show {
-    display: block;
-    position: relative;
-}
-
-.group-item {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 6px;
-    padding: 12px;
-    margin-bottom: 10px;
-}
-
-.group-item:last-child {
-    margin-bottom: 0;
-}
-
-.timetable-card {
-    position: relative;
-}
-
-/* Update these styles in your existing CSS */
-.lecturer-info.compact {
-    padding: 0.75rem;
-    margin-bottom: 0.75rem;
-    background: #f8f9fa;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-}
-
-.lecturer-info.compact .info-icon {
-    font-size: 1.2rem;
-    color: #012970;
-    margin-right: 0.5rem;
-}
-
-.lecturer-details {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.detail-item {
-    margin-bottom: 0.25rem;
-}
-
-.detail-name {
-    font-size: 1rem;
-    color: #2c3e50;
-    font-weight: 600;
-}
-
-.contact-info {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.contact-item {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.9rem;
-    color: #495057;
-}
-
-.contact-item i {
-    color: #012970;
-    font-size: 1rem;
-    width: 1.2rem;
-    text-align: center;
-}
-
-.contact-link {
-    color: #012970;
-    text-decoration: none;
-    transition: color 0.3s ease;
-}
-
-.contact-link:hover {
-    color: #0056b3;
-    text-decoration: underline;
-}
-
-@media (max-width: 768px) {
-    .lecturer-info.compact {
-        padding: 0.5rem;
-    }
-    
-    .contact-item {
-        font-size: 0.85rem;
-    }
-}
-</style>
+
+        function updateCurrentView() {
+            let html = '';
+            const academicYear = "<?php echo $academic_year_label; ?>";
+            const semester = "<?php echo $semester; ?>";
+            html += `<strong>Academic Year:</strong> ${academicYear}<br>`;
+            html += `<strong>Trimester:</strong> ${semester}<br>`;
+
+            const campusSelect = document.getElementById('campus');
+            const campusText = campusSelect?.value ? campusSelect.selectedOptions[0].text : 'All Campuses';
+            html += `<strong>Campus:</strong> ${campusText}<br>`;
+
+            if (filters.college.value) html += `<strong>College:</strong> ${filters.college.selectedOptions[0].text}<br>`;
+            if (filters.school.value) html += `<strong>School:</strong> ${filters.school.selectedOptions[0].text}<br>`;
+            if (filters.program.value) html += `<strong>Program:</strong> ${filters.program.selectedOptions[0].text}<br>`;
+            if (filters.yearOfStudy.value) html += `<strong>Year of Study:</strong> ${filters.yearOfStudy.selectedOptions[0].text}<br>`;
+            if (filters.group.value) html += `<strong>Group:</strong> ${filters.group.selectedOptions[0].text}<br>`;
+
+            currentViewEl.innerHTML = html || '<em>Currently viewing full timetable (no filters applied)</em>';
+        }
+
+        function showLoading() {
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.getElementById('timetableTable').classList.remove('loaded');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+            document.getElementById('timetableTable').classList.add('loaded');
+        }
+
+        async function loadTimetable() {
+            showLoading();
+            try {
+                const res = await fetch('./Dashboard/get_timetable.php');
+                const json = await res.json();
+                let timetableData = json.data || [];
+
+                const selectedCampusId = document.getElementById('campus')?.value;
+                if (selectedCampusId) {
+                    timetableData = timetableData.filter(entry =>
+                        entry.groups?.some(g => g.intake?.campus?.id == selectedCampusId) ||
+                        entry.leader_lecturer?.campus?.id == selectedCampusId ||
+                        entry.other_lecturers?.some(l => l.campus?.id == selectedCampusId)
+                    );
+                }
+
+                apiData = timetableData;
+                updateFilters();
+                renderTable(filterData());
+                hideLoading();
+            } catch (e) {
+                console.error('Error:', e);
+                hideLoading();
+                document.getElementById('loadingOverlay').innerHTML = `
+                    <div class="text-danger text-center">
+                        <div class="loading-text">Failed to load timetable.</div>
+                        <button class="btn btn-primary mt-3" onclick="loadTimetable()">Retry</button>
+                    </div>`;
+            }
+        }
+
+        function updateFilters() {
+            const groups = apiData.flatMap(t => t.groups || []);
+            const colleges = groups.map(g => g.college).filter(Boolean);
+            setOptions(filters.college, colleges, g => g.id, g => g.name);
+
+            const selectedCollege = filters.college.value;
+            const schools = selectedCollege
+                ? groups.filter(g => g.college?.id == selectedCollege).map(g => g.school)
+                : groups.map(g => g.school);
+            setOptions(filters.school, schools.filter(Boolean), g => g.id, g => g.name);
+
+            const selectedSchool = filters.school.value;
+            const programs = selectedSchool
+                ? groups.filter(g => g.school?.id == selectedSchool).map(g => g.program)
+                : groups.map(g => g.program);
+            setOptions(filters.program, programs.filter(Boolean), g => g.id, g => g.name);
+
+            const selectedProg = filters.program.value;
+            const years = selectedProg
+                ? groups.filter(g => g.program?.id == selectedProg && g.intake?.year_of_study)
+                    .map(g => ({ id: g.intake.year_of_study, name: `Year ${g.intake.year_of_study}` }))
+                : groups.filter(g => g.intake?.year_of_study)
+                    .map(g => ({ id: g.intake.year_of_study, name: `Year ${g.intake.year_of_study}` }));
+            const uniqueYears = [...new Map(years.map(y => [y.id, y])).values()].sort((a, b) => a.id - b.id);
+            setOptions(filters.yearOfStudy, uniqueYears, y => y.id, y => y.name);
+
+            const currentCollege = filters.college.value;
+            const currentSchool = filters.school.value;
+            const currentProgram = filters.program.value;
+            const currentYear = filters.yearOfStudy.value;
+
+            let filteredGroups = groups.filter(g => {
+                if (!currentCollege && !currentSchool && !currentProgram && !currentYear) return true;
+                return (!currentCollege || g.college?.id == currentCollege) &&
+                       (!currentSchool || g.school?.id == currentSchool) &&
+                       (!currentProgram || g.program?.id == currentProgram) &&
+                       (!currentYear || g.intake?.year_of_study == currentYear);
+            });
+
+            const uniqueGroups = [];
+            const seen = new Set();
+            filteredGroups.forEach(g => {
+                const key = `${g.id}_${g.program?.id}_${g.intake?.year_of_study}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueGroups.push(g);
+                }
+            });
+
+            uniqueGroups.sort((a, b) => {
+                const prog = (a.program?.name || '').localeCompare(b.program?.name || '');
+                if (prog !== 0) return prog;
+                const year = (a.intake?.year_of_study || 0) - (b.intake?.year_of_study || 0);
+                if (year !== 0) return year;
+                return (a.name || '').localeCompare(b.name || '');
+            });
+
+            window.groupData = {};
+            uniqueGroups.forEach(g => {
+                const prog = g.program?.name ? ` (${g.program.name})` : '';
+                const year = g.intake?.year_of_study ? ` - Y${g.intake.year_of_study}` : '';
+                window.groupData[g.id] = g;
+                g.displayName = `${g.name}${prog}${year}`;
+            });
+
+            setOptions(filters.group, uniqueGroups, g => g.id, g => g.displayName);
+        }
+
+        function getDayOrder(day) {
+            return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].indexOf(day);
+        }
+
+        function timeToMinutes(t) {
+            if (!t) return 0;
+            const [h, m] = t.split(':').map(Number);
+            return h * 60 + m;
+        }
+
+        function filterData() {
+            const college = filters.college.value;
+            const school = filters.school.value;
+            const prog = filters.program.value;
+            const year = filters.yearOfStudy.value;
+            const groupId = filters.group.value;
+
+            const filtered = apiData
+                .map(t => ({
+                    ...t,
+                    groups: (t.groups || []).filter(g =>
+                        (!college || g.college?.id == college) &&
+                        (!school || g.school?.id == school) &&
+                        (!prog || g.program?.id == prog) &&
+                        (!year || g.intake?.year_of_study == year) &&
+                        (!groupId || g.id == groupId)
+                    )
+                }))
+                .filter(t => t.groups.length > 0);
+
+            return filtered.sort((a, b) => {
+                if (!a.sessions?.length) return 1;
+                if (!b.sessions?.length) return -1;
+                const sa = a.sessions[0], sb = b.sessions[0];
+                const dayDiff = getDayOrder(sa.day) - getDayOrder(sb.day);
+                if (dayDiff !== 0) return dayDiff;
+                return timeToMinutes(sa.start) - timeToMinutes(sb.start);
+            });
+        }
+
+        function renderTable(data) {
+            tableBody.innerHTML = '';
+            data.forEach(t => {
+                const sessions = t.sessions || [];
+                const facility = t.facility?.name || '';
+                const site = t.facility?.site?.name ? ` (${t.facility.site.name})` : '';
+
+                const sessionMap = {};
+                sessions.forEach(s => {
+                    const key = `${s.day}-${s.start}-${s.end}`;
+                    sessionMap[key] = sessionMap[key] || [];
+                    sessionMap[key].push(s);
+                });
+
+                Object.entries(sessionMap).forEach(([key, sess], idx) => {
+                    const [day, start, end] = key.split('-');
+                    const groups = t.groups || [];
+                    const rowspan = groups.length;
+
+                    groups.forEach((g, i) => {
+                        const isFirst = idx === 0 && i === 0;
+                        tableBody.innerHTML += `<tr>
+                            ${i === 0 ? `<td rowspan="${rowspan}">${day}</td><td rowspan="${rowspan}">${start}-${end}</td>` : ''}
+                            <td>${t.course || 'N/A'}</td>
+                            <td>${t.credits || 'N/A'}</td>
+                            <td>${facility}${site}</td>
+                            <td>${g.name}</td>
+                            <td>${g.intake?.year_of_study ? 'Year ' + g.intake.year_of_study : ''}</td>
+                            <td>${g.program?.name || ''}</td>
+                            <td>${g.school?.name || ''}</td>
+                            <td>${g.intake?.campus?.name || ''}</td>
+                            <td>${g.college?.name || ''}</td>
+                        </tr>`;
+                    });
+                });
+            });
+            updateCurrentView();
+        }
+
+        document.getElementById('resetFilters').onclick = () => {
+            Object.values(filters).forEach(f => f.value = '');
+            updateFilters();
+            renderTable(filterData());
+        };
+
+        Object.values(filters).forEach(f => f.onchange = () => {
+            updateFilters();
+            renderTable(filterData());
+        });
+
+        document.getElementById('campus')?.addEventListener('change', () => {
+            loadTimetable();
+        });
+
+        document.getElementById('exportBtn').onclick = () => {
+            const wb = XLSX.utils.table_to_book(document.getElementById('timetableTable'), {sheet: "Timetable"});
+            XLSX.writeFile(wb, "timetable.xlsx");
+        };
+
+        window.addEventListener('DOMContentLoaded', loadTimetable);
+    </script>
+
+    <!-- Back to Top -->
+    <a href="#" class="back-to-top d-flex align-items-center justify-content-center">
+        Back to Top
+    </a>
+
+    <!-- Vendor JS -->
+    <script src="./assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="./assets/js/main.js"></script>
 </body>
-</html> 
+</html>

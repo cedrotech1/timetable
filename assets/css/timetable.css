@@ -1,0 +1,44 @@
+.compact-time-card {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    max-width: 320px;
+    margin: 0 auto;
+}
+
+.compact-time-card .card-header {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.compact-time-card .form-select-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 4px;
+}
+
+.compact-time-card .form-label {
+    margin-bottom: 0.25rem;
+}
+
+.compact-time-card optgroup {
+    font-size: 0.7rem;
+}
+
+.compact-time-card .time-selector {
+    padding: 0.5rem;
+    background: #f8f9fa;
+    border-radius: 6px;
+}
+
+.compact-time-card .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+.compact-time-card .invalid-feedback {
+    font-size: 0.7rem;
+}
+.bg-primary{
+    background-color: #021a42 !important;
+}

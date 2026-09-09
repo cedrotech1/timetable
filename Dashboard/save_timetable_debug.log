@@ -1,0 +1,775 @@
+[2025-09-27 12:46:38] New request: "POST"
+[2025-09-27 12:46:38] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":103,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"12:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:48:10] New request: "POST"
+[2025-09-27 12:48:10] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":103,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"12:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:48:33] New request: "POST"
+[2025-09-27 12:48:33] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":103,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:50:16] New request: "POST"
+[2025-09-27 12:50:16] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":103,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:50:36] New request: "POST"
+[2025-09-27 12:50:36] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":103,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:53:31] New request: "POST"
+[2025-09-27 12:53:31] Input data: {"selectedFacilityId":"3","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":104,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-09-27 12:55:13] New request: "POST"
+[2025-09-27 12:55:13] Input data: {"selectedFacilityId":"5","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":99,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"09:00"}],"academic_year_id":"1","semester":"1"}
+[2025-10-13 18:35:47] New request: "POST"
+[2025-10-13 18:35:47] Input data: {"selectedFacilityId":"15","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":3064,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"12:00"}],"academic_year_id":"1","semester":"1"}
+[2025-10-13 19:45:28] New request: "POST"
+[2025-10-13 19:45:28] Input data: {"selectedFacilityId":"16","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":27,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"12:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-03 10:03:10] New request: "POST"
+[2025-11-03 10:03:10] Input data: {"selectedFacilityId":"51","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":3202,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"12:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-03 10:03:31] New request: "POST"
+[2025-11-03 10:03:31] Input data: {"selectedFacilityId":"51","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":3202,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-03 13:55:28] New request: "POST"
+[2025-11-03 13:55:28] Input data: {"selectedFacilityId":"48","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":3202,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:02:30] New request: "POST"
+[2025-11-07 00:02:30] Input data: {"selectedFacilityId":"3","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":104,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"},{"day":"Sunday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:15:25] New request: "POST"
+[2025-11-07 00:15:25] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:15:25] Response: {"status":"error","message":"Missing required fields: module leader","missing_fields":["module leader"],"received_data":{"module_id":2,"leader_id":0,"facility_id":14,"semester":1,"academic_year_id":1}}
+[2025-11-07 00:16:34] New request: "POST"
+[2025-11-07 00:16:34] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:17:06] New request: "POST"
+[2025-11-07 00:17:06] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Sunday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:17:27] New request: "POST"
+[2025-11-07 00:17:27] Input data: {"selectedFacilityId":"14","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Sunday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:28:11] New request: "POST"
+[2025-11-07 00:28:11] Input data: {"selectedFacilityId":"5","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:33:57] New request: "POST"
+[2025-11-07 00:33:57] Input data: {"selectedFacilityId":"5","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 00:38:35] New request: "POST"
+[2025-11-07 00:38:35] Input data: {"selectedFacilityId":"1","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 11:13:33] New request: "POST"
+[2025-11-07 11:13:33] Input data: {"selectedFacilityId":"12","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-07 21:54:50] New request: "POST"
+[2025-11-07 21:54:50] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 10:49:19] New request: "POST"
+[2025-11-08 10:49:19] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":902,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 11:55:07] New request: "POST"
+[2025-11-08 11:55:07] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":921,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 11:57:17] New request: "POST"
+[2025-11-08 11:57:17] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":921,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 11:58:32] New request: "POST"
+[2025-11-08 11:58:33] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":920,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:01:07] New request: "POST"
+[2025-11-08 12:01:07] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":914,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:05:13] New request: "POST"
+[2025-11-08 12:05:13] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":915,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:17:15] New request: "POST"
+[2025-11-08 12:17:15] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":913,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:19:00] New request: "POST"
+[2025-11-08 12:19:00] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":922,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:26:32] New request: "POST"
+[2025-11-08 12:26:32] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":920,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:27:37] New request: "POST"
+[2025-11-08 12:27:37] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":921,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:28:40] New request: "POST"
+[2025-11-08 12:28:40] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":914,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:33:46] New request: "POST"
+[2025-11-08 12:33:46] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":915,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:34:31] New request: "POST"
+[2025-11-08 12:34:31] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":922,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:35:17] New request: "POST"
+[2025-11-08 12:35:17] Input data: {"selectedFacilityId":"130","selectedGroupIds":"1 groups","selectedModuleId":913,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:43:07] New request: "POST"
+[2025-11-08 12:43:07] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":924,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:45:09] New request: "POST"
+[2025-11-08 12:45:09] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":917,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:48:27] New request: "POST"
+[2025-11-08 12:48:27] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":917,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:51:47] New request: "POST"
+[2025-11-08 12:51:47] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":918,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:53:11] New request: "POST"
+[2025-11-08 12:53:11] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":916,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:54:02] New request: "POST"
+[2025-11-08 12:54:02] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":916,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 12:55:13] New request: "POST"
+[2025-11-08 12:55:13] Input data: {"selectedFacilityId":"134","selectedGroupIds":"1 groups","selectedModuleId":926,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 17:58:06] New request: "POST"
+[2025-11-08 17:58:06] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 17:59:24] New request: "POST"
+[2025-11-08 17:59:24] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:00:15] New request: "POST"
+[2025-11-08 18:00:15] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:01:14] New request: "POST"
+[2025-11-08 18:01:14] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:05:04] New request: "POST"
+[2025-11-08 18:05:04] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:07:46] New request: "POST"
+[2025-11-08 18:07:46] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:08:39] New request: "POST"
+[2025-11-08 18:08:39] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:09:57] New request: "POST"
+[2025-11-08 18:09:57] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:11:35] New request: "POST"
+[2025-11-08 18:11:35] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":378,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:12:16] New request: "POST"
+[2025-11-08 18:12:17] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:15:21] New request: "POST"
+[2025-11-08 18:15:21] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:16:34] New request: "POST"
+[2025-11-08 18:16:34] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:17:46] New request: "POST"
+[2025-11-08 18:17:46] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:21:48] New request: "POST"
+[2025-11-08 18:21:48] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:22:50] New request: "POST"
+[2025-11-08 18:22:50] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:23:49] New request: "POST"
+[2025-11-08 18:23:49] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":378,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:24:33] New request: "POST"
+[2025-11-08 18:24:33] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:26:38] New request: "POST"
+[2025-11-08 18:26:38] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:27:29] New request: "POST"
+[2025-11-08 18:27:29] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:28:54] New request: "POST"
+[2025-11-08 18:28:54] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:30:56] New request: "POST"
+[2025-11-08 18:30:56] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:31:59] New request: "POST"
+[2025-11-08 18:31:59] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":378,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:38:27] New request: "POST"
+[2025-11-08 18:38:27] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:41:00] New request: "POST"
+[2025-11-08 18:41:00] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 18:42:07] New request: "POST"
+[2025-11-08 18:42:07] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 21:59:06] New request: "POST"
+[2025-11-08 21:59:06] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:01:09] New request: "POST"
+[2025-11-08 22:01:09] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:03:31] New request: "POST"
+[2025-11-08 22:03:31] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:05:48] New request: "POST"
+[2025-11-08 22:05:48] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":378,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:06:40] New request: "POST"
+[2025-11-08 22:06:40] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:09:09] New request: "POST"
+[2025-11-08 22:09:09] Input data: {"selectedFacilityId":"171","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Sunday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:10:07] New request: "POST"
+[2025-11-08 22:10:07] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:11:37] New request: "POST"
+[2025-11-08 22:11:37] Input data: {"selectedFacilityId":"177","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:14:16] New request: "POST"
+[2025-11-08 22:14:16] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:15:23] New request: "POST"
+[2025-11-08 22:15:23] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:16:22] New request: "POST"
+[2025-11-08 22:16:22] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":376,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:17:38] New request: "POST"
+[2025-11-08 22:17:38] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":377,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:18:46] New request: "POST"
+[2025-11-08 22:18:46] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":378,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:19:24] New request: "POST"
+[2025-11-08 22:19:24] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":379,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:21:48] New request: "POST"
+[2025-11-08 22:21:48] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":374,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:22:49] New request: "POST"
+[2025-11-08 22:22:49] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":909,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:23:46] New request: "POST"
+[2025-11-08 22:23:46] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":910,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:25:06] New request: "POST"
+[2025-11-08 22:25:06] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":911,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:26:35] New request: "POST"
+[2025-11-08 22:26:35] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":912,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:28:20] New request: "POST"
+[2025-11-08 22:28:20] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":919,"moduleLeaderId":null,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:30:00] New request: "POST"
+[2025-11-08 22:30:00] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":908,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:30:48] New request: "POST"
+[2025-11-08 22:30:48] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":909,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:31:47] New request: "POST"
+[2025-11-08 22:31:47] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":910,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:32:53] New request: "POST"
+[2025-11-08 22:32:53] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":911,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:34:31] New request: "POST"
+[2025-11-08 22:34:31] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":912,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:36:10] New request: "POST"
+[2025-11-08 22:36:11] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":919,"moduleLeaderId":null,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:38:46] New request: "POST"
+[2025-11-08 22:38:46] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":908,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:40:13] New request: "POST"
+[2025-11-08 22:40:13] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":909,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:41:00] New request: "POST"
+[2025-11-08 22:41:00] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":910,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:43:07] New request: "POST"
+[2025-11-08 22:43:07] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":911,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:44:43] New request: "POST"
+[2025-11-08 22:44:43] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":912,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 22:48:12] New request: "POST"
+[2025-11-08 22:48:12] Input data: {"selectedFacilityId":"119","selectedGroupIds":"1 groups","selectedModuleId":919,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:00:10] New request: "POST"
+[2025-11-08 23:00:10] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":637,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:04:41] New request: "POST"
+[2025-11-08 23:04:41] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:09:59] New request: "POST"
+[2025-11-08 23:09:59] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":637,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:11:11] New request: "POST"
+[2025-11-08 23:11:12] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:12:16] New request: "POST"
+[2025-11-08 23:12:16] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":637,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:15:12] New request: "POST"
+[2025-11-08 23:15:12] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":637,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:16:08] New request: "POST"
+[2025-11-08 23:16:08] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":637,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-08 23:18:39] New request: "POST"
+[2025-11-08 23:18:39] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 05:53:53] New request: "POST"
+[2025-11-10 05:53:53] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 05:55:14] New request: "POST"
+[2025-11-10 05:55:14] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 05:56:33] New request: "POST"
+[2025-11-10 05:56:33] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":4,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:00:53] New request: "POST"
+[2025-11-10 06:00:53] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:02:17] New request: "POST"
+[2025-11-10 06:02:17] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":5,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:03:22] New request: "POST"
+[2025-11-10 06:03:22] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":6,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Saturday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:04:41] New request: "POST"
+[2025-11-10 06:04:41] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:06:14] New request: "POST"
+[2025-11-10 06:06:14] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":2,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:07:57] New request: "POST"
+[2025-11-10 06:07:57] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":4,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:08:33] New request: "POST"
+[2025-11-10 06:08:33] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":3,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:09:17] New request: "POST"
+[2025-11-10 06:09:17] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":5,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:10:47] New request: "POST"
+[2025-11-10 06:10:47] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":6,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Saturday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 06:28:46] New request: "POST"
+[2025-11-10 06:28:46] Input data: {"selectedFacilityId":"127","selectedGroupIds":"1 groups","selectedModuleId":1,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:16:01] New request: "POST"
+[2025-11-10 11:16:01] Input data: {"selectedFacilityId":"84","selectedGroupIds":"1 groups","selectedModuleId":886,"moduleLeaderId":1752,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:17:14] New request: "POST"
+[2025-11-10 11:17:14] Input data: {"selectedFacilityId":"84","selectedGroupIds":"1 groups","selectedModuleId":886,"moduleLeaderId":27,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:18:54] New request: "POST"
+[2025-11-10 11:18:54] Input data: {"selectedFacilityId":"86","selectedGroupIds":"1 groups","selectedModuleId":886,"moduleLeaderId":null,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:21:01] New request: "POST"
+[2025-11-10 11:21:01] Input data: {"selectedFacilityId":"108","selectedGroupIds":"1 groups","selectedModuleId":886,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:27:57] New request: "POST"
+[2025-11-10 11:27:57] Input data: {"selectedFacilityId":"84","selectedGroupIds":"1 groups","selectedModuleId":927,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 11:59:30] New request: "POST"
+[2025-11-10 11:59:30] Input data: {"selectedFacilityId":"178","selectedGroupIds":"4 groups","selectedModuleId":541,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:03:36] New request: "POST"
+[2025-11-10 12:03:36] Input data: {"selectedFacilityId":"178","selectedGroupIds":"4 groups","selectedModuleId":392,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:07:14] New request: "POST"
+[2025-11-10 12:07:14] Input data: {"selectedFacilityId":"178","selectedGroupIds":"4 groups","selectedModuleId":393,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:09:26] New request: "POST"
+[2025-11-10 12:09:26] Input data: {"selectedFacilityId":"178","selectedGroupIds":"4 groups","selectedModuleId":512,"moduleLeaderId":null,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:15:25] New request: "POST"
+[2025-11-10 12:15:25] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":513,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:23:51] New request: "POST"
+[2025-11-10 12:23:51] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":513,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:27:07] New request: "POST"
+[2025-11-10 12:27:07] Input data: {"selectedFacilityId":"178","selectedGroupIds":"2 groups","selectedModuleId":396,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:32:42] New request: "POST"
+[2025-11-10 12:32:42] Input data: {"selectedFacilityId":"178","selectedGroupIds":"2 groups","selectedModuleId":652,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-10 12:35:47] New request: "POST"
+[2025-11-10 12:35:48] Input data: {"selectedFacilityId":"178","selectedGroupIds":"4 groups","selectedModuleId":652,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-11 09:08:38] New request: "POST"
+[2025-11-11 09:08:38] Input data: {"selectedFacilityId":"145","selectedGroupIds":"1 groups","selectedModuleId":639,"moduleLeaderId":1307,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-11 12:26:56] New request: "POST"
+[2025-11-11 12:26:56] Input data: {"selectedFacilityId":"96","selectedGroupIds":"2 groups","selectedModuleId":378,"moduleLeaderId":3064,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Sunday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-12 08:49:21] New request: "POST"
+[2025-11-12 08:49:21] Input data: {"selectedFacilityId":"106","selectedGroupIds":"1 groups","selectedModuleId":934,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-12 12:27:07] New request: "POST"
+[2025-11-12 12:27:07] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":518,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-12 12:54:56] New request: "POST"
+[2025-11-12 12:54:56] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":527,"moduleLeaderId":3225,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-12 14:31:23] New request: "POST"
+[2025-11-12 14:31:23] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":526,"moduleLeaderId":1093,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-12 15:31:11] New request: "POST"
+[2025-11-12 15:31:11] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":558,"moduleLeaderId":920,"otherLecturerIds":"5 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-13 08:31:07] New request: "POST"
+[2025-11-13 08:31:07] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":529,"moduleLeaderId":2874,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-13 08:39:03] New request: "POST"
+[2025-11-13 08:39:03] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":530,"moduleLeaderId":1088,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 10:52:04] New request: "POST"
+[2025-11-14 10:52:04] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":690,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:07:15] New request: "POST"
+[2025-11-14 11:07:15] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":691,"moduleLeaderId":943,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:10:21] New request: "POST"
+[2025-11-14 11:10:22] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":692,"moduleLeaderId":1404,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:12:59] New request: "POST"
+[2025-11-14 11:12:59] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":693,"moduleLeaderId":360,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:18:06] New request: "POST"
+[2025-11-14 11:18:06] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":693,"moduleLeaderId":360,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:18:06] New request: "POST"
+[2025-11-14 11:18:06] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":693,"moduleLeaderId":360,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:23:00] New request: "POST"
+[2025-11-14 11:23:00] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":694,"moduleLeaderId":1565,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:25:52] New request: "POST"
+[2025-11-14 11:25:52] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":694,"moduleLeaderId":1565,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:33:44] New request: "POST"
+[2025-11-14 11:33:44] Input data: {"selectedFacilityId":"179","selectedGroupIds":"1 groups","selectedModuleId":695,"moduleLeaderId":2844,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:54:15] New request: "POST"
+[2025-11-14 11:54:15] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":702,"moduleLeaderId":2647,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:57:30] New request: "POST"
+[2025-11-14 11:57:30] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":703,"moduleLeaderId":1713,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 11:59:52] New request: "POST"
+[2025-11-14 11:59:52] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":704,"moduleLeaderId":1403,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:02:31] New request: "POST"
+[2025-11-14 12:02:31] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":705,"moduleLeaderId":554,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:05:32] New request: "POST"
+[2025-11-14 12:05:32] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":706,"moduleLeaderId":554,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:07:46] New request: "POST"
+[2025-11-14 12:07:46] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":706,"moduleLeaderId":554,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:09:48] New request: "POST"
+[2025-11-14 12:09:48] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":707,"moduleLeaderId":1404,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:13:26] New request: "POST"
+[2025-11-14 12:13:26] Input data: {"selectedFacilityId":"121","selectedGroupIds":"1 groups","selectedModuleId":707,"moduleLeaderId":1404,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:17:18] New request: "POST"
+[2025-11-14 12:17:18] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":714,"moduleLeaderId":88,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:27:53] New request: "POST"
+[2025-11-14 12:27:53] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":718,"moduleLeaderId":1592,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-14 12:29:54] New request: "POST"
+[2025-11-14 12:29:54] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":718,"moduleLeaderId":1565,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 09:56:04] New request: "POST"
+[2025-11-17 09:56:04] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":715,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 09:59:37] New request: "POST"
+[2025-11-17 09:59:37] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":716,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:01:48] New request: "POST"
+[2025-11-17 10:01:48] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":716,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:03:13] New request: "POST"
+[2025-11-17 10:03:13] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":717,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:09:08] New request: "POST"
+[2025-11-17 10:09:08] Input data: {"selectedFacilityId":"104","selectedGroupIds":"1 groups","selectedModuleId":717,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:20:18] New request: "POST"
+[2025-11-17 10:20:18] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":684,"moduleLeaderId":835,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:22:41] New request: "POST"
+[2025-11-17 10:22:41] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":684,"moduleLeaderId":835,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:28:29] New request: "POST"
+[2025-11-17 10:28:29] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":683,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:35:29] New request: "POST"
+[2025-11-17 10:35:29] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":682,"moduleLeaderId":1713,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:39:41] New request: "POST"
+[2025-11-17 10:39:41] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":680,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:43:35] New request: "POST"
+[2025-11-17 10:43:35] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":681,"moduleLeaderId":1393,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:47:51] New request: "POST"
+[2025-11-17 10:47:51] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":681,"moduleLeaderId":1393,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 10:47:51] New request: "POST"
+[2025-11-17 10:47:51] Input data: {"selectedFacilityId":"96","selectedGroupIds":"1 groups","selectedModuleId":681,"moduleLeaderId":1393,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:30:20] New request: "POST"
+[2025-11-17 16:30:20] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":936,"moduleLeaderId":2682,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:32:35] New request: "POST"
+[2025-11-17 16:32:35] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":936,"moduleLeaderId":2682,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:36:36] New request: "POST"
+[2025-11-17 16:36:36] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":936,"moduleLeaderId":324,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:41:14] New request: "POST"
+[2025-11-17 16:41:14] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":649,"moduleLeaderId":3236,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:46:06] New request: "POST"
+[2025-11-17 16:46:06] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":649,"moduleLeaderId":3236,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:49:15] New request: "POST"
+[2025-11-17 16:49:15] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":649,"moduleLeaderId":null,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:52:42] New request: "POST"
+[2025-11-17 16:52:42] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":939,"moduleLeaderId":1270,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 16:57:13] New request: "POST"
+[2025-11-17 16:57:13] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":939,"moduleLeaderId":1270,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:03:13] New request: "POST"
+[2025-11-17 17:03:13] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":939,"moduleLeaderId":2825,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:06:12] New request: "POST"
+[2025-11-17 17:06:12] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":938,"moduleLeaderId":2825,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:08:15] New request: "POST"
+[2025-11-17 17:08:16] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":938,"moduleLeaderId":2825,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:10:47] New request: "POST"
+[2025-11-17 17:10:47] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":938,"moduleLeaderId":699,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:12:46] New request: "POST"
+[2025-11-17 17:12:46] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":715,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:13:16] New request: "POST"
+[2025-11-17 17:13:16] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":715,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:15:27] New request: "POST"
+[2025-11-17 17:15:27] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":715,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-17 17:17:37] New request: "POST"
+[2025-11-17 17:17:37] Input data: {"selectedFacilityId":"141","selectedGroupIds":"1 groups","selectedModuleId":636,"moduleLeaderId":982,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:29:11] New request: "POST"
+[2025-11-18 09:29:12] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":159,"moduleLeaderId":997,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:32:50] New request: "POST"
+[2025-11-18 09:32:50] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":160,"moduleLeaderId":3095,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:40:43] New request: "POST"
+[2025-11-18 09:40:43] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":161,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:43:46] New request: "POST"
+[2025-11-18 09:43:46] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":162,"moduleLeaderId":1285,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:50:39] New request: "POST"
+[2025-11-18 09:50:39] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":163,"moduleLeaderId":1306,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:57:32] New request: "POST"
+[2025-11-18 09:57:32] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":163,"moduleLeaderId":1306,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 09:57:54] New request: "POST"
+[2025-11-18 09:57:54] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":163,"moduleLeaderId":1306,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:04:38] New request: "POST"
+[2025-11-18 10:04:38] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":159,"moduleLeaderId":997,"otherLecturerIds":"4 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:07:49] New request: "POST"
+[2025-11-18 10:07:49] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":160,"moduleLeaderId":3095,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:11:19] New request: "POST"
+[2025-11-18 10:11:19] Input data: {"selectedFacilityId":"156","selectedGroupIds":"1 groups","selectedModuleId":161,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:17:28] New request: "POST"
+[2025-11-18 10:17:28] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":168,"moduleLeaderId":3095,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:20:45] New request: "POST"
+[2025-11-18 10:20:45] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":169,"moduleLeaderId":1574,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:25:37] New request: "POST"
+[2025-11-18 10:25:37] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":170,"moduleLeaderId":683,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:36:12] New request: "POST"
+[2025-11-18 10:36:12] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":171,"moduleLeaderId":3419,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:38:15] New request: "POST"
+[2025-11-18 10:38:15] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":171,"moduleLeaderId":3419,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:41:56] New request: "POST"
+[2025-11-18 10:41:56] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":170,"moduleLeaderId":683,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:45:18] New request: "POST"
+[2025-11-18 10:45:18] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":169,"moduleLeaderId":1574,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:50:18] New request: "POST"
+[2025-11-18 10:50:18] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":169,"moduleLeaderId":1574,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:50:18] New request: "POST"
+[2025-11-18 10:50:18] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":169,"moduleLeaderId":1574,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:57:08] New request: "POST"
+[2025-11-18 10:57:08] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":168,"moduleLeaderId":3095,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 10:58:48] New request: "POST"
+[2025-11-18 10:58:48] Input data: {"selectedFacilityId":"94","selectedGroupIds":"1 groups","selectedModuleId":169,"moduleLeaderId":3095,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 11:42:06] New request: "POST"
+[2025-11-18 11:42:06] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":45,"moduleLeaderId":3290,"otherLecturerIds":"4 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 11:52:34] New request: "POST"
+[2025-11-18 11:52:34] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":45,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:05:46] New request: "POST"
+[2025-11-18 12:05:46] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":46,"moduleLeaderId":683,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:09:37] New request: "POST"
+[2025-11-18 12:09:37] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":46,"moduleLeaderId":683,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:11:28] New request: "POST"
+[2025-11-18 12:11:28] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":47,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:13:30] New request: "POST"
+[2025-11-18 12:13:30] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":47,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:15:11] New request: "POST"
+[2025-11-18 12:15:11] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":47,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:20:23] New request: "POST"
+[2025-11-18 12:20:23] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":48,"moduleLeaderId":28,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:23:09] New request: "POST"
+[2025-11-18 12:23:09] Input data: {"selectedFacilityId":"131","selectedGroupIds":"1 groups","selectedModuleId":48,"moduleLeaderId":28,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:31:40] New request: "POST"
+[2025-11-18 12:31:40] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":68,"moduleLeaderId":683,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:34:43] New request: "POST"
+[2025-11-18 12:34:43] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":69,"moduleLeaderId":1285,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:37:28] New request: "POST"
+[2025-11-18 12:37:28] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":70,"moduleLeaderId":2269,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:40:13] New request: "POST"
+[2025-11-18 12:40:13] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":71,"moduleLeaderId":2269,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:43:30] New request: "POST"
+[2025-11-18 12:43:30] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":72,"moduleLeaderId":1361,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:53:11] New request: "POST"
+[2025-11-18 12:53:11] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":74,"moduleLeaderId":1306,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 12:56:53] New request: "POST"
+[2025-11-18 12:56:53] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":74,"moduleLeaderId":3290,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:01:32] New request: "POST"
+[2025-11-18 13:01:32] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":74,"moduleLeaderId":3290,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:05:14] New request: "POST"
+[2025-11-18 13:05:14] Input data: {"selectedFacilityId":"105","selectedGroupIds":"1 groups","selectedModuleId":74,"moduleLeaderId":1306,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:24:13] New request: "POST"
+[2025-11-18 13:24:13] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":193,"moduleLeaderId":997,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:26:51] New request: "POST"
+[2025-11-18 13:26:51] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":194,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:29:54] New request: "POST"
+[2025-11-18 13:29:54] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":195,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:32:21] New request: "POST"
+[2025-11-18 13:32:21] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":197,"moduleLeaderId":1361,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:36:32] New request: "POST"
+[2025-11-18 13:36:32] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":198,"moduleLeaderId":1305,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:38:53] New request: "POST"
+[2025-11-18 13:38:53] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":198,"moduleLeaderId":1305,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:41:46] New request: "POST"
+[2025-11-18 13:41:46] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":197,"moduleLeaderId":1361,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 13:47:24] New request: "POST"
+[2025-11-18 13:47:24] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":195,"moduleLeaderId":825,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:23:31] New request: "POST"
+[2025-11-18 14:23:31] Input data: {"selectedFacilityId":"154","selectedGroupIds":"1 groups","selectedModuleId":195,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:30:48] New request: "POST"
+[2025-11-18 14:30:48] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":236,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:44:27] New request: "POST"
+[2025-11-18 14:44:27] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":236,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:48:34] New request: "POST"
+[2025-11-18 14:48:34] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":236,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:49:49] New request: "POST"
+[2025-11-18 14:49:49] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":236,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 14:53:58] New request: "POST"
+[2025-11-18 14:53:58] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":239,"moduleLeaderId":2267,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:01:47] New request: "POST"
+[2025-11-18 15:01:47] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":238,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:08:03] New request: "POST"
+[2025-11-18 15:08:03] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":237,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:23:25] New request: "POST"
+[2025-11-18 15:23:25] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":237,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:26:10] New request: "POST"
+[2025-11-18 15:26:10] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":235,"moduleLeaderId":997,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:29:38] New request: "POST"
+[2025-11-18 15:29:38] Input data: {"selectedFacilityId":"103","selectedGroupIds":"1 groups","selectedModuleId":235,"moduleLeaderId":997,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:34:39] New request: "POST"
+[2025-11-18 15:34:39] Input data: {"selectedFacilityId":"106","selectedGroupIds":"1 groups","selectedModuleId":244,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:35:19] New request: "POST"
+[2025-11-18 15:35:19] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":244,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:37:33] New request: "POST"
+[2025-11-18 15:37:33] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":244,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:42:12] New request: "POST"
+[2025-11-18 15:42:12] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":247,"moduleLeaderId":1774,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:45:54] New request: "POST"
+[2025-11-18 15:45:54] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":247,"moduleLeaderId":1774,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:51:44] New request: "POST"
+[2025-11-18 15:51:44] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":245,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:54:24] New request: "POST"
+[2025-11-18 15:54:24] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":248,"moduleLeaderId":1010,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 15:56:21] New request: "POST"
+[2025-11-18 15:56:21] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":246,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-18 16:03:19] New request: "POST"
+[2025-11-18 16:03:19] Input data: {"selectedFacilityId":"107","selectedGroupIds":"1 groups","selectedModuleId":246,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:01:10] New request: "POST"
+[2025-11-19 09:01:10] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":226,"moduleLeaderId":997,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:05:24] New request: "POST"
+[2025-11-19 09:05:24] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":226,"moduleLeaderId":997,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:08:19] New request: "POST"
+[2025-11-19 09:08:19] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":229,"moduleLeaderId":454,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:13:32] New request: "POST"
+[2025-11-19 09:13:32] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":229,"moduleLeaderId":454,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:16:44] New request: "POST"
+[2025-11-19 09:16:44] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":230,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:18:07] New request: "POST"
+[2025-11-19 09:18:07] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":230,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:26:15] New request: "POST"
+[2025-11-19 09:26:15] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":228,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:28:52] New request: "POST"
+[2025-11-19 09:28:52] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":228,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:31:33] New request: "POST"
+[2025-11-19 09:31:33] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":227,"moduleLeaderId":2267,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:38:03] New request: "POST"
+[2025-11-19 09:38:03] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":227,"moduleLeaderId":3225,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:48:19] New request: "POST"
+[2025-11-19 09:48:19] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":152,"moduleLeaderId":683,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 09:51:47] New request: "POST"
+[2025-11-19 09:51:47] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":152,"moduleLeaderId":683,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:01:37] New request: "POST"
+[2025-11-19 10:01:37] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":154,"moduleLeaderId":1306,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:04:16] New request: "POST"
+[2025-11-19 10:04:16] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":154,"moduleLeaderId":1306,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:07:34] New request: "POST"
+[2025-11-19 10:07:34] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":154,"moduleLeaderId":1306,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:11:17] New request: "POST"
+[2025-11-19 10:11:17] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":155,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:14:02] New request: "POST"
+[2025-11-19 10:14:02] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":155,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:21:20] New request: "POST"
+[2025-11-19 10:21:20] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":152,"moduleLeaderId":3276,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:24:49] New request: "POST"
+[2025-11-19 10:24:49] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":152,"moduleLeaderId":3276,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:30:31] New request: "POST"
+[2025-11-19 10:30:31] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:30:47] New request: "POST"
+[2025-11-19 10:30:47] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:31:11] New request: "POST"
+[2025-11-19 10:31:11] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:35:39] New request: "POST"
+[2025-11-19 10:35:39] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":3290,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:36:39] New request: "POST"
+[2025-11-19 10:36:39] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":997,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:37:09] New request: "POST"
+[2025-11-19 10:37:09] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":null,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:38:03] New request: "POST"
+[2025-11-19 10:38:03] Input data: {"selectedFacilityId":"91","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":null,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:39:38] New request: "POST"
+[2025-11-19 10:39:38] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":184,"moduleLeaderId":null,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:49:39] New request: "POST"
+[2025-11-19 10:49:39] Input data: {"selectedFacilityId":"159","selectedGroupIds":"1 groups","selectedModuleId":185,"moduleLeaderId":683,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 10:55:48] New request: "POST"
+[2025-11-19 10:55:48] Input data: {"selectedFacilityId":"92","selectedGroupIds":"1 groups","selectedModuleId":185,"moduleLeaderId":683,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 11:22:34] New request: "POST"
+[2025-11-19 11:22:34] Input data: {"selectedFacilityId":"160","selectedGroupIds":"1 groups","selectedModuleId":186,"moduleLeaderId":3095,"otherLecturerIds":"4 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 11:27:23] New request: "POST"
+[2025-11-19 11:27:23] Input data: {"selectedFacilityId":"160","selectedGroupIds":"1 groups","selectedModuleId":187,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 11:27:23] New request: "POST"
+[2025-11-19 11:27:23] Input data: {"selectedFacilityId":"160","selectedGroupIds":"1 groups","selectedModuleId":187,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 11:48:41] New request: "POST"
+[2025-11-19 11:48:41] Input data: {"selectedFacilityId":"160","selectedGroupIds":"1 groups","selectedModuleId":187,"moduleLeaderId":825,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:01:30] New request: "POST"
+[2025-11-19 12:01:30] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":55,"moduleLeaderId":997,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:04:08] New request: "POST"
+[2025-11-19 12:04:08] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":56,"moduleLeaderId":1285,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:06:27] New request: "POST"
+[2025-11-19 12:06:27] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":57,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:08:24] New request: "POST"
+[2025-11-19 12:08:24] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":58,"moduleLeaderId":3419,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:10:41] New request: "POST"
+[2025-11-19 12:10:41] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":59,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:12:29] New request: "POST"
+[2025-11-19 12:12:29] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":60,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:15:40] New request: "POST"
+[2025-11-19 12:15:40] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":61,"moduleLeaderId":28,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:19:12] New request: "POST"
+[2025-11-19 12:19:12] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":61,"moduleLeaderId":28,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 12:22:31] New request: "POST"
+[2025-11-19 12:22:31] Input data: {"selectedFacilityId":"155","selectedGroupIds":"1 groups","selectedModuleId":60,"moduleLeaderId":28,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:10:10] New request: "POST"
+[2025-11-19 13:10:10] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":401,"moduleLeaderId":1087,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:15:38] New request: "POST"
+[2025-11-19 13:15:38] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":406,"moduleLeaderId":475,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:21:51] New request: "POST"
+[2025-11-19 13:21:51] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":406,"moduleLeaderId":475,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:52:11] New request: "POST"
+[2025-11-19 13:52:11] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":420,"moduleLeaderId":920,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:55:08] New request: "POST"
+[2025-11-19 13:55:08] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":420,"moduleLeaderId":920,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:57:46] New request: "POST"
+[2025-11-19 13:57:46] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":400,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 13:59:29] New request: "POST"
+[2025-11-19 13:59:29] Input data: {"selectedFacilityId":"135","selectedGroupIds":"1 groups","selectedModuleId":400,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 14:04:33] New request: "POST"
+[2025-11-19 14:04:33] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":408,"moduleLeaderId":1089,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 14:11:59] New request: "POST"
+[2025-11-19 14:11:59] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":407,"moduleLeaderId":920,"otherLecturerIds":"5 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 14:33:33] New request: "POST"
+[2025-11-19 14:33:33] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":407,"moduleLeaderId":null,"otherLecturerIds":"4 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 15:04:49] New request: "POST"
+[2025-11-19 15:04:49] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":410,"moduleLeaderId":399,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 15:11:19] New request: "POST"
+[2025-11-19 15:11:19] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":413,"moduleLeaderId":1056,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 15:16:06] New request: "POST"
+[2025-11-19 15:16:07] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":520,"moduleLeaderId":3204,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 15:20:04] New request: "POST"
+[2025-11-19 15:20:05] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":521,"moduleLeaderId":571,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-19 15:33:13] New request: "POST"
+[2025-11-19 15:33:13] Input data: {"selectedFacilityId":"147","selectedGroupIds":"1 groups","selectedModuleId":517,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 08:40:38] New request: "POST"
+[2025-11-20 08:40:38] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":660,"moduleLeaderId":2481,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 08:45:23] New request: "POST"
+[2025-11-20 08:45:23] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":660,"moduleLeaderId":2481,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 08:52:20] New request: "POST"
+[2025-11-20 08:52:20] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":661,"moduleLeaderId":1728,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 08:55:17] New request: "POST"
+[2025-11-20 08:55:17] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":661,"moduleLeaderId":1728,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 08:59:16] New request: "POST"
+[2025-11-20 08:59:16] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":658,"moduleLeaderId":1590,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 09:01:53] New request: "POST"
+[2025-11-20 09:01:53] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":658,"moduleLeaderId":1590,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 09:04:49] New request: "POST"
+[2025-11-20 09:04:49] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":659,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 09:07:07] New request: "POST"
+[2025-11-20 09:07:07] Input data: {"selectedFacilityId":"151","selectedGroupIds":"1 groups","selectedModuleId":659,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 09:19:13] New request: "POST"
+[2025-11-20 09:19:13] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":668,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 09:22:54] New request: "POST"
+[2025-11-20 09:22:54] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":668,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:00:24] New request: "POST"
+[2025-11-20 10:00:24] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":670,"moduleLeaderId":1592,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Tuesday","start":"17:00","end":"21:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:04:03] New request: "POST"
+[2025-11-20 10:04:03] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":670,"moduleLeaderId":920,"otherLecturerIds":"3 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:15:13] New request: "POST"
+[2025-11-20 10:15:13] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":666,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:23:50] New request: "POST"
+[2025-11-20 10:23:50] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":666,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:34:10] New request: "POST"
+[2025-11-20 10:34:10] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":666,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:45:11] New request: "POST"
+[2025-11-20 10:45:11] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":666,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:45:12] New request: "POST"
+[2025-11-20 10:45:12] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":666,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:49:28] New request: "POST"
+[2025-11-20 10:49:28] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":665,"moduleLeaderId":1778,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:50:13] New request: "POST"
+[2025-11-20 10:50:13] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":665,"moduleLeaderId":1778,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 10:59:34] New request: "POST"
+[2025-11-20 10:59:34] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":472,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:00:04] New request: "POST"
+[2025-11-20 11:00:04] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":472,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:01:52] New request: "POST"
+[2025-11-20 11:01:52] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":472,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:02:08] New request: "POST"
+[2025-11-20 11:02:08] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":472,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:02:26] New request: "POST"
+[2025-11-20 11:02:26] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":472,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:05:51] New request: "POST"
+[2025-11-20 11:05:51] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":473,"moduleLeaderId":927,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:06:10] New request: "POST"
+[2025-11-20 11:06:10] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":473,"moduleLeaderId":927,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:07:55] New request: "POST"
+[2025-11-20 11:07:55] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":473,"moduleLeaderId":927,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:08:16] New request: "POST"
+[2025-11-20 11:08:16] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":473,"moduleLeaderId":927,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:10:20] New request: "POST"
+[2025-11-20 11:10:20] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:10:41] New request: "POST"
+[2025-11-20 11:10:41] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:12:58] New request: "POST"
+[2025-11-20 11:12:58] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:15:18] New request: "POST"
+[2025-11-20 11:15:18] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:16:51] New request: "POST"
+[2025-11-20 11:16:51] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:17:07] New request: "POST"
+[2025-11-20 11:17:07] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:23:11] New request: "POST"
+[2025-11-20 11:23:11] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:23:29] New request: "POST"
+[2025-11-20 11:23:29] Input data: {"selectedFacilityId":"101","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:23:44] New request: "POST"
+[2025-11-20 11:23:44] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":474,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:25:11] New request: "POST"
+[2025-11-20 11:25:11] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":471,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:28:03] New request: "POST"
+[2025-11-20 11:28:03] Input data: {"selectedFacilityId":"102","selectedGroupIds":"1 groups","selectedModuleId":471,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 11:28:44] New request: "POST"
+[2025-11-20 11:28:44] Input data: {"selectedFacilityId":"100","selectedGroupIds":"1 groups","selectedModuleId":471,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:13:10] New request: "POST"
+[2025-11-20 13:13:10] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":479,"moduleLeaderId":1187,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:15:33] New request: "POST"
+[2025-11-20 13:15:33] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":479,"moduleLeaderId":571,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:19:40] New request: "POST"
+[2025-11-20 13:19:40] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":479,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:21:19] New request: "POST"
+[2025-11-20 13:21:19] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":480,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:27:54] New request: "POST"
+[2025-11-20 13:27:54] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":480,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:34:16] New request: "POST"
+[2025-11-20 13:34:16] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":480,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:47:39] New request: "POST"
+[2025-11-20 13:47:39] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":480,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 13:52:29] New request: "POST"
+[2025-11-20 13:52:29] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":480,"moduleLeaderId":3449,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:00:32] New request: "POST"
+[2025-11-20 14:00:32] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":478,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:02:39] New request: "POST"
+[2025-11-20 14:02:39] Input data: {"selectedFacilityId":"142","selectedGroupIds":"1 groups","selectedModuleId":478,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:09:03] New request: "POST"
+[2025-11-20 14:09:03] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":942,"moduleLeaderId":1728,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:09:57] New request: "POST"
+[2025-11-20 14:09:57] Input data: {"selectedFacilityId":"152","selectedGroupIds":"1 groups","selectedModuleId":942,"moduleLeaderId":1728,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:14:29] New request: "POST"
+[2025-11-20 14:14:29] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":943,"moduleLeaderId":95,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:14:29] New request: "POST"
+[2025-11-20 14:14:29] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":943,"moduleLeaderId":95,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:33:21] New request: "POST"
+[2025-11-20 14:33:21] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":941,"moduleLeaderId":null,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:37:09] New request: "POST"
+[2025-11-20 14:37:09] Input data: {"selectedFacilityId":"149","selectedGroupIds":"1 groups","selectedModuleId":940,"moduleLeaderId":2647,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:43:28] New request: "POST"
+[2025-11-20 14:43:28] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":948,"moduleLeaderId":435,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:43:28] New request: "POST"
+[2025-11-20 14:43:28] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":948,"moduleLeaderId":435,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 14:48:37] New request: "POST"
+[2025-11-20 14:48:37] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":948,"moduleLeaderId":435,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:14:28] New request: "POST"
+[2025-11-20 15:14:28] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":952,"moduleLeaderId":920,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:17:18] New request: "POST"
+[2025-11-20 15:17:18] Input data: {"selectedFacilityId":"125","selectedGroupIds":"1 groups","selectedModuleId":952,"moduleLeaderId":920,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Tuesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:19:41] New request: "POST"
+[2025-11-20 15:19:41] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":952,"moduleLeaderId":920,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Wednesday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:22:12] New request: "POST"
+[2025-11-20 15:22:12] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":952,"moduleLeaderId":920,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Wednesday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:25:06] New request: "POST"
+[2025-11-20 15:25:06] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":947,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:28:29] New request: "POST"
+[2025-11-20 15:28:29] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":947,"moduleLeaderId":2481,"otherLecturerIds":"2 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:30:54] New request: "POST"
+[2025-11-20 15:30:54] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":949,"moduleLeaderId":1778,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"08:00","end":"13:00"}],"academic_year_id":"1","semester":"1"}
+[2025-11-20 15:33:48] New request: "POST"
+[2025-11-20 15:33:48] Input data: {"selectedFacilityId":"128","selectedGroupIds":"1 groups","selectedModuleId":949,"moduleLeaderId":1778,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Friday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-12-10 15:38:02] New request: "POST"
+[2025-12-10 15:38:03] Input data: {"selectedFacilityId":"184","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":824,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-12-10 15:41:58] New request: "POST"
+[2025-12-10 15:41:58] Input data: {"selectedFacilityId":"184","selectedGroupIds":"1 groups","selectedModuleId":375,"moduleLeaderId":824,"otherLecturerIds":"1 lecturers","schedule":[{"day":"Thursday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}
+[2025-12-10 15:57:11] New request: "POST"
+[2025-12-10 15:57:11] Input data: {"selectedFacilityId":"184","selectedGroupIds":"1 groups","selectedModuleId":389,"moduleLeaderId":824,"otherLecturerIds":"0 lecturers","schedule":[{"day":"Monday","start":"14:00","end":"17:00"}],"academic_year_id":"1","semester":"1"}

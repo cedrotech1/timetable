@@ -1,0 +1,65 @@
+[2025-11-07 00:59:58] REQUEST: Array
+(
+    [id] => 15
+    [site_id] => 1
+    [name] => 888888888QQ
+    [name2] => Q
+    [type] => Auditorium
+    [capacity] => 11
+    [buildname] => 12
+    [build_code] => 1
+    [campus_id] => 1
+)
+
+[2025-11-07 01:00:12] REQUEST: Array
+(
+    [id] => 17
+    [site_id] => 1
+    [name] => SSSS
+    [name2] => SS
+    [type] => Laboratory
+    [capacity] => 2122
+    [buildname] => S
+    [build_code] => X
+    [campus_id] => 1
+)
+
+[2025-11-07 01:00:26] REQUEST: Array
+(
+    [id] => 15
+    [site_id] => 1
+    [name] => 888888888QQ
+    [name2] => Q
+    [type] => Auditorium
+    [capacity] => 111
+    [buildname] => 12
+    [build_code] => 1
+    [campus_id] => 1
+)
+
+[2025-11-10 11:59:10] REQUEST: Array
+(
+    [id] => 178
+    [site_id] => 3
+    [name] => audi
+    [name2] => Main_Auditorium
+    [type] => Auditorium
+    [capacity] => 1000
+    [buildname] => Main Auditorium
+    [build_code] => Main_Auditorium
+    [campus_id] => 1
+)
+
+[2025-11-10 12:27:27] REQUEST: Array
+(
+    [id] => 178
+    [site_id] => 3
+    [name] => Main Auditorium
+    [name2] => Main_Auditorium
+    [type] => Auditorium
+    [capacity] => 1000
+    [buildname] => Main Auditorium
+    [build_code] => Main_Auditorium
+    [campus_id] => 1
+)
+

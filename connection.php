@@ -5,9 +5,9 @@ ini_set('display_errors', 0);
 // Default database configuration
 $dbHost = 'localhost';
 $dbPort = '3306';
-$dbName = 'timetable';
+$dbName = 'timetable-v3';
 $dbUser = 'root';
-$dbPassword = '';
+$dbPassword = 'Ur@2312';
 
 // Try to load environment variables if loadEnv.php exists
 if (file_exists(__DIR__ . '/../loadEnv.php')) {
@@ -18,7 +18,7 @@ if (file_exists(__DIR__ . '/../loadEnv.php')) {
         // Override defaults with environment variables if they exist
         $dbHost = getenv('DB_HOST') ?: $dbHost;
         $dbPort = getenv('DB_PORT') ?: $dbPort;
-        $dbName = getenv('DB_TIMETABLE') ?: $dbName; // Use DB_HOSTEL
+        $dbName = getenv('DB_TIMETABLE-v3') ?: $dbName; // Use DB_HOSTEL
         $dbUser = getenv('DB_USER') ?: $dbUser;
         $dbPassword = getenv('DB_PASSWORD') ?: $dbPassword;
         // $timeLimit = getenv('TIME') ?: 1; // Load TIME variable

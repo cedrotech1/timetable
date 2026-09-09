@@ -1,0 +1,15 @@
+[04-Aug-2025 10:38:15 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Commands out of sync; you can't run this command now in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php:87
+Stack trace:
+#0 C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php(87): mysqli->rollback()
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php on line 87
+[04-Aug-2025 10:40:13 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Commands out of sync; you can't run this command now in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php:118
+Stack trace:
+#0 C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php(118): mysqli->rollback()
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php on line 118
+[04-Aug-2025 10:40:52 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Commands out of sync; you can't run this command now in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php:118
+Stack trace:
+#0 C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php(118): mysqli->rollback()
+#1 {main}
+  thrown in C:\xampp\htdocs\timetable-v2\Dashboard\upload_facilities.php on line 118

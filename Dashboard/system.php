@@ -4,6 +4,33 @@ include('connection.php');
 // include ('./includes/auth.php');
 // checkUserRole(['information_modifier']);
 
+$resetMessage = null;
+
+if (isset($_POST['reset_timetables'])) {
+    $tables = [
+        'timetable_sessions',
+        'timetable_lecturers',
+        'timetable_groups',
+        'timetable'
+    ];
+
+    $connection->begin_transaction();
+    
+    try {
+        foreach ($tables as $table) {
+            if (!$connection->query("TRUNCATE TABLE {$table}")) {
+                throw new Exception($connection->error ?: "Failed to truncate {$table}");
+            }
+        }
+
+        $connection->commit();
+        $resetMessage = ['type' => 'success', 'text' => 'All timetable data has been reset.'];
+    } catch (Exception $e) {
+        $connection->rollback();
+        $resetMessage = ['type' => 'danger', 'text' => 'Reset failed: ' . $e->getMessage()];
+    }
+}
+
 // Handle Academic Year CRUD operations
 if (isset($_POST['add_year'])) {
     $year_label = $connection->real_escape_string($_POST['year_label']);
@@ -159,8 +186,27 @@ $years_result = $connection->query($years_query);
                 <div class="tab-content pt-2" id="myTabjustifiedContent">
                   <!-- System Settings Tab -->
                   <div class="tab-pane fade show active" id="system-justified" role="tabpanel" aria-labelledby="system-tab">
-                    <div class="row">
-                      <div class="col-md-6"></div>
+                    <div class="row g-4">
+                      <div class="col-md-6">
+                        <div class="card border-danger h-100">
+                          <div class="card-body">
+                            <h5 class="card-title text-danger">Reset Timetables</h5>
+                            <p class="text-muted">This action permanently clears every timetable record along with associated groups, lecturers, and sessions. Proceed only if you have a backup or are certain you want to wipe the data.</p>
+                            <?php if ($resetMessage): ?>
+                              <div class="alert alert-<?= htmlspecialchars($resetMessage['type']); ?>" role="alert">
+                                <?= htmlspecialchars($resetMessage['text']); ?>
+                              </div>
+                            <?php endif; ?>
+                            <form method="post" onsubmit="return confirm('This will erase all timetable data. Are you sure you want to continue?');">
+                              <input type="hidden" name="reset_timetables" value="1">
+                              <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Reset All Timetables
+                              </button>
+                            </form>
+                            <p class="mt-2 text-muted small">Last action time: <?= date('Y-m-d H:i:s'); ?></p>
+                          </div>
+                        </div>
+                      </div>
                       <div class="col-md-6">
                         <form class="mt-3" action="" method="POST">
                           <div class="col-md-12">

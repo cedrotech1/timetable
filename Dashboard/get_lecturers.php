@@ -1,94 +1,145 @@
 <?php
+header('Content-Type: application/json');
+header("Access-Control-Allow-Origin: *");
+header("Access-Control-Allow-Methods: GET");
+header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
 include('connection.php');
 
-// Enable error reporting for debugging
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
 
-// Start session if not already started
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+
+// Pagination parameters
+$page = isset($_GET['page']) ? (int) $_GET['page'] : 1;
+$limit = isset($_GET['limit']) ? (int) $_GET['limit'] : 10;
+$offset = ($page - 1) * $limit;
+
+// Search
+$search = isset($_GET['search']) ? trim($_GET['search']) : "";
+
+// Filters
+$campus = isset($_GET['campus']) ? trim($_GET['campus']) : "";
+$college = isset($_GET['college']) ? trim($_GET['college']) : "";
+$school = isset($_GET['school']) ? trim($_GET['school']) : "";
+
+// Build query
+$sql = "SELECT id, names, email, ur_email, phone, image, role, campus, college, school 
+        FROM users 
+        WHERE role != 'admin'";
+
+// Search filter
+if (!empty($search)) {
+    $sql .= " AND (names LIKE ? OR email LIKE ? OR ur_email LIKE ? OR phone LIKE ?)";
 }
 
-// Set content type to JSON
-header('Content-Type: application/json');
+// Campus filter
+if (!empty($campus)) {
+    $sql .= " AND campus = ?";
+}
 
-try {
-    // Get filter parameters
-    $search = isset($_GET['search']) ? mysqli_real_escape_string($connection, $_GET['search']) : '';
-    $campus = isset($_GET['campus']) ? (int)$_GET['campus'] : 0;
-    $status = isset($_GET['status']) ? mysqli_real_escape_string($connection, $_GET['status']) : '';
-    $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-    $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 10;
-    $offset = ($page - 1) * $limit;
+// College filter
+if (!empty($college)) {
+    $sql .= " AND college = ?";
+}
 
-    // Build the base query
-    $query = "SELECT u.*, c.name as campus_name 
-              FROM users u 
-              LEFT JOIN campus c ON u.campus = c.id 
-              WHERE u.role = 'lecturer'";
+// School filter
+if (!empty($school)) {
+    $sql .= " AND school = ?";
+}
 
-    // Add search condition
-    if (!empty($search)) {
-        $query .= " AND (u.names LIKE '%$search%' OR u.email LIKE '%$search%')";
-    }
+$sql .= " ORDER BY names ASC LIMIT ? OFFSET ?";
 
-    // Add campus filter
-    if ($campus > 0) {
-        $query .= " AND u.campus = $campus";
-    }
+// Prepare statement
+$stmt = $connection->prepare($sql);
 
-    // Add status filter
-    if (!empty($status)) {
-        $query .= " AND u.active = " . ($status === 'active' ? '1' : '0');
-    }
+// Dynamic bind parameters
+$bindTypes = "";
+$bindValues = [];
 
-    // Add order by
-    $query .= " ORDER BY u.names ASC";
+if (!empty($search)) {
+    $bindTypes .= "ssss";
+    $searchTerm = "%$search%";
+    $bindValues[] = &$searchTerm;
+    $bindValues[] = &$searchTerm;
+    $bindValues[] = &$searchTerm;
+    $bindValues[] = &$searchTerm;
+}
 
-    // Get total count for pagination
-    $count_query = str_replace("u.*, c.name as campus_name", "COUNT(*) as total", $query);
-    $count_result = mysqli_query($connection, $count_query);
-    $total = mysqli_fetch_assoc($count_result)['total'];
+if (!empty($campus)) {
+    $bindTypes .= "s";
+    $bindValues[] = &$campus;
+}
 
-    // Add pagination
-    $query .= " LIMIT $offset, $limit";
+if (!empty($college)) {
+    $bindTypes .= "s";
+    $bindValues[] = &$college;
+}
 
-    // Execute the main query
-    $result = mysqli_query($connection, $query);
+if (!empty($school)) {
+    $bindTypes .= "s";
+    $bindValues[] = &$school;
+}
 
-    if (!$result) {
-        throw new Exception("Query failed: " . mysqli_error($connection));
-    }
+$bindTypes .= "ii";
+$bindValues[] = &$limit;
+$bindValues[] = &$offset;
 
-    // Fetch all lecturers
-    $lecturers = [];
-    while ($row = mysqli_fetch_assoc($result)) {
-        $lecturers[] = $row;
-    }
+// Bind dynamically
+$stmt->bind_param($bindTypes, ...$bindValues);
 
-    // Calculate pagination info
-    $total_pages = ceil($total / $limit);
-    $pagination = [
-        'current_page' => $page,
-        'last_page' => $total_pages,
-        'per_page' => $limit,
-        'total' => $total
-    ];
+// Execute query
+$stmt->execute();
+$result = $stmt->get_result();
 
-    // Return success response
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'lecturers' => $lecturers,
-            'pagination' => $pagination
-        ]
-    ]);
+// Fetch lecturers
+$lecturers = [];
+while ($row = $result->fetch_assoc()) {
+    $lecturers[] = $row;
+}
 
-} catch (Exception $e) {
-    // Return error response
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
-} 
+// Count total for pagination using same filters
+$countSql = "SELECT COUNT(*) AS total FROM users WHERE role != 'admin'";
+$countParams = [];
+
+if (!empty($search)) {
+    $countSql .= " AND (names LIKE ? OR email LIKE ? OR ur_email LIKE ? OR phone LIKE ?)";
+    $searchTermCount = "%$search%";
+    $countParams = array_merge($countParams, [$searchTermCount, $searchTermCount, $searchTermCount, $searchTermCount]);
+}
+if (!empty($campus)) {
+    $countSql .= " AND campus = ?";
+    $countParams[] = $campus;
+}
+if (!empty($college)) {
+    $countSql .= " AND college = ?";
+    $countParams[] = $college;
+}
+if (!empty($school)) {
+    $countSql .= " AND school = ?";
+    $countParams[] = $school;
+}
+
+$countStmt = $connection->prepare($countSql);
+
+if (!empty($countParams)) {
+    $countTypes = str_repeat('s', count($countParams));
+    $countStmt->bind_param($countTypes, ...$countParams);
+}
+
+$countStmt->execute();
+$countResult = $countStmt->get_result();
+$total = $countResult->fetch_assoc()['total'] ?? 0;
+
+echo json_encode([
+    "success" => true,
+    "data" => $lecturers,
+    "pagination" => [
+        "total" => (int)$total,
+        "page" => $page,
+        "limit" => $limit,
+        "pages" => ceil($total / $limit)
+    ]
+]);
+
+$stmt->close();
+$connection->close();
+?>
