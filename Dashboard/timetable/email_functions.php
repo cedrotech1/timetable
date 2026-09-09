@@ -133,9 +133,8 @@ function sendResetPasswordEmail($recipientEmail, $name, $resetCode) {
 
 function generateResetPasswordEmailBody($name, $resetCode, $recipientEmail) {
     global $url;
-    // Escape email for security
-    $safeEmail = htmlspecialchars($recipientEmail, ENT_QUOTES, 'UTF-8');
-    $link = "$url/studentcard/reset.php?step=2&email=$safeEmail";
+    $baseUrl = rtrim($url ?: '', '/');
+    $link = ($baseUrl !== '' ? $baseUrl : '') . "/reset.php?step=2&email=" . urlencode($recipientEmail);
     
     return "
     <!DOCTYPE html>

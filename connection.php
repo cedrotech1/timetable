@@ -9,19 +9,26 @@ $dbName = 'timetable-v3';
 $dbUser = 'root';
 $dbPassword = 'Ur@2312';
 
-// Try to load environment variables if loadEnv.php exists
-if (file_exists(__DIR__ . '/../loadEnv.php')) {
-    require_once __DIR__ . '/../loadEnv.php';
-    $filePath = __DIR__ . '/../.env';
-    if (file_exists($filePath)) {
-        loadEnv($filePath);
-        // Override defaults with environment variables if they exist
-        $dbHost = getenv('DB_HOST') ?: $dbHost;
-        $dbPort = getenv('DB_PORT') ?: $dbPort;
-        $dbName = getenv('DB_TIMETABLE-v3') ?: $dbName; // Use DB_HOSTEL
-        $dbUser = getenv('DB_USER') ?: $dbUser;
-        $dbPassword = getenv('DB_PASSWORD') ?: $dbPassword;
-        // $timeLimit = getenv('TIME') ?: 1; // Load TIME variable
+// Try to load environment variables if loadEnv.php exists (app dir first, then parent)
+$loadEnvCandidates = [__DIR__ . '/loadEnv.php', __DIR__ . '/../loadEnv.php'];
+$envCandidates = [__DIR__ . '/.env', __DIR__ . '/../.env'];
+foreach ($loadEnvCandidates as $loadEnvPath) {
+    if (file_exists($loadEnvPath)) {
+        require_once $loadEnvPath;
+        break;
+    }
+}
+if (function_exists('loadEnv')) {
+    foreach ($envCandidates as $filePath) {
+        if (file_exists($filePath)) {
+            loadEnv($filePath);
+            $dbHost = getenv('DB_HOST') ?: $dbHost;
+            $dbPort = getenv('DB_PORT') ?: $dbPort;
+            $dbName = getenv('DB_TIMETABLE-v3') ?: $dbName;
+            $dbUser = getenv('DB_USER') ?: $dbUser;
+            $dbPassword = getenv('DB_PASSWORD') ?: $dbPassword;
+            break;
+        }
     }
 }
 

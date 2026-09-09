@@ -1,50 +1,79 @@
 <?php
-// Include database connection file
 include("connection.php");
-require_once '../loadEnv.php';
 session_start();
 
-// Load the .env file
-$filePath = __DIR__ . '/../.env'; // Corrected path
-loadEnv($filePath);
-include("./email_functions.php");
+// Load .env from this app folder when present (do not fatal if missing)
+if (file_exists(__DIR__ . '/loadEnv.php')) {
+    require_once __DIR__ . '/loadEnv.php';
+    $envPath = __DIR__ . '/.env';
+    if (file_exists($envPath)) {
+        loadEnv($envPath);
+    }
+}
+include(__DIR__ . "/email_functions.php");
 
-// Initialize error and success messages
 $error = "";
 $success = "";
 
-// Step can now be passed via the URL (default is 1)
 $step = isset($_GET['step']) ? (int)$_GET['step'] : 1;
-$email = isset($_GET['email']) ? mysqli_real_escape_string($connection, $_GET['email']) : '';
+$email = isset($_GET['email']) ? trim($_GET['email']) : '';
 
-// Check if form is submitted
+/**
+ * Find an active user by personal email or UR email.
+ */
+function findUserByEmail($connection, $email) {
+    $identifier = strtolower(trim($email));
+    if ($identifier === '') {
+        return null;
+    }
+
+    $sql = "SELECT id, names, email, ur_email, active
+            FROM users
+            WHERE LOWER(email) = ? OR LOWER(ur_email) = ?
+            LIMIT 1";
+    $stmt = $connection->prepare($sql);
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('ss', $identifier, $identifier);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = ($result && $result->num_rows === 1) ? $result->fetch_assoc() : null;
+    $stmt->close();
+    return $row;
+}
+
 if (isset($_POST["reset"])) {
-    // Step 1: Requesting reset code (email provided)
     if ($step === 1) {
-        $email = mysqli_real_escape_string($connection, $_POST['email']);
-        
-        // Fetch user from database based on email
-        $sql = "SELECT id, names, active FROM users WHERE email='$email'";
-        $result = mysqli_query($connection, $sql);
-        
-        if ($result && mysqli_num_rows($result) === 1) {
-            $row = mysqli_fetch_assoc($result);
-            if ($row['active'] == '1') {
-                $names = $row['names'];
-                
-                // Generate a reset code
-                $resetCode = rand(100000, 999999); // Generate a random 6-digit reset code
-                
-                // Update the user's reset code in the database
-                $sqlUpdate = "UPDATE users SET resetcode='$resetCode' WHERE email='$email'";
-                mysqli_query($connection, $sqlUpdate);
-                
-                // Send the reset code to user's email
-                sendResetPasswordEmail($email, $names, $resetCode);
+        $email = trim($_POST['email'] ?? '');
+        $row = findUserByEmail($connection, $email);
 
-                // Redirect to step 2 with the email in the URL
-                header("Location: reset.php?step=2&email=" . urlencode($email));
-                exit;
+        if ($row) {
+            if ((string)$row['active'] === '1') {
+                $names = $row['names'];
+                $resetCode = (string)rand(100000, 999999);
+                $userId = (int)$row['id'];
+
+                $sqlUpdate = "UPDATE users SET resetcode = ? WHERE id = ?";
+                $stmt = $connection->prepare($sqlUpdate);
+                if ($stmt) {
+                    $stmt->bind_param('si', $resetCode, $userId);
+                    if ($stmt->execute()) {
+                        $mailResult = sendResetPasswordEmail($email, $names, $resetCode);
+                        if ($mailResult === true) {
+                            header("Location: reset.php?step=2&email=" . urlencode($email));
+                            exit;
+                        }
+                        $error = is_string($mailResult)
+                            ? $mailResult
+                            : "Failed to send reset email. Please try again later.";
+                    } else {
+                        $error = "Could not save reset code. Ensure the users.resetcode column exists.";
+                    }
+                    $stmt->close();
+                } else {
+                    $error = "Could not prepare reset update. Ensure the users.resetcode column exists.";
+                }
             } else {
                 $error = "This account is deactivated.";
             }
@@ -53,43 +82,51 @@ if (isset($_POST["reset"])) {
         }
     }
 
-    // Step 2: Verifying the reset code
     if ($step === 2) {
-        $resetCode = mysqli_real_escape_string($connection, $_POST['reset_code']);
-        
-        // Fetch user based on email and reset code
-        $sql = "SELECT id FROM users WHERE email='$email' AND resetcode='$resetCode' AND resetcode!=0";
-        $result = mysqli_query($connection, $sql);
-        
-        if ($result && mysqli_num_rows($result) === 1) {
-            // Code matches, proceed to reset password
-            $_SESSION['code'] = $resetCode;
-            
-            header("Location: reset.php?step=3&email=" . urlencode($email));
-            exit;
-        } else {
-            $error = "Invalid reset code.";
+        $resetCode = trim($_POST['reset_code'] ?? '');
+        $row = findUserByEmail($connection, $email);
+
+        if ($row && $resetCode !== '') {
+            $userId = (int)$row['id'];
+            $sql = "SELECT id FROM users WHERE id = ? AND resetcode = ? AND resetcode IS NOT NULL AND resetcode != '0' LIMIT 1";
+            $stmt = $connection->prepare($sql);
+            if ($stmt) {
+                $stmt->bind_param('is', $userId, $resetCode);
+                $stmt->execute();
+                $result = $stmt->get_result();
+                if ($result && $result->num_rows === 1) {
+                    $_SESSION['code'] = $resetCode;
+                    $_SESSION['reset_user_id'] = $userId;
+                    header("Location: reset.php?step=3&email=" . urlencode($email));
+                    exit;
+                }
+                $stmt->close();
+            }
         }
+        $error = "Invalid reset code.";
     }
 
-    // Step 3: Resetting the password
     if ($step === 3) {
-        $newPassword = mysqli_real_escape_string($connection, $_POST['new_password']);
-        $confirmPassword = mysqli_real_escape_string($connection, $_POST['confirm_password']);
-        
-        // Check if the passwords match
-        if ($newPassword === $confirmPassword) {
-            // Hash the new password
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
+        $userId = isset($_SESSION['reset_user_id']) ? (int)$_SESSION['reset_user_id'] : 0;
+        $sessionCode = $_SESSION['code'] ?? '';
+
+        if ($userId <= 0 || $sessionCode === '') {
+            $error = "Reset session expired. Please try again.";
+        } elseif ($newPassword === $confirmPassword) {
             $hashedPassword = password_hash($newPassword, PASSWORD_DEFAULT);
-            
-            // Update the password in the database
-            $sqlUpdate = "UPDATE users SET password='$hashedPassword', resetcode=NULL WHERE email='$email'";
-            if (mysqli_query($connection, $sqlUpdate)) {
-                $success = "Your password has been successfully reset.";
-                // Redirect after successful reset
-                session_destroy();
-                header("Location: login.php?reset=success");
-                exit;
+            $sqlUpdate = "UPDATE users SET password = ?, resetcode = NULL WHERE id = ? AND resetcode = ?";
+            $stmt = $connection->prepare($sqlUpdate);
+            if ($stmt) {
+                $stmt->bind_param('sis', $hashedPassword, $userId, $sessionCode);
+                if ($stmt->execute() && $stmt->affected_rows > 0) {
+                    session_destroy();
+                    header("Location: login.php?reset=success");
+                    exit;
+                }
+                $error = "Failed to reset password. Please try again.";
+                $stmt->close();
             } else {
                 $error = "Failed to reset password. Please try again.";
             }
@@ -131,13 +168,13 @@ if (isset($_POST["reset"])) {
 
                     <?php if ($error): ?>
                     <div class="alert alert-danger" role="alert">
-                      <?php echo $error; ?>
+                      <?php echo htmlspecialchars($error); ?>
                     </div>
                     <?php endif; ?>
 
                     <?php if ($success): ?>
                     <div class="alert alert-success" role="alert">
-                      <?php echo $success; ?>
+                      <?php echo htmlspecialchars($success); ?>
                     </div>
                     <?php endif; ?>
 
@@ -184,7 +221,7 @@ if (isset($_POST["reset"])) {
                     </div>
                     <button class="btn btn-outline-primary"><a href="reset.php">Try again </a></button>
                 <?php endif; ?>
-                    
+
                   </div>
                 </div>
               </div>
