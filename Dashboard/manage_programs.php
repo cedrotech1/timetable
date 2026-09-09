@@ -148,6 +148,70 @@ if ($moduleResult) {
     }
     mysqli_free_result($moduleResult);
 }
+
+// Map program name -> school (via program.school_id)
+$programSchoolMap = []; // lower(name) => ['school_id' => ..., 'school_name' => ..., 'program_id' => ...]
+$schoolMapQuery = "SELECT p.id AS program_id, LOWER(TRIM(p.name)) AS lname, s.id AS school_id, s.name AS school_name
+                   FROM program p
+                   LEFT JOIN school s ON p.school_id = s.id
+                   WHERE p.name IS NOT NULL AND TRIM(p.name) <> ''
+                   ORDER BY s.name, p.name";
+$schoolMapResult = mysqli_query($connection, $schoolMapQuery);
+if ($schoolMapResult) {
+    while ($row = mysqli_fetch_assoc($schoolMapResult)) {
+        // Keep first match if duplicate names exist
+        if (!isset($programSchoolMap[$row['lname']])) {
+            $programSchoolMap[$row['lname']] = [
+                'program_id' => (int)$row['program_id'],
+                'school_id' => $row['school_id'] !== null ? (int)$row['school_id'] : 0,
+                'school_name' => $row['school_name'] ?: 'Unassigned school',
+            ];
+        }
+    }
+    mysqli_free_result($schoolMapResult);
+}
+
+// Group all_programs by school for table display
+$programsBySchool = [];
+foreach ($programs as $program) {
+    $lname = strtolower(trim($program['name']));
+    $schoolId = 0;
+    $schoolName = 'Not assigned to a school';
+    $linkedProgramId = $programsWithModules[$lname] ?? ($programSchoolMap[$lname]['program_id'] ?? 0);
+
+    if (isset($programSchoolMap[$lname])) {
+        $schoolId = $programSchoolMap[$lname]['school_id'];
+        $schoolName = $programSchoolMap[$lname]['school_name'];
+        if (!$linkedProgramId) {
+            $linkedProgramId = $programSchoolMap[$lname]['program_id'];
+        }
+    }
+
+    if (!isset($programsBySchool[$schoolId])) {
+        $programsBySchool[$schoolId] = [
+            'school_name' => $schoolName,
+            'programs' => [],
+        ];
+    }
+
+    $programsBySchool[$schoolId]['programs'][] = [
+        'id' => $program['id'],
+        'name' => $program['name'],
+        'lname' => $lname,
+        'linked_program_id' => $linkedProgramId,
+        'has_modules' => isset($programsWithModules[$lname]),
+    ];
+}
+
+// Sort schools by name; keep "Not assigned" last
+uasort($programsBySchool, function ($a, $b) {
+    $aUnassigned = ($a['school_name'] === 'Not assigned to a school');
+    $bUnassigned = ($b['school_name'] === 'Not assigned to a school');
+    if ($aUnassigned !== $bUnassigned) {
+        return $aUnassigned ? 1 : -1;
+    }
+    return strcasecmp($a['school_name'], $b['school_name']);
+});
 ?>
 
 <!DOCTYPE html>
@@ -231,49 +295,56 @@ if ($moduleResult) {
                 <?php if (empty($programs)): ?>
                     <p>No programs found.</p>
                 <?php else: ?>
-                    <table class="table table-striped">
+                    <table class="table table-striped align-middle">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th style="width: 70px;">ID</th>
                                 <th>Name</th>
-                                <th>Modules</th>
-                                <th>Action</th>
+                                <th style="width: 180px;">Modules</th>
+                                <th style="width: 100px;">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($programs as $program): ?>
-                                <?php
-                                $lname = strtolower(trim($program['name']));
-                                $hasModules = isset($programsWithModules[$lname]);
-                                $linkedProgramId = $hasModules ? $programsWithModules[$lname] : 0;
-                                ?>
-                                <tr>
-                                    <td><?php echo htmlspecialchars($program['id']); ?></td>
-                                    <td><?php echo htmlspecialchars($program['name']); ?></td>
-                                    <td>
-                                        <?php if ($hasModules): ?>
-                                            <button type="button"
-                                                    class="btn btn-link p-0 view-modules"
-                                                    data-program-id="<?php echo (int)$linkedProgramId; ?>"
-                                                    data-program-name="<?php echo htmlspecialchars($program['name'], ENT_QUOTES, 'UTF-8'); ?>"
-                                                    title="View all modules">
-                                                <i class="bi bi-check-circle-fill text-success"></i>
-                                                <span class="text-success ms-1">Has modules</span>
-                                            </button>
-                                        <?php else: ?>
-                                            <span class="text-muted" title="No modules assigned">
-                                                <i class="bi bi-x-circle text-danger"></i>
-                                                <span class="ms-1">No modules</span>
-                                            </span>
+                            <?php foreach ($programsBySchool as $schoolId => $schoolGroup): ?>
+                                <tr class="table-primary">
+                                    <td colspan="4" class="fw-semibold">
+                                        <i class="bi bi-building me-1"></i>
+                                        <?php echo htmlspecialchars($schoolGroup['school_name']); ?>
+                                        <span class="badge bg-secondary ms-2"><?php echo count($schoolGroup['programs']); ?></span>
+                                        <?php if ($schoolId > 0): ?>
+                                            <a href="school_page.php?id=<?php echo (int)$schoolId; ?>" class="ms-2 small">Open school</a>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
-                                        <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete <?php echo htmlspecialchars($program['name']); ?>?');">
-                                            <input type="hidden" name="delete_id" value="<?php echo htmlspecialchars($program['id']); ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                        </form>
-                                    </td>
                                 </tr>
+                                <?php foreach ($schoolGroup['programs'] as $program): ?>
+                                    <tr>
+                                        <td><?php echo htmlspecialchars($program['id']); ?></td>
+                                        <td><?php echo htmlspecialchars($program['name']); ?></td>
+                                        <td>
+                                            <?php if ($program['has_modules']): ?>
+                                                <button type="button"
+                                                        class="btn btn-link p-0 view-modules"
+                                                        data-program-id="<?php echo (int)$program['linked_program_id']; ?>"
+                                                        data-program-name="<?php echo htmlspecialchars($program['name'], ENT_QUOTES, 'UTF-8'); ?>"
+                                                        title="View all modules">
+                                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                                    <span class="text-success ms-1">Has modules</span>
+                                                </button>
+                                            <?php else: ?>
+                                                <span class="text-muted" title="No modules assigned">
+                                                    <i class="bi bi-x-circle text-danger"></i>
+                                                    <span class="ms-1">No modules</span>
+                                                </span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <form method="post" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete <?php echo htmlspecialchars($program['name']); ?>?');">
+                                                <input type="hidden" name="delete_id" value="<?php echo htmlspecialchars($program['id']); ?>">
+                                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
