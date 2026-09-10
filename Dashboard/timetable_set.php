@@ -113,6 +113,10 @@ border-radius: 5px !important;
 .btn-success:hover{
     background-color: rgb(63, 143, 84) !important;
 }
+.page-title .btn-reset-data {
+    white-space: nowrap;
+    margin: 6px 10px 6px 0;
+}
 h4{
     font-size: 17px !important;
     background-color: rgb(3,31,80) !important;
@@ -142,7 +146,7 @@ include ('./includes/menu.php');
   </div>
 
   <div class="">
-    <div class="card page-title">
+    <div class="card page-title d-flex flex-row flex-wrap align-items-center justify-content-between gap-2">
       <h2 class="text-light mb-0">
         Schedule Timetable for academic year: <?php echo htmlspecialchars($academic_year_label ?: '-'); ?>, 
         Semester <?php echo htmlspecialchars($semester ?: '-'); ?>
@@ -152,6 +156,9 @@ include ('./includes/menu.php');
           for <?php echo htmlspecialchars($school_name ?: 'Assigned School'); ?>
         <?php endif; ?>
       </h2>
+      <button type="button" id="btnDeleteDataTop" class="btn btn-danger btn-reset-data">
+        <i class="bi bi-trash"></i> Reset Data
+      </button>
     </div>
 
    
@@ -209,7 +216,7 @@ include ('./includes/menu.php');
                     </button>
                 </div>
                 <div class="delete-btn">
-                    <button id="btnDeleteData" class="btn btn-danger col-12">
+                    <button id="btnDeleteData" class="btn btn-danger col-12 btn-reset-data">
                         <i class="bi bi-trash"></i> Reset Data
                     </button>
                 </div>
@@ -227,22 +234,23 @@ $(document).ready(function() {
     }
 });
 
-document.getElementById("btnDeleteData").addEventListener("click", function () {
-    if (confirm("Are you sure you want to reset all data?")) {
-        // Save the selectedGroups before clearing
-        const selectedGroups = localStorage.getItem('selectedGroups');
-        
-        // Clear all localStorage
-        localStorage.clear();
-        
-        // Restore selectedGroups if it exists
-        if (selectedGroups) {
-            localStorage.setItem('selectedGroups', selectedGroups);
+document.querySelectorAll('.btn-reset-data').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+        if (confirm('Are you sure you want to reset all data?')) {
+            // Save the selectedGroups before clearing
+            const selectedGroups = localStorage.getItem('selectedGroups');
+
+            // Clear all localStorage
+            localStorage.clear();
+
+            // Restore selectedGroups if it exists
+            if (selectedGroups) {
+                localStorage.setItem('selectedGroups', selectedGroups);
+            }
+
+            location.reload();
         }
-        
-        // alert("All data except selected groups has been cleared!");
-        location.reload(); // Refresh page so cleared data is reflected
-    }
+    });
 });
 </script>
 
