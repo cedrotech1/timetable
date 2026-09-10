@@ -530,6 +530,78 @@ include('./includes/menu.php');
     </div>
   </div>
 
+  <!-- 3. Excel import -->
+  <div class="bulk-section mb-3">
+    <div class="bulk-section-header">
+      <div class="d-flex align-items-center">
+        <span class="step-badge">3</span>
+        <div>
+          <div class="fw-semibold">Upload Excel — sync &amp; match</div>
+          <div class="small" style="opacity:.85">Parse teaching timetable sheet, match modules / rooms / lecturers / groups, then apply a section into the table above</div>
+        </div>
+      </div>
+    </div>
+    <div class="bulk-section-body">
+      <div class="row g-3 align-items-start">
+        <div class="col-lg-5">
+          <div class="selector-panel">
+            <div class="panel-title"><i class="bi bi-file-earmark-excel me-1"></i> Excel / CSV file</div>
+            <input type="file" id="excelImportFile" class="form-control form-control-sm" accept=".xlsx,.xls,.csv">
+            <div class="small text-muted mt-2">
+              Expected columns: Day, Time, Module code, Module/Course Name, Lecturer, Room Capacity, Class room.
+              Section headers like <em>Year 2 : PROGRAM… GROUP 1 &amp; 2</em> are detected automatically.
+            </div>
+            <div class="d-flex flex-wrap gap-2 mt-3">
+              <button type="button" id="btnParseExcel" class="btn btn-primary btn-sm" disabled>
+                <i class="bi bi-search"></i> Parse &amp; match
+              </button>
+              <button type="button" id="btnClearImport" class="btn btn-outline-secondary btn-sm" disabled>
+                Clear import
+              </button>
+            </div>
+            <div id="excelImportStatus" class="small mt-2 text-muted"></div>
+          </div>
+        </div>
+        <div class="col-lg-7">
+          <div class="selector-panel" style="min-height: 160px;">
+            <div class="panel-title"><i class="bi bi-diagram-3 me-1"></i> Matched sections</div>
+            <div id="excelSectionsEmpty" class="text-muted small">Upload a file, then Parse &amp; match. Apply one section at a time (groups are shared per save).</div>
+            <div id="excelSectionsList"></div>
+          </div>
+        </div>
+      </div>
+      <div id="excelMatchDetails" class="mt-3 d-none">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+          <h6 class="mb-0 fw-semibold" id="excelMatchTitle">Section match details</h6>
+          <button type="button" id="btnApplyExcelSection" class="btn btn-success btn-sm" disabled>
+            <i class="bi bi-box-arrow-in-down"></i> Apply section to plan table
+          </button>
+        </div>
+        <div class="table-wrap" style="max-height: 320px;">
+          <table class="table table-sm table-bordered mb-0" id="excelMatchTable">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Day / Time</th>
+                <th>Excel module</th>
+                <th>Matched module</th>
+                <th>Facility</th>
+                <th>Lecturers</th>
+                <th>Groups</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="excelMatchBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="hint-bar mb-0 mt-3">
+        After Apply, review rows in step 2, fix any unmatched cells via the modals, then <strong>Save all</strong>.
+        Repeat Apply for the next Excel section (e.g. GP3&amp;4) after saving.
+      </div>
+    </div>
+  </div>
+
   <div id="bulkResultAlert" class="alert d-none" role="alert"></div>
   <div id="bulkConflictDetails" class="card d-none mb-3 border-danger">
     <div class="card-header text-danger fw-semibold">Conflict details</div>
@@ -622,6 +694,7 @@ include('./includes/menu.php');
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/main.js"></script>
 <script>
@@ -1911,6 +1984,377 @@ include('./includes/menu.php');
     const rows = pendingSaveRows;
     pendingSaveRows = null;
     await doBulkSave(rows);
+  });
+
+  // ---------- Excel import (step 3) ----------
+  let importSections = [];
+  let activeImportSectionIndex = null;
+  let excelFileBuffer = null;
+
+  function normalizeDayName(d) {
+    const s = String(d || '').trim().toLowerCase();
+    const map = {
+      mon: 'Monday', monday: 'Monday',
+      tue: 'Tuesday', tues: 'Tuesday', tuesday: 'Tuesday',
+      wed: 'Wednesday', weds: 'Wednesday', wedsday: 'Wednesday', wednesday: 'Wednesday',
+      thu: 'Thursday', thur: 'Thursday', thurs: 'Thursday', thursday: 'Thursday',
+      fri: 'Friday', friday: 'Friday',
+      sat: 'Saturday', saturday: 'Saturday',
+      sun: 'Sunday', sunday: 'Sunday'
+    };
+    if (map[s]) return map[s];
+    for (const [k, v] of Object.entries(map)) {
+      if (s.startsWith(k)) return v;
+    }
+    return d ? String(d).trim() : '';
+  }
+
+  function parseExcelTime(raw) {
+    const text = String(raw || '').replace(/\s+/g, ' ').trim();
+    const timeGroupNums = [];
+    const gp = text.match(/\(?\s*(?:GP|G|Group)\s*([0-9]+(?:\s*[&,]\s*[0-9]+)*)\s*\)?/i);
+    if (gp) {
+      (gp[1].match(/\d+/g) || []).forEach(n => timeGroupNums.push(parseInt(n, 10)));
+    }
+    // 8:00 AM-13:00 PM / 14:00 PM- 17:00 PM
+    const m = text.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?\s*[-–—to]+\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+    if (!m) return { start: '', end: '', time_raw: text, time_group_nums: timeGroupNums };
+
+    function to24(h, min, ampm) {
+      let hh = parseInt(h, 10);
+      const mm = min;
+      const ap = (ampm || '').toUpperCase();
+      if (ap === 'PM' && hh < 12) hh += 12;
+      if (ap === 'AM' && hh === 12) hh = 0;
+      // If end has PM and start has no ampm but end hour small... handled by explicit ampm when present
+      return String(hh).padStart(2, '0') + ':' + mm;
+    }
+
+    let startAmpm = m[3] || '';
+    let endAmpm = m[6] || '';
+    // Heuristic: "8:00 AM-13:00 PM" — start has AM, end has PM
+    // "14:00 PM-17:00 PM" — both PM (14 already 24h-ish)
+    if (!startAmpm && endAmpm && parseInt(m[1], 10) <= 12 && parseInt(m[4], 10) <= 12) {
+      // leave
+    }
+    // If hour >= 13, treat as 24h regardless of AM/PM label mistakes
+    let start = to24(m[1], m[2], startAmpm);
+    let end = to24(m[4], m[5], endAmpm);
+    if (parseInt(m[1], 10) >= 13) start = String(parseInt(m[1], 10)).padStart(2, '0') + ':' + m[2];
+    if (parseInt(m[4], 10) >= 13) end = String(parseInt(m[4], 10)).padStart(2, '0') + ':' + m[5];
+    return { start, end, time_raw: text, time_group_nums: timeGroupNums };
+  }
+
+  function isHeaderRow(cells) {
+    const joined = cells.map(c => String(c || '').toLowerCase()).join(' | ');
+    return joined.includes('day') && (joined.includes('module code') || joined.includes('module/course') || joined.includes('module'));
+  }
+
+  function findColMap(cells) {
+    const map = {};
+    cells.forEach((c, i) => {
+      const t = String(c || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      if (t === 'day') map.day = i;
+      else if (t === 'time') map.time = i;
+      else if (t.includes('module code')) map.module_code = i;
+      else if (t.includes('module/course') || t.includes('course name') || (t.includes('module') && t.includes('name'))) map.module_name = i;
+      else if (t.includes('lecturer')) map.lecturers = i;
+      else if (t.includes('room capacity') || t === 'capacity') map.room_capacity = i;
+      else if (t.includes('class room') || t.includes('classroom') || t === 'room') map.classroom = i;
+      else if (t.includes('number of students') || t.includes('no of students')) map.students = i;
+    });
+    return map;
+  }
+
+  function parseSectionTitle(text) {
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!/^year\s*\d+/i.test(t) && !/group\s*\d+/i.test(t)) return null;
+    if (/^day\b/i.test(t)) return null;
+    const yearM = t.match(/year\s*(\d+)/i);
+    const year = yearM ? parseInt(yearM[1], 10) : 0;
+    let program_hint = t;
+    const afterYear = t.replace(/^year\s*\d+\s*[:\-]?\s*/i, '');
+    program_hint = afterYear.split(/,?\s*GROUP/i)[0].trim();
+    return { title: t, year, program_hint, group_hint: t };
+  }
+
+  function parseSheetToSections(aoa) {
+    const sections = [];
+    let current = null;
+    let colMap = null;
+    let lastDay = '';
+
+    for (let r = 0; r < aoa.length; r++) {
+      const row = aoa[r] || [];
+      const cells = row.map(c => (c == null ? '' : String(c).replace(/\r?\n/g, ' ').trim()));
+      const first = cells[0] || '';
+      const line = cells.filter(Boolean).join(' ').trim();
+      if (!line) continue;
+
+      const sec = parseSectionTitle(line) || parseSectionTitle(first);
+      if (sec && !isHeaderRow(cells)) {
+        current = { ...sec, rows: [] };
+        sections.push(current);
+        colMap = null;
+        lastDay = '';
+        continue;
+      }
+
+      if (isHeaderRow(cells)) {
+        colMap = findColMap(cells);
+        continue;
+      }
+
+      if (!current || !colMap) continue;
+
+      const get = (key) => {
+        const idx = colMap[key];
+        return idx == null ? '' : (cells[idx] || '');
+      };
+
+      let day = get('day');
+      if (day) lastDay = normalizeDayName(day);
+      else day = lastDay;
+      day = normalizeDayName(day);
+
+      const timeRaw = get('time');
+      if (!timeRaw && !get('module_code') && !get('module_name')) continue;
+
+      const tm = parseExcelTime(timeRaw);
+      if (!tm.start && !get('module_code')) continue;
+
+      current.rows.push({
+        day,
+        start: tm.start,
+        end: tm.end,
+        time_raw: tm.time_raw,
+        time_group_nums: tm.time_group_nums,
+        module_code: get('module_code'),
+        module_name: get('module_name'),
+        lecturers: get('lecturers'),
+        classroom: get('classroom'),
+        room_capacity: parseInt(get('room_capacity'), 10) || null,
+        students: parseInt(get('students'), 10) || null
+      });
+    }
+
+    return sections.filter(s => s.rows.length > 0);
+  }
+
+  function setImportStatus(msg, cls) {
+    $('#excelImportStatus').removeClass('text-muted text-danger text-success text-warning').addClass(cls || 'text-muted').text(msg || '');
+  }
+
+  function renderImportSections() {
+    const $list = $('#excelSectionsList').empty();
+    if (!importSections.length) {
+      $('#excelSectionsEmpty').removeClass('d-none');
+      $('#excelMatchDetails').addClass('d-none');
+      $('#btnApplyExcelSection').prop('disabled', true);
+      return;
+    }
+    $('#excelSectionsEmpty').addClass('d-none');
+    importSections.forEach((sec, idx) => {
+      const st = sec.stats || {};
+      const prog = sec.program ? escapeHtml(sec.program.name) : '<span class="text-danger">Program not matched</span>';
+      const gcount = (sec.groups || []).length;
+      $list.append(`
+        <div class="selected-group-card ${activeImportSectionIndex === idx ? 'border-primary' : ''}" style="cursor:pointer" data-sec="${idx}">
+          <div>
+            <div class="sg-title">Section ${idx + 1}: ${escapeHtml(sec.title || 'Untitled')}</div>
+            <div class="sg-meta">
+              <span class="meta-pill"><i class="bi bi-mortarboard"></i> ${prog}</span>
+              <span class="meta-pill year">Year ${sec.year || '?'}</span>
+              <span class="meta-pill cap">${gcount} groups matched</span>
+              <span class="meta-pill">${st.rows || 0} rows</span>
+              <span class="meta-pill" style="background:#dcfce7;color:#166534">${st.ok || 0} ok</span>
+              <span class="meta-pill" style="background:#fef3c7;color:#92400e">${st.warnings || 0} warn</span>
+              <span class="meta-pill" style="background:#fee2e2;color:#b91c1c">${st.errors || 0} err</span>
+            </div>
+          </div>
+          <button type="button" class="btn btn-sm btn-outline-primary btn-view-sec" data-sec="${idx}">View</button>
+        </div>
+      `);
+    });
+  }
+
+  function showImportSection(idx) {
+    activeImportSectionIndex = idx;
+    const sec = importSections[idx];
+    if (!sec) return;
+    renderImportSections();
+    $('#excelMatchDetails').removeClass('d-none');
+    $('#excelMatchTitle').text(`Section ${idx + 1} — ${sec.title || ''}`);
+    $('#btnApplyExcelSection').prop('disabled', false);
+    const $body = $('#excelMatchBody').empty();
+    (sec.rows || []).forEach((row, i) => {
+      const stCls = row.status === 'ok' ? 'text-success' : (row.status === 'warning' ? 'text-warning' : 'text-danger');
+      const mod = row.module ? `${escapeHtml(row.module.code || '')} ${escapeHtml(row.module.name || '')}` : '<span class="text-danger">—</span>';
+      const fac = row.facility ? `${escapeHtml(row.facility.name)} (${row.facility.capacity || '?'})` : '<span class="text-muted">—</span>';
+      const lect = [];
+      if (row.lecturers?.leader) lect.push(escapeHtml(lectName(row.lecturers.leader)) + ' <span class="badge bg-primary">ML</span>');
+      (row.lecturers?.others || []).forEach(o => lect.push(escapeHtml(lectName(o))));
+      const grps = (row.groups || []).map(g => escapeHtml(g.name)).join(', ') || '—';
+      const notes = [...(row.errors || []), ...(row.warnings || [])].map(escapeHtml).join('; ');
+      $body.append(`
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(row.day)}<br><span class="small text-muted">${escapeHtml(row.start)}–${escapeHtml(row.end)}</span></td>
+          <td class="small">${escapeHtml(row.excel?.module_code || '')}<br>${escapeHtml(row.excel?.module_name || '')}</td>
+          <td class="small">${mod}</td>
+          <td class="small">${fac}</td>
+          <td class="small">${lect.join('<br>') || '—'}</td>
+          <td class="small">${grps}</td>
+          <td class="${stCls} small">${escapeHtml(row.status)}${notes ? '<div class="text-muted">' + notes + '</div>' : ''}</td>
+        </tr>
+      `);
+    });
+  }
+
+  function applyImportSection(idx) {
+    const sec = importSections[idx];
+    if (!sec) return;
+    const usable = (sec.rows || []).filter(r => r.module && r.day && r.start && r.end);
+    if (!usable.length) {
+      alert('No usable rows in this section (need matched module + day/time).');
+      return;
+    }
+
+    // Prefer section-level groups; else union of row groups
+    let groups = (sec.groups || []).map(g => resolveGroupMeta(g));
+    if (!groups.length) {
+      const map = new Map();
+      usable.forEach(r => (r.groups || []).forEach(g => map.set(String(g.id), resolveGroupMeta(g))));
+      groups = Array.from(map.values());
+    }
+    if (!groups.length) {
+      if (!confirm('No groups were matched. Apply rows anyway? You must select groups manually before save.')) return;
+    } else {
+      selectedGroups = groups;
+      renderSelectedGroups();
+      syncGroupChecks();
+    }
+
+    $('#bulkTableBody').empty();
+    usable.forEach(r => {
+      addRow({
+        day: r.day,
+        start: r.start,
+        end: r.end,
+        module_id: r.module.id,
+        facility_id: r.facility ? r.facility.id : 0,
+        facility_name: r.facility ? r.facility.name : '',
+        facility_capacity: r.facility ? r.facility.capacity : '',
+        facility_site: r.facility ? r.facility.site_name : '',
+        facility_building: r.facility ? r.facility.buildname : '',
+        lecturers: r.lecturers || { leader: null, others: [] }
+      });
+      // Force module button from matched object (may not be in filtered cache yet)
+      const $tr = $('#bulkTableBody tr').last();
+      if (r.module) setModuleBtn($tr, r.module);
+      if (r.facility) setFacilityBtn($tr, r.facility);
+      if (r.lecturers) setRowLecturers($tr, r.lecturers);
+      const bad = (r.errors || []).length;
+      $tr.find('.row-status')
+        .removeClass('text-muted text-success text-danger')
+        .addClass(bad ? 'text-danger' : 'text-success')
+        .text(bad ? 'Imported (fix)' : (r.warnings?.length ? 'Imported (warn)' : 'Imported'));
+    });
+
+    clearInvalidModulesOnRows();
+    setImportStatus(`Applied section ${idx + 1}: ${usable.length} row(s), ${selectedGroups.length} group(s). Review step 2 then Save all.`, 'text-success');
+    document.getElementById('bulkTable')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  $('#excelImportFile').on('change', function () {
+    const f = this.files && this.files[0];
+    excelFileBuffer = null;
+    importSections = [];
+    activeImportSectionIndex = null;
+    renderImportSections();
+    $('#btnClearImport').prop('disabled', !f);
+    if (!f) {
+      $('#btnParseExcel').prop('disabled', true);
+      setImportStatus('');
+      return;
+    }
+    $('#btnParseExcel').prop('disabled', true);
+    setImportStatus('Reading file…');
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      excelFileBuffer = e.target.result;
+      $('#btnParseExcel').prop('disabled', false);
+      setImportStatus(`Ready: ${f.name}. Click Parse & match.`, 'text-muted');
+    };
+    reader.onerror = function () {
+      setImportStatus('Failed to read file.', 'text-danger');
+    };
+    reader.readAsArrayBuffer(f);
+  });
+
+  $('#btnParseExcel').on('click', async function () {
+    if (!excelFileBuffer) return;
+    if (typeof XLSX === 'undefined') {
+      alert('Excel library failed to load. Check your network and refresh.');
+      return;
+    }
+    setImportStatus('Parsing Excel…');
+    $('#btnParseExcel').prop('disabled', true);
+    try {
+      const wb = XLSX.read(excelFileBuffer, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const aoa = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, defval: '', raw: false });
+      const parsed = parseSheetToSections(aoa);
+      if (!parsed.length) {
+        setImportStatus('No timetable sections found. Check that the sheet has Year/Group headers and Day/Time/Module columns.', 'text-danger');
+        $('#btnParseExcel').prop('disabled', false);
+        return;
+      }
+      setImportStatus(`Parsed ${parsed.length} section(s). Matching against database…`);
+      const res = await fetch('match_bulk_import.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sections: parsed })
+      });
+      const data = await res.json();
+      if (!data.success) {
+        setImportStatus(data.message || 'Match failed.', 'text-danger');
+        $('#btnParseExcel').prop('disabled', false);
+        return;
+      }
+      importSections = data.sections || [];
+      renderImportSections();
+      if (importSections.length) showImportSection(0);
+      const totalRows = importSections.reduce((s, x) => s + (x.stats?.rows || 0), 0);
+      const totalErr = importSections.reduce((s, x) => s + (x.stats?.errors || 0), 0);
+      setImportStatus(`Matched ${importSections.length} section(s), ${totalRows} rows (${totalErr} with errors). Select a section and Apply.`, totalErr ? 'text-warning' : 'text-success');
+    } catch (err) {
+      console.error(err);
+      setImportStatus('Parse/match error: ' + (err.message || err), 'text-danger');
+    }
+    $('#btnParseExcel').prop('disabled', false);
+  });
+
+  $('#excelSectionsList').on('click', '[data-sec]', function (e) {
+    const idx = parseInt($(this).data('sec'), 10);
+    if (Number.isFinite(idx)) showImportSection(idx);
+  });
+
+  $('#btnApplyExcelSection').on('click', function () {
+    if (activeImportSectionIndex == null) return;
+    if (!confirm('Replace current plan rows and selected groups with this Excel section?')) return;
+    applyImportSection(activeImportSectionIndex);
+  });
+
+  $('#btnClearImport').on('click', function () {
+    $('#excelImportFile').val('');
+    excelFileBuffer = null;
+    importSections = [];
+    activeImportSectionIndex = null;
+    renderImportSections();
+    $('#btnParseExcel').prop('disabled', true);
+    $('#btnClearImport').prop('disabled', true);
+    setImportStatus('');
   });
 
   // Init
