@@ -77,9 +77,16 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     }
     .page-title h2 { font-size: 1.1rem; margin: 0; color: #fff; }
     #bulkTable th { white-space: nowrap; font-size: 0.8rem; background: #f8f9fa; }
-    #bulkTable td { vertical-align: middle; min-width: 120px; }
-    #bulkTable select, #bulkTable input { font-size: 0.85rem; min-width: 110px; }
-    #bulkTable .col-module, #bulkTable .col-facility, #bulkTable .col-leader { min-width: 220px; }
+    #bulkTable td { vertical-align: middle; }
+    #bulkTable .col-module, #bulkTable .col-facility, #bulkTable .col-leader { min-width: 180px; }
+    .picker-btn {
+      width: 100%;
+      text-align: left;
+      white-space: normal;
+      font-size: 0.82rem;
+      min-height: 38px;
+    }
+    .picker-btn .muted { color: #6c757d; font-size: 0.75rem; }
     .row-status { font-size: 0.75rem; }
     .row-ok { background-color: #f0fdf4 !important; }
     .row-fail { background-color: #fef2f2 !important; }
@@ -88,6 +95,23 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
       background: #e9ecef; border-radius: 999px; padding: 4px 10px; margin: 2px; font-size: 0.85rem;
     }
     .group-chip button { border: 0; background: transparent; color: #dc3545; }
+    .picker-list { max-height: 420px; overflow: auto; }
+    .picker-item {
+      cursor: pointer;
+      border: 1px solid #e9ecef;
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      transition: background .15s;
+    }
+    .picker-item:hover { background: #f1f5ff; border-color: #c5d2ff; }
+    .picker-item .cap-badge {
+      background: #012a70; color: #fff; border-radius: 999px;
+      padding: 2px 8px; font-size: 0.75rem; font-weight: 600;
+    }
+    .picker-item.too-small { opacity: 0.7; }
+    .picker-item.too-small .cap-badge { background: #dc3545; }
+    .picker-item.ok-cap .cap-badge { background: #198754; }
   </style>
 </head>
 <body>
@@ -124,7 +148,6 @@ include('./includes/menu.php');
     </div>
   </div>
 
-  <!-- Step 1: Groups -->
   <div class="card mb-3">
     <div class="card-header fw-semibold">1. Select groups (shared for all rows)</div>
     <div class="card-body">
@@ -155,10 +178,9 @@ include('./includes/menu.php');
     </div>
   </div>
 
-  <!-- Step 2: Table -->
   <div class="card mb-3">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <span class="fw-semibold">2. Add plan rows</span>
+      <span class="fw-semibold">2. Add plan rows — click Module / Facility / Leader to search in a modal</span>
       <div class="d-flex gap-2">
         <button type="button" id="btnAddRow" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> Add row</button>
         <button type="button" id="btnSaveAll" class="btn btn-sm btn-success"><i class="bi bi-save"></i> Save all</button>
@@ -169,7 +191,7 @@ include('./includes/menu.php');
         <table class="table table-bordered table-sm align-middle mb-0" id="bulkTable">
           <thead>
             <tr>
-              <th>#</th>
+              <th style="width:40px">#</th>
               <th class="col-module">Module</th>
               <th>Day</th>
               <th>Start</th>
@@ -183,12 +205,46 @@ include('./includes/menu.php');
           <tbody id="bulkTableBody"></tbody>
         </table>
       </div>
-      <p class="small text-muted mt-2 mb-0">Facilities reload from free rooms for each row’s day/time and required group capacity.</p>
+      <p class="small text-muted mt-2 mb-0">
+        Facility modal lists <strong>all free rooms</strong> for that day/time (any capacity). Use search/min capacity to filter. Required group capacity is shown for guidance.
+      </p>
     </div>
   </div>
 
   <div id="bulkResultAlert" class="alert d-none" role="alert"></div>
 </main>
+
+<!-- Shared searchable picker modal -->
+<div class="modal fade" id="pickerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="pickerModalTitle">Select</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3 align-items-end">
+          <div class="col-md-6">
+            <label class="form-label small mb-1">Search</label>
+            <input type="search" id="pickerSearch" class="form-control" placeholder="Type to filter...">
+          </div>
+          <div class="col-md-3 facility-only d-none">
+            <label class="form-label small mb-1">Min capacity</label>
+            <input type="number" id="pickerMinCap" class="form-control" min="0" placeholder="e.g. 400">
+          </div>
+          <div class="col-md-3 facility-only d-none">
+            <div class="form-check mt-4">
+              <input class="form-check-input" type="checkbox" id="pickerFitRequired">
+              <label class="form-check-label" for="pickerFitRequired">Fit required (≥ <span id="pickerRequiredCap">0</span>)</label>
+            </div>
+          </div>
+        </div>
+        <div id="pickerHint" class="small text-muted mb-2"></div>
+        <div id="pickerList" class="picker-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/main.js"></script>
@@ -198,17 +254,20 @@ include('./includes/menu.php');
   const SEM = <?php echo json_encode($semester); ?>;
   const userSchoolId = <?php echo json_encode($userSchoolId); ?>;
   const canAccessAllSchools = <?php echo $canAccessAllSchools ? 'true' : 'false'; ?>;
-
   const DAYS = <?php echo json_encode($days); ?>;
   const TIMES = <?php echo json_encode($timeOptions); ?>;
 
   let programs = [];
   let selectedProgram = null;
   let selectedIntake = null;
-  let selectedGroups = []; // {id,name,size}
+  let selectedGroups = [];
   let rowSeq = 0;
   let modulesCache = [];
   let lecturersCache = [];
+  let activeRow = null;
+  let pickerMode = null; // module | facility | leader
+  let facilityCache = [];
+  let pickerModal;
 
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({
@@ -239,6 +298,289 @@ include('./includes/menu.php');
       const id = String($(this).val());
       $(this).prop('checked', selectedGroups.some(g => String(g.id) === id));
     });
+  }
+
+  function dayOptionsHtml(selected) {
+    return '<option value="">Day</option>' + DAYS.map(d =>
+      `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}</option>`
+    ).join('');
+  }
+
+  function timeOptionsHtml(selected, fallback) {
+    const val = selected || fallback;
+    return TIMES.map(t => `<option value="${t}" ${t === val ? 'selected' : ''}>${t}</option>`).join('');
+  }
+
+  function setModuleBtn($tr, module) {
+    const $btn = $tr.find('.btn-pick-module');
+    if (module && module.id) {
+      $btn.data('id', module.id);
+      $btn.html(`<strong>${escapeHtml(module.code || '')}</strong> ${escapeHtml(module.name || '')}<div class="muted">Click to change</div>`);
+    } else {
+      $btn.data('id', '');
+      $btn.html('<span class="text-muted">Search module...</span>');
+    }
+  }
+
+  function setLeaderBtn($tr, lect) {
+    const $btn = $tr.find('.btn-pick-leader');
+    if (lect && lect.id) {
+      $btn.data('id', lect.id);
+      $btn.html(`${escapeHtml(lect.names || lect.name || ('User ' + lect.id))}<div class="muted">Click to change</div>`);
+    } else {
+      $btn.data('id', '');
+      $btn.html('<span class="text-muted">Search leader (optional)...</span>');
+    }
+  }
+
+  function setFacilityBtn($tr, fac) {
+    const $btn = $tr.find('.btn-pick-facility');
+    if (fac && fac.id) {
+      $btn.data('id', fac.id);
+      $btn.data('capacity', fac.capacity || 0);
+      $btn.html(`
+        <strong>${escapeHtml(fac.name)}</strong>
+        <span class="badge bg-primary ms-1">${fac.capacity || 0} seats</span>
+        <div class="muted">${escapeHtml(fac.site_name || '')} / ${escapeHtml(fac.buildname || '')}</div>
+      `);
+    } else {
+      $btn.data('id', '');
+      $btn.data('capacity', '');
+      $btn.html('<span class="text-muted">Search free facility...</span>');
+    }
+  }
+
+  function addRow(preset = {}) {
+    rowSeq += 1;
+    const id = 'row_' + rowSeq;
+    const tr = $(`
+      <tr data-row-id="${id}">
+        <td class="row-num"></td>
+        <td class="col-module">
+          <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-module" data-id="">
+            <span class="text-muted">Search module...</span>
+          </button>
+        </td>
+        <td><select class="form-select form-select-sm day-select">${dayOptionsHtml(preset.day || '')}</select></td>
+        <td><select class="form-select form-select-sm start-select">${timeOptionsHtml(preset.start, '08:00')}</select></td>
+        <td><select class="form-select form-select-sm end-select">${timeOptionsHtml(preset.end, '13:00')}</select></td>
+        <td class="col-facility">
+          <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-facility" data-id="">
+            <span class="text-muted">Search free facility...</span>
+          </button>
+        </td>
+        <td class="col-leader">
+          <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-leader" data-id="">
+            <span class="text-muted">Search leader (optional)...</span>
+          </button>
+        </td>
+        <td class="row-status text-muted">Ready</td>
+        <td class="text-nowrap">
+          <button type="button" class="btn btn-outline-primary btn-sm btn-dup" title="Duplicate"><i class="bi bi-copy"></i></button>
+          <button type="button" class="btn btn-outline-danger btn-sm btn-del" title="Delete"><i class="bi bi-trash"></i></button>
+        </td>
+      </tr>
+    `);
+    $('#bulkTableBody').append(tr);
+
+    if (preset.module_id) {
+      const m = modulesCache.find(x => String(x.id) === String(preset.module_id));
+      if (m) setModuleBtn(tr, m);
+    }
+    if (preset.leader_id) {
+      const l = lecturersCache.find(x => String(x.id) === String(preset.leader_id));
+      if (l) setLeaderBtn(tr, l);
+    }
+    if (preset.facility_id) {
+      setFacilityBtn(tr, {
+        id: preset.facility_id,
+        name: preset.facility_name || ('Facility #' + preset.facility_id),
+        capacity: preset.facility_capacity || '',
+        site_name: preset.facility_site || '',
+        buildname: preset.facility_building || ''
+      });
+    }
+
+    renumberRows();
+    return tr;
+  }
+
+  function renumberRows() {
+    $('#bulkTableBody tr').each(function (i) {
+      $(this).find('.row-num').text(i + 1);
+    });
+  }
+
+  function collectRow($tr) {
+    return {
+      module_id: parseInt($tr.find('.btn-pick-module').data('id'), 10) || 0,
+      day: $tr.find('.day-select').val() || '',
+      start: $tr.find('.start-select').val() || '',
+      end: $tr.find('.end-select').val() || '',
+      facility_id: parseInt($tr.find('.btn-pick-facility').data('id'), 10) || 0,
+      leader_id: parseInt($tr.find('.btn-pick-leader').data('id'), 10) || 0,
+      other_lecturer_ids: []
+    };
+  }
+
+  function openPicker(mode, $tr) {
+    activeRow = $tr;
+    pickerMode = mode;
+    $('#pickerSearch').val('');
+    $('#pickerMinCap').val('');
+    $('#pickerFitRequired').prop('checked', false);
+    $('#pickerRequiredCap').text(requiredCapacity());
+    $('.facility-only').toggleClass('d-none', mode !== 'facility');
+
+    if (mode === 'module') {
+      $('#pickerModalTitle').text('Search module');
+      $('#pickerHint').text(`${modulesCache.length} modules loaded`);
+      renderPickerList();
+      pickerModal.show();
+    } else if (mode === 'leader') {
+      $('#pickerModalTitle').text('Search module leader');
+      $('#pickerHint').text(`${lecturersCache.length} lecturers loaded — optional`);
+      renderPickerList();
+      pickerModal.show();
+    } else if (mode === 'facility') {
+      openFacilityPicker($tr);
+    }
+  }
+
+  function openFacilityPicker($tr) {
+    const day = $tr.find('.day-select').val();
+    const start = $tr.find('.start-select').val();
+    const end = $tr.find('.end-select').val();
+    if (!day || !start || !end) {
+      alert('Set day, start and end first.');
+      return;
+    }
+    if (start >= end) {
+      alert('End time must be after start time.');
+      return;
+    }
+    if (!selectedGroups.length) {
+      alert('Select at least one group first.');
+      return;
+    }
+    if (!AY || !SEM) {
+      alert('Academic year / semester not configured.');
+      return;
+    }
+
+    $('#pickerModalTitle').text(`Free facilities — ${day} ${start}-${end}`);
+    $('#pickerHint').text('Loading all free facilities for this slot...');
+    $('#pickerList').html('<div class="text-center py-4 text-muted">Loading...</div>');
+    $('#pickerRequiredCap').text(requiredCapacity());
+    pickerModal.show();
+
+    // Load ALL free rooms for slot (no min capacity) so user can see every capacity
+    $.ajax({
+      url: 'get_facilities_with_site.php',
+      type: 'POST',
+      dataType: 'json',
+      data: {
+        draw: 1,
+        start: 0,
+        length: 1000,
+        'search[value]': '',
+        academic_year_id: AY,
+        semester: SEM,
+        sessions: JSON.stringify([{ day, start, end }]),
+        minCapacity: 0
+      }
+    }).done(function (json) {
+      facilityCache = Array.isArray(json?.data) ? json.data : [];
+      facilityCache.sort((a, b) => (b.capacity || 0) - (a.capacity || 0));
+      $('#pickerHint').text(`${facilityCache.length} free facilities (all capacities). Required students: ${requiredCapacity()}.`);
+      renderPickerList();
+    }).fail(function (xhr) {
+      console.error(xhr.responseText);
+      facilityCache = [];
+      $('#pickerHint').text('Failed to load facilities.');
+      $('#pickerList').html('<div class="alert alert-danger">Failed to load facilities.</div>');
+    });
+  }
+
+  function renderPickerList() {
+    const q = ($('#pickerSearch').val() || '').toLowerCase().trim();
+    const $list = $('#pickerList').empty();
+    const req = requiredCapacity();
+
+    if (pickerMode === 'module') {
+      const items = modulesCache.filter(m => {
+        if (!q) return true;
+        return `${m.code || ''} ${m.name || ''} ${m.program_name || ''}`.toLowerCase().includes(q);
+      }).slice(0, 400);
+
+      if (!items.length) {
+        $list.html('<div class="text-muted">No modules match.</div>');
+        return;
+      }
+      items.forEach(m => {
+        $list.append(`
+          <div class="picker-item" data-type="module" data-id="${m.id}">
+            <div class="fw-semibold">${escapeHtml(m.code ? m.code + ' — ' : '')}${escapeHtml(m.name)}</div>
+            <div class="small text-muted">Year ${m.year ?? 'N/A'} · Sem ${m.semester ?? 'N/A'} · ${escapeHtml(m.program_name || '')}</div>
+          </div>
+        `);
+      });
+      return;
+    }
+
+    if (pickerMode === 'leader') {
+      $list.append(`
+        <div class="picker-item" data-type="leader" data-id="">
+          <div class="fw-semibold text-muted">No leader (clear)</div>
+        </div>
+      `);
+      const items = lecturersCache.filter(l => {
+        if (!q) return true;
+        return `${l.names || ''} ${l.name || ''} ${l.email || ''} ${l.ur_email || ''}`.toLowerCase().includes(q);
+      }).slice(0, 400);
+      items.forEach(l => {
+        $list.append(`
+          <div class="picker-item" data-type="leader" data-id="${l.id}">
+            <div class="fw-semibold">${escapeHtml(l.names || l.name || ('User ' + l.id))}</div>
+            <div class="small text-muted">${escapeHtml(l.ur_email || l.email || '')}</div>
+          </div>
+        `);
+      });
+      return;
+    }
+
+    if (pickerMode === 'facility') {
+      let minCap = parseInt($('#pickerMinCap').val(), 10);
+      if ($('#pickerFitRequired').is(':checked')) minCap = req;
+      if (!Number.isFinite(minCap) || minCap < 0) minCap = 0;
+
+      const items = facilityCache.filter(f => {
+        if ((f.capacity || 0) < minCap) return false;
+        if (!q) return true;
+        return `${f.name || ''} ${f.site_name || ''} ${f.buildname || ''} ${f.type || ''} ${f.capacity || ''}`.toLowerCase().includes(q);
+      });
+
+      if (!items.length) {
+        $list.html('<div class="text-muted">No free facilities match this search/capacity filter.</div>');
+        return;
+      }
+
+      items.forEach(f => {
+        const cap = f.capacity || 0;
+        const ok = !req || cap >= req;
+        $list.append(`
+          <div class="picker-item ${ok ? 'ok-cap' : 'too-small'}" data-type="facility" data-id="${f.id}">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+              <div>
+                <div class="fw-semibold">${escapeHtml(f.name)}</div>
+                <div class="small text-muted">${escapeHtml(f.type || '')} · ${escapeHtml(f.site_name || '')} · ${escapeHtml(f.buildname || 'N/A')}</div>
+              </div>
+              <span class="cap-badge">${cap} seats ${ok ? '' : '(small)'}</span>
+            </div>
+          </div>
+        `);
+      });
+    }
   }
 
   function loadOrganization() {
@@ -279,18 +621,17 @@ include('./includes/menu.php');
   }
 
   function loadModules() {
-    return $.getJSON('api_get_modules.php', { page: 1, perPage: 2000, sort: 'name' })
+    return $.getJSON('api_get_modules.php', { page: 1, perPage: 5000, sort: 'name' })
       .done(function (res) {
         modulesCache = (res && res.success && Array.isArray(res.data)) ? res.data : [];
       });
   }
 
   function loadLecturers() {
-    const params = { page: 1, limit: 2000 };
+    const params = { page: 1, limit: 5000 };
     if (!canAccessAllSchools && userSchoolId) params.school = userSchoolId;
     return $.getJSON('get_lecturers.php', params)
       .done(function (res) {
-        // API may return {data:[...]} or array
         if (Array.isArray(res)) lecturersCache = res;
         else if (Array.isArray(res?.data)) lecturersCache = res.data;
         else if (Array.isArray(res?.lecturers)) lecturersCache = res.lecturers;
@@ -298,145 +639,7 @@ include('./includes/menu.php');
       });
   }
 
-  function moduleOptionsHtml(selectedId) {
-    let html = '<option value="">-- Module --</option>';
-    modulesCache.forEach(m => {
-      const label = `${m.code ? m.code + ' — ' : ''}${m.name}`;
-      html += `<option value="${m.id}" ${String(m.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-    });
-    return html;
-  }
-
-  function lecturerOptionsHtml(selectedId) {
-    let html = '<option value="">-- Leader (optional) --</option>';
-    lecturersCache.forEach(l => {
-      html += `<option value="${l.id}" ${String(l.id) === String(selectedId) ? 'selected' : ''}>${escapeHtml(l.names || l.name || ('User ' + l.id))}</option>`;
-    });
-    return html;
-  }
-
-  function dayOptionsHtml(selected) {
-    return DAYS.map(d => `<option value="${d}" ${d === selected ? 'selected' : ''}>${d}</option>`).join('');
-  }
-
-  function timeOptionsHtml(selected, fallback) {
-    const val = selected || fallback;
-    return TIMES.map(t => `<option value="${t}" ${t === val ? 'selected' : ''}>${t}</option>`).join('');
-  }
-
-  function addRow(preset = {}) {
-    rowSeq += 1;
-    const id = 'row_' + rowSeq;
-    const tr = $(`
-      <tr data-row-id="${id}">
-        <td class="row-num"></td>
-        <td>
-          <input type="search" class="form-control form-control-sm mb-1 module-search" placeholder="Search module...">
-          <select class="form-select form-select-sm module-select">${moduleOptionsHtml(preset.module_id)}</select>
-        </td>
-        <td><select class="form-select form-select-sm day-select"><option value="">Day</option>${dayOptionsHtml(preset.day || '')}</select></td>
-        <td><select class="form-select form-select-sm start-select">${timeOptionsHtml(preset.start, '08:00')}</select></td>
-        <td><select class="form-select form-select-sm end-select">${timeOptionsHtml(preset.end, '13:00')}</select></td>
-        <td>
-          <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-1 btn-load-facility">Load free</button>
-          <select class="form-select form-select-sm facility-select">
-            <option value="">-- Set day/time then Load free --</option>
-          </select>
-        </td>
-        <td>
-          <input type="search" class="form-control form-control-sm mb-1 leader-search" placeholder="Search lecturer...">
-          <select class="form-select form-select-sm leader-select">${lecturerOptionsHtml(preset.leader_id)}</select>
-        </td>
-        <td class="row-status text-muted">Ready</td>
-        <td class="text-nowrap">
-          <button type="button" class="btn btn-outline-primary btn-sm btn-dup" title="Duplicate"><i class="bi bi-copy"></i></button>
-          <button type="button" class="btn btn-outline-danger btn-sm btn-del" title="Delete"><i class="bi bi-trash"></i></button>
-        </td>
-      </tr>
-    `);
-    $('#bulkTableBody').append(tr);
-    renumberRows();
-    return tr;
-  }
-
-  function renumberRows() {
-    $('#bulkTableBody tr').each(function (i) {
-      $(this).find('.row-num').text(i + 1);
-    });
-  }
-
-  function collectRow($tr) {
-    return {
-      module_id: parseInt($tr.find('.module-select').val(), 10) || 0,
-      day: $tr.find('.day-select').val() || '',
-      start: $tr.find('.start-select').val() || '',
-      end: $tr.find('.end-select').val() || '',
-      facility_id: parseInt($tr.find('.facility-select').val(), 10) || 0,
-      leader_id: parseInt($tr.find('.leader-select').val(), 10) || 0,
-      other_lecturer_ids: []
-    };
-  }
-
-  function loadFacilitiesForRow($tr) {
-    const day = $tr.find('.day-select').val();
-    const start = $tr.find('.start-select').val();
-    const end = $tr.find('.end-select').val();
-    const $fac = $tr.find('.facility-select');
-    const prev = $fac.val();
-
-    if (!day || !start || !end) {
-      alert('Set day, start and end first.');
-      return;
-    }
-    if (start >= end) {
-      alert('End time must be after start time.');
-      return;
-    }
-    if (!selectedGroups.length) {
-      alert('Select at least one group first.');
-      return;
-    }
-    if (!AY || !SEM) {
-      alert('Academic year / semester not configured.');
-      return;
-    }
-
-    $fac.html('<option value="">Loading...</option>');
-    $.ajax({
-      url: 'get_facilities_with_site.php',
-      type: 'POST',
-      dataType: 'json',
-      data: {
-        draw: 1,
-        start: 0,
-        length: 200,
-        'search[value]': '',
-        academic_year_id: AY,
-        semester: SEM,
-        sessions: JSON.stringify([{ day, start, end }]),
-        minCapacity: requiredCapacity()
-      }
-    }).done(function (json) {
-      const rows = Array.isArray(json?.data) ? json.data : [];
-      let html = '<option value="">-- Select facility --</option>';
-      if (!rows.length) {
-        html = '<option value="">No free facility for this slot/capacity</option>';
-      } else {
-        rows.forEach(f => {
-          const label = `${f.name} (${f.capacity}) — ${f.site_name || ''} / ${f.buildname || ''}`;
-          html += `<option value="${f.id}" ${String(f.id) === String(prev) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-        });
-      }
-      $fac.html(html);
-      $tr.find('.row-status').text(rows.length ? `${rows.length} free` : 'No free rooms').removeClass('text-danger').addClass('text-muted');
-    }).fail(function (xhr) {
-      console.error(xhr.responseText);
-      $fac.html('<option value="">Failed to load facilities</option>');
-      $tr.find('.row-status').text('Facility load failed').addClass('text-danger');
-    });
-  }
-
-  // --- Events ---
+  // Events
   $('#programSelect').on('change', function () {
     const id = $(this).val();
     selectedProgram = programs.find(p => String(p.id) === String(id)) || null;
@@ -493,11 +696,7 @@ include('./includes/menu.php');
   });
 
   $('#btnAddRow').on('click', function () {
-    if (!modulesCache.length || !lecturersCache.length) {
-      Promise.all([loadModules(), loadLecturers()]).then(() => addRow());
-    } else {
-      addRow();
-    }
+    addRow();
   });
 
   $('#bulkTableBody').on('click', '.btn-del', function () {
@@ -508,49 +707,58 @@ include('./includes/menu.php');
   $('#bulkTableBody').on('click', '.btn-dup', function () {
     const $tr = $(this).closest('tr');
     const data = collectRow($tr);
-    const $new = addRow(data);
-    // copy facility options
-    $new.find('.facility-select').html($tr.find('.facility-select').html());
-    $new.find('.facility-select').val(data.facility_id || '');
+    const $facBtn = $tr.find('.btn-pick-facility');
+    data.facility_name = $facBtn.find('strong').first().text();
+    data.facility_capacity = $facBtn.data('capacity');
+    addRow(data);
   });
 
-  $('#bulkTableBody').on('click', '.btn-load-facility', function () {
-    loadFacilitiesForRow($(this).closest('tr'));
+  $('#bulkTableBody').on('click', '.btn-pick-module', function () {
+    openPicker('module', $(this).closest('tr'));
+  });
+  $('#bulkTableBody').on('click', '.btn-pick-leader', function () {
+    openPicker('leader', $(this).closest('tr'));
+  });
+  $('#bulkTableBody').on('click', '.btn-pick-facility', function () {
+    openPicker('facility', $(this).closest('tr'));
   });
 
   $('#bulkTableBody').on('change', '.day-select, .start-select, .end-select', function () {
     const $tr = $(this).closest('tr');
-    $tr.find('.facility-select').html('<option value="">-- Click Load free --</option>');
+    setFacilityBtn($tr, null);
+    $tr.find('.row-status').text('Re-pick facility').removeClass('text-success').addClass('text-muted');
   });
 
-  $('#bulkTableBody').on('input', '.module-search', function () {
-    const q = $(this).val().toLowerCase().trim();
-    const $sel = $(this).closest('td').find('.module-select');
-    const current = $sel.val();
-    let html = '<option value="">-- Module --</option>';
-    modulesCache.filter(m => {
-      if (!q) return true;
-      const hay = `${m.code || ''} ${m.name || ''}`.toLowerCase();
-      return hay.includes(q);
-    }).slice(0, 300).forEach(m => {
-      const label = `${m.code ? m.code + ' — ' : ''}${m.name}`;
-      html += `<option value="${m.id}" ${String(m.id) === String(current) ? 'selected' : ''}>${escapeHtml(label)}</option>`;
-    });
-    $sel.html(html);
+  let searchTimer = null;
+  $('#pickerSearch, #pickerMinCap').on('input', function () {
+    clearTimeout(searchTimer);
+    searchTimer = setTimeout(renderPickerList, 150);
+  });
+  $('#pickerFitRequired').on('change', function () {
+    if (this.checked) $('#pickerMinCap').val(requiredCapacity() || '');
+    renderPickerList();
   });
 
-  $('#bulkTableBody').on('input', '.leader-search', function () {
-    const q = $(this).val().toLowerCase().trim();
-    const $sel = $(this).closest('td').find('.leader-select');
-    const current = $sel.val();
-    let html = '<option value="">-- Leader (optional) --</option>';
-    lecturersCache.filter(l => {
-      if (!q) return true;
-      return String(l.names || l.name || '').toLowerCase().includes(q);
-    }).slice(0, 300).forEach(l => {
-      html += `<option value="${l.id}" ${String(l.id) === String(current) ? 'selected' : ''}>${escapeHtml(l.names || l.name || ('User ' + l.id))}</option>`;
-    });
-    $sel.html(html);
+  $('#pickerList').on('click', '.picker-item', function () {
+    if (!activeRow) return;
+    const type = $(this).data('type');
+    const id = $(this).data('id');
+
+    if (type === 'module') {
+      const m = modulesCache.find(x => String(x.id) === String(id));
+      setModuleBtn(activeRow, m);
+    } else if (type === 'leader') {
+      if (!id) setLeaderBtn(activeRow, null);
+      else {
+        const l = lecturersCache.find(x => String(x.id) === String(id));
+        setLeaderBtn(activeRow, l);
+      }
+    } else if (type === 'facility') {
+      const f = facilityCache.find(x => String(x.id) === String(id));
+      setFacilityBtn(activeRow, f);
+      activeRow.find('.row-status').text('Facility set').addClass('text-muted');
+    }
+    pickerModal.hide();
   });
 
   $('#btnClearBulk').on('click', function () {
@@ -604,8 +812,7 @@ include('./includes/menu.php');
         })
       });
       const data = await res.json();
-      const results = data.results || [];
-      results.forEach(r => {
+      (data.results || []).forEach(r => {
         const $tr = $('#bulkTableBody tr').eq(r.row_index);
         if (!$tr.length) return;
         if (r.status === 'success') {
@@ -613,14 +820,12 @@ include('./includes/menu.php');
           $tr.find('.row-status').removeClass('text-danger').addClass('text-success').text(r.approval_status || 'Saved');
         } else {
           $tr.addClass('row-fail').removeClass('row-ok');
-          const msg = r.status === 'conflict' ? 'Conflict' : (r.message || 'Error');
-          $tr.find('.row-status').removeClass('text-success').addClass('text-danger').text(msg);
+          $tr.find('.row-status').removeClass('text-success').addClass('text-danger')
+            .text(r.status === 'conflict' ? 'Conflict' : (r.message || 'Error'));
         }
       });
-
       const cls = data.status === 'success' ? 'alert-success' : (data.status === 'partial' ? 'alert-warning' : 'alert-danger');
-      $alert.removeClass('alert-info alert-success alert-danger alert-warning').addClass(cls)
-        .text(data.message || 'Done');
+      $alert.removeClass('alert-info alert-success alert-danger alert-warning').addClass(cls).text(data.message || 'Done');
     } catch (e) {
       console.error(e);
       $alert.removeClass('alert-info').addClass('alert-danger').text('Network error while saving.');
@@ -628,11 +833,10 @@ include('./includes/menu.php');
   });
 
   // Init
+  pickerModal = new bootstrap.Modal(document.getElementById('pickerModal'));
   renderSelectedGroups();
   loadOrganization();
-  Promise.all([loadModules(), loadLecturers()]).then(() => {
-    addRow();
-  });
+  Promise.all([loadModules(), loadLecturers()]).then(() => addRow());
 })();
 </script>
 </body>
