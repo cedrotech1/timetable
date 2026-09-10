@@ -31,6 +31,83 @@ if (isset($_POST['reset_timetables'])) {
     }
 }
 
+// Clear all promotions/intakes and student groups (so Excel import can recreate them)
+if (isset($_POST['reset_intakes_groups'])) {
+    $connection->begin_transaction();
+    try {
+        // Count before delete (for message)
+        $gCount = 0;
+        $iCount = 0;
+        $tCount = 0;
+        if ($r = $connection->query("SELECT COUNT(*) AS c FROM student_group")) {
+            $gCount = (int)($r->fetch_assoc()['c'] ?? 0);
+        }
+        if ($r = $connection->query("SELECT COUNT(*) AS c FROM intake")) {
+            $iCount = (int)($r->fetch_assoc()['c'] ?? 0);
+        }
+
+        // Timetables linked to any student group must go first
+        $ttIds = [];
+        if ($r = $connection->query("SELECT DISTINCT timetable_id FROM timetable_groups")) {
+            while ($row = $r->fetch_assoc()) {
+                $ttIds[] = (int)$row['timetable_id'];
+            }
+        }
+        $tCount = count($ttIds);
+
+        if (!empty($ttIds)) {
+            $idList = implode(',', $ttIds);
+            foreach (['timetable_sessions', 'timetable_lecturers', 'timetable_groups'] as $tbl) {
+                if (!$connection->query("DELETE FROM {$tbl} WHERE timetable_id IN ({$idList})")) {
+                    throw new Exception($connection->error ?: "Failed to clear {$tbl}");
+                }
+            }
+            // Also clear any leftover timetable_groups by group_id
+            if (!$connection->query("DELETE FROM timetable_groups")) {
+                throw new Exception($connection->error ?: 'Failed to clear timetable_groups');
+            }
+            if (!$connection->query("DELETE FROM timetable WHERE id IN ({$idList})")) {
+                throw new Exception($connection->error ?: 'Failed to clear linked timetables');
+            }
+        } else {
+            // No linked TTs, still clear junction if any orphans
+            $connection->query("DELETE FROM timetable_groups");
+        }
+
+        if (!$connection->query("DELETE FROM student_group")) {
+            throw new Exception($connection->error ?: 'Failed to delete student groups');
+        }
+        if (!$connection->query("DELETE FROM intake")) {
+            throw new Exception($connection->error ?: 'Failed to delete intakes / promotions');
+        }
+
+        // Reset auto-increment for a clean recreate
+        $connection->query("ALTER TABLE student_group AUTO_INCREMENT = 1");
+        $connection->query("ALTER TABLE intake AUTO_INCREMENT = 1");
+
+        $connection->commit();
+        $resetMessage = [
+            'type' => 'success',
+            'text' => "Cleared {$iCount} promotion/intake(s), {$gCount} group(s)" .
+                ($tCount ? ", and {$tCount} linked timetable(s)" : '') .
+                ". You can recreate them from Excel Import."
+        ];
+    } catch (Exception $e) {
+        $connection->rollback();
+        $resetMessage = ['type' => 'danger', 'text' => 'Clear intakes/groups failed: ' . $e->getMessage()];
+    }
+}
+
+// Live counts for settings cards
+$intakeCount = 0;
+$groupCount = 0;
+if ($r = $connection->query("SELECT COUNT(*) AS c FROM intake")) {
+    $intakeCount = (int)($r->fetch_assoc()['c'] ?? 0);
+}
+if ($r = $connection->query("SELECT COUNT(*) AS c FROM student_group")) {
+    $groupCount = (int)($r->fetch_assoc()['c'] ?? 0);
+}
+
 // Handle Academic Year CRUD operations
 if (isset($_POST['add_year'])) {
     $year_label = $connection->real_escape_string($_POST['year_label']);
@@ -192,7 +269,7 @@ $years_result = $connection->query($years_query);
                           <div class="card-body">
                             <h5 class="card-title text-danger">Reset Timetables</h5>
                             <p class="text-muted">This action permanently clears every timetable record along with associated groups, lecturers, and sessions. Proceed only if you have a backup or are certain you want to wipe the data.</p>
-                            <?php if ($resetMessage): ?>
+                            <?php if ($resetMessage && isset($_POST['reset_timetables'])): ?>
                               <div class="alert alert-<?= htmlspecialchars($resetMessage['type']); ?>" role="alert">
                                 <?= htmlspecialchars($resetMessage['text']); ?>
                               </div>
@@ -203,33 +280,61 @@ $years_result = $connection->query($years_query);
                                 <i class="bi bi-trash"></i> Reset All Timetables
                               </button>
                             </form>
-                            <p class="mt-2 text-muted small">Last action time: <?= date('Y-m-d H:i:s'); ?></p>
                           </div>
                         </div>
                       </div>
                       <div class="col-md-6">
-                        <form class="mt-3" action="" method="POST">
-                          <div class="col-md-12">
+                        <div class="card border-warning h-100">
+                          <div class="card-body">
+                            <h5 class="card-title text-warning">Clear promotions / intakes &amp; groups</h5>
+                            <p class="text-muted mb-2">
+                              Removes all existing <strong>promotions (intakes)</strong> and <strong>student groups</strong>
+                              so you can recreate them cleanly from Excel Import.
+                              Linked teaching-plan rows for those groups are also removed.
+                            </p>
+                            <p class="small mb-3">
+                              Current: <strong><?= (int)$intakeCount; ?></strong> intake(s),
+                              <strong><?= (int)$groupCount; ?></strong> group(s)
+                            </p>
+                            <?php if ($resetMessage && isset($_POST['reset_intakes_groups'])): ?>
+                              <div class="alert alert-<?= htmlspecialchars($resetMessage['type']); ?>" role="alert">
+                                <?= htmlspecialchars($resetMessage['text']); ?>
+                              </div>
+                            <?php endif; ?>
+                            <form method="post" onsubmit="return confirm('Delete ALL promotions/intakes and student groups?\\n\\nLinked timetable plans for those groups will also be deleted.\\nYou can recreate groups from Import Timetable Excel.\\n\\nContinue?');">
+                              <input type="hidden" name="reset_intakes_groups" value="1">
+                              <button type="submit" class="btn btn-warning">
+                                <i class="bi bi-people"></i> Clear intakes &amp; groups
+                              </button>
+                            </form>
+                            <p class="mt-2 text-muted small">
+                              After clearing, open <em>Import Timetable Excel</em> → Create all missing groups.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <form class="mt-1" action="" method="POST">
+                          <div class="row g-3">
+                          <div class="col-md-6">
                             <div class="form-floating">
                               <input type="text" class="form-control" id="floatingStatus" placeholder="status" 
                                 value='<?php echo $system_data['status'] ?? '' ?>' disabled>
                               <label for="floatingStatus">Current System Status</label>
                             </div>
                           </div>
-                          <br>
-                          <div class="col-md-12">
+                          <div class="col-md-6">
                             <div class="form-floating">
-                              <select class="form-control" id="floatingStatus" name="status" required>
+                              <select class="form-control" id="floatingStatusUpdate" name="status" required>
                                 <option value="live" <?php echo ($system_data['status'] == 'live') ? 'selected' : ''; ?>>Live</option>
                                 <option value="maintenance" <?php echo ($system_data['status'] == 'maintenance') ? 'selected' : ''; ?>>Maintenance</option>
                                 <option value="offline" <?php echo ($system_data['status'] == 'offline') ? 'selected' : ''; ?>>Offline</option>
                                 <option value="development" <?php echo ($system_data['status'] == 'development') ? 'selected' : ''; ?>>Development</option>
                               </select>
-                              <label for="floatingStatus">Update System Status</label>
+                              <label for="floatingStatusUpdate">Update System Status</label>
                             </div>
                           </div>
-                          <br>
-                          <div class="col-md-12">
+                          <div class="col-md-6">
                             <div class="form-floating">
                               <select class="form-control" id="floatingYear" name="academic_year_id" required>
                                 <?php 
@@ -245,8 +350,7 @@ $years_result = $connection->query($years_query);
                               <label for="floatingYear">Academic Year</label>
                             </div>
                           </div>
-                          <br>
-                          <div class="col-md-12">
+                          <div class="col-md-6">
                             <div class="form-floating">
                               <select class="form-control" id="floatingSemester" name="semester" required>
                                 <option value="1" <?php echo ($system_data['semester'] == '1') ? 'selected' : ''; ?>>Semester 1</option>
@@ -256,8 +360,10 @@ $years_result = $connection->query($years_query);
                               <label for="floatingSemester">Semester</label>
                             </div>
                           </div>
-                          <br>
-                          <button type="submit" name='update' class="btn btn-primary col-12">Update System Settings</button>
+                          <div class="col-12">
+                            <button type="submit" name='update' class="btn btn-primary">Update System Settings</button>
+                          </div>
+                          </div>
                         </form>
                       </div>
                     </div>

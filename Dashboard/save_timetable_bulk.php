@@ -313,27 +313,53 @@ if (!$academic_year_id) {
 if (!$semester) {
     sendBulkResponse('error', 'Missing required fields: semester');
 }
-if (empty($groups)) {
-    sendBulkResponse('error', 'Please select at least one group.');
-}
 if (empty($rows) || !is_array($rows)) {
     sendBulkResponse('error', 'Please add at least one session / plan row.');
 }
 
-$groups = array_values(array_unique(array_filter(array_map('intval', $groups))));
+$groups = array_values(array_unique(array_filter(array_map('intval', is_array($groups) ? $groups : []))));
+
+// Allow per-row group_ids (whole-school import); fall back to shared groupIds
+$anyRowGroups = false;
+foreach ($rows as $r) {
+    if (!empty($r['group_ids']) || !empty($r['groupIds'])) {
+        $anyRowGroups = true;
+        break;
+    }
+}
+if (empty($groups) && !$anyRowGroups) {
+    sendBulkResponse('error', 'Please select at least one group.');
+}
+
 $results = [];
 $successCount = 0;
 $failCount = 0;
 $batchBooked = [];
 
 foreach ($rows as $index => $row) {
+    $rowGroups = $row['group_ids'] ?? $row['groupIds'] ?? null;
+    if (is_array($rowGroups) && !empty($rowGroups)) {
+        $rowGroups = array_values(array_unique(array_filter(array_map('intval', $rowGroups))));
+    } else {
+        $rowGroups = $groups;
+    }
+    if (empty($rowGroups)) {
+        $results[] = [
+            'status' => 'error',
+            'message' => 'Missing groups for this row',
+            'row_index' => $index
+        ];
+        $failCount++;
+        continue;
+    }
+
     $result = saveOneTimetableRow(
         $connection,
         $user_id,
         $user_role,
         $academic_year_id,
         $semester,
-        $groups,
+        $rowGroups,
         $row,
         $ignore_conflicts,
         $batchBooked
@@ -348,6 +374,7 @@ foreach ($rows as $index => $row) {
         $failCount++;
     }
     $result['row_index'] = $index;
+    if (isset($row['section_index'])) $result['section_index'] = $row['section_index'];
     $results[] = $result;
 }
 

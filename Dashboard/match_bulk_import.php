@@ -620,6 +620,7 @@ foreach ($input['sections'] as $secIndex => $sec) {
     $outSections[] = [
         'section_index' => $secIndex,
         'title' => $title,
+        'sheet' => $sec['sheet'] ?? '',
         'year' => $year,
         'group_numbers' => $groupNums,
         'size_hint' => $sizeHint,

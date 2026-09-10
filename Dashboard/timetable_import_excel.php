@@ -239,7 +239,15 @@ include('./includes/menu.php');
             <div class="panel-title"><i class="bi bi-file-earmark-excel me-1"></i> File</div>
             <input type="file" id="excelFile" class="form-control form-control-sm" accept=".xlsx,.xls,.csv">
             <div class="small text-muted mt-2">
-              Detects section headers like <em>Year 2 : PROGRAM… GROUP 1 &amp; 2</em>, then matches modules, rooms, lecturers and groups.
+              Loads <strong>all sheets</strong> and every Year/Group section. Create each group once, then save the whole school timetable.
+            </div>
+            <div class="mt-2">
+              <label class="form-label small mb-1">Default campus (for creating missing groups)</label>
+              <select id="defaultCampusId" class="form-select form-select-sm">
+                <?php foreach ($campuses as $c): ?>
+                  <option value="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+                <?php endforeach; ?>
+              </select>
             </div>
             <div class="d-flex flex-wrap gap-2 mt-3">
               <button type="button" id="btnParse" class="btn btn-primary btn-sm" disabled>
@@ -248,6 +256,19 @@ include('./includes/menu.php');
               <button type="button" id="btnClear" class="btn btn-outline-secondary btn-sm" disabled>Clear</button>
             </div>
             <div id="statusMsg" class="small text-muted mt-2"></div>
+            <div id="schoolSummary" class="d-none mt-3">
+              <div class="panel-title">School import summary</div>
+              <div id="schoolSummaryText" class="small mb-2"></div>
+              <div class="d-flex flex-wrap gap-2">
+                <button type="button" id="btnCreateAllGroups" class="btn btn-warning btn-sm">
+                  <i class="bi bi-people"></i> Create all missing groups (once)
+                </button>
+                <button type="button" id="btnSaveAll" class="btn btn-success btn-sm">
+                  <i class="bi bi-save"></i> Save all sections
+                </button>
+              </div>
+              <div id="schoolActionStatus" class="small text-muted mt-2"></div>
+            </div>
           </div>
         </div>
         <div class="col-lg-7">
@@ -267,12 +288,14 @@ include('./includes/menu.php');
         <span class="step">2</span>
         <div>
           <div class="fw-semibold" id="detailTitle">Section details</div>
-          <div class="small" style="opacity:.85">Change day, time, module, facility or lecturers anytime — then save</div>
+          <div class="small" style="opacity:.85">Change day, time, module, facility or lecturers — or use Save all sections for the whole file</div>
         </div>
       </div>
-      <button type="button" id="btnSaveSection" class="btn btn-success btn-sm">
-        <i class="bi bi-save"></i> Save this section
-      </button>
+      <div class="d-flex gap-2">
+        <button type="button" id="btnSaveSection" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-save"></i> Save this section
+        </button>
+      </div>
     </div>
     <div class="imp-body">
       <div id="sectionMeta" class="meta mb-3"></div>
@@ -545,7 +568,7 @@ include('./includes/menu.php');
     return { title: t, year, program_hint, group_hint: t };
   }
 
-  function parseSheetToSections(aoa) {
+  function parseSheetToSections(aoa, sheetName) {
     const sections = [];
     let current = null;
     let colMap = null;
@@ -560,7 +583,7 @@ include('./includes/menu.php');
 
       const sec = parseSectionTitle(line) || parseSectionTitle(first);
       if (sec && !isHeaderRow(cells)) {
-        current = { ...sec, rows: [] };
+        current = { ...sec, sheet: sheetName || '', rows: [] };
         sections.push(current);
         colMap = null;
         lastDay = '';
@@ -569,6 +592,18 @@ include('./includes/menu.php');
 
       if (isHeaderRow(cells)) {
         colMap = findColMap(cells);
+        // If no Year/Group header yet, start a sheet-level section
+        if (!current) {
+          current = {
+            title: (sheetName ? sheetName + ' — ' : '') + 'Untitled section',
+            year: 0,
+            program_hint: sheetName || '',
+            group_hint: '',
+            sheet: sheetName || '',
+            rows: []
+          };
+          sections.push(current);
+        }
         continue;
       }
       if (!current || !colMap) continue;
@@ -603,6 +638,124 @@ include('./includes/menu.php');
       });
     }
     return sections.filter(s => s.rows.length > 0);
+  }
+
+  function parseWorkbookToSections(wb) {
+    const all = [];
+    (wb.SheetNames || []).forEach(name => {
+      const sheet = wb.Sheets[name];
+      if (!sheet) return;
+      const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
+      parseSheetToSections(aoa, name).forEach(s => all.push(s));
+    });
+    return all;
+  }
+
+  function schoolStats() {
+    let sections = importSections.length;
+    let rows = 0, ready = 0, missingGroups = 0, missingModule = 0, missingFacility = 0;
+    const needGroupKeys = new Set();
+    importSections.forEach(sec => {
+      refreshSectionStats(sec);
+      rows += (sec.rows || []).length;
+      (sec.rows || []).forEach(r => {
+        if (r.module && r.facility && r.day && r.start && r.end && ((r.groups || []).length || (sec.groups || []).length)) ready++;
+        if (!r.module) missingModule++;
+        if (!r.facility) missingFacility++;
+      });
+      if (!(sec.groups || []).length) {
+        missingGroups++;
+        if (sec.program?.id && sec.year) {
+          needGroupKeys.add(sec.program.id + ':' + sec.year);
+        }
+      }
+    });
+    return { sections, rows, ready, missingGroups, missingModule, missingFacility, needGroupPrograms: needGroupKeys.size };
+  }
+
+  function updateSchoolSummary() {
+    if (!importSections.length) {
+      $('#schoolSummary').addClass('d-none');
+      return;
+    }
+    const st = schoolStats();
+    $('#schoolSummary').removeClass('d-none');
+    $('#schoolSummaryText').html(
+      `<strong>${st.sections}</strong> section(s), <strong>${st.rows}</strong> Excel row(s), ` +
+      `<strong>${st.ready}</strong> ready to save. ` +
+      (st.missingGroups ? `<span class="text-warning">${st.missingGroups} section(s) need groups.</span> ` : '') +
+      (st.missingModule || st.missingFacility
+        ? `<span class="text-muted">${st.missingModule} without module, ${st.missingFacility} without facility.</span>`
+        : '')
+    );
+  }
+
+  function collectMissingGroupItems() {
+    const campus_id = parseInt($('#defaultCampusId').val(), 10) || 0;
+    const map = new Map();
+    importSections.forEach(sec => {
+      if ((sec.groups || []).length) return;
+      const program_id = sec.program?.id || 0;
+      const year_of_study = sec.year || 0;
+      if (!program_id || !year_of_study) return;
+      const key = program_id + ':' + year_of_study + ':' + campus_id;
+      const nums = (sec.group_numbers || []).length ? sec.group_numbers.slice() : [1];
+      const size = (sec.size_hint && sec.size_hint.size) ? sec.size_hint.size : 40;
+      const mode = (sec.size_hint && sec.size_hint.mode) || 'each';
+      if (!map.has(key)) {
+        map.set(key, {
+          program_id,
+          year_of_study,
+          campus_id,
+          group_numbers: [],
+          size_each: size,
+          size_mode: mode
+        });
+      }
+      const item = map.get(key);
+      nums.forEach(n => { if (n > 0) item.group_numbers.push(n); });
+      if (size > item.size_each) item.size_each = size;
+    });
+    return Array.from(map.values()).map(it => ({
+      ...it,
+      group_numbers: Array.from(new Set(it.group_numbers)).sort((a, b) => a - b)
+    }));
+  }
+
+  function syncActiveSectionDom() {
+    if (activeIdx == null) return;
+    $('#matchBody tr').each(function () { syncRowFromDom($(this)); });
+  }
+
+  function collectSaveRowsFromSections(onlyIdx) {
+    const out = [];
+    importSections.forEach((sec, si) => {
+      if (onlyIdx != null && si !== onlyIdx) return;
+      let groups = sec.groups || [];
+      if (!groups.length) {
+        const map = new Map();
+        (sec.rows || []).forEach(r => (r.groups || []).forEach(g => map.set(String(g.id), g)));
+        groups = Array.from(map.values());
+      }
+      (sec.rows || []).forEach((r, ri) => {
+        if (!(r.module && r.day && r.start && r.end && r.facility)) return;
+        const gids = ((r.groups && r.groups.length) ? r.groups : groups).map(g => g.id).filter(Boolean);
+        if (!gids.length) return;
+        out.push({
+          section_index: si,
+          row_index: ri,
+          module_id: r.module.id,
+          day: r.day,
+          start: r.start,
+          end: r.end,
+          facility_id: r.facility.id,
+          leader_id: r.lecturers?.leader?.id || 0,
+          other_lecturer_ids: (r.lecturers?.others || []).map(o => o.id).filter(Boolean),
+          group_ids: Array.from(new Set(gids.map(Number)))
+        });
+      });
+    });
+    return out;
   }
 
   function refreshRowStatus(row) {
@@ -677,11 +830,13 @@ include('./includes/menu.php');
       refreshSectionStats(sec);
       const st = sec.stats || {};
       const prog = sec.program ? escapeHtml(sec.program.name) : '<span class="text-danger">Program not matched</span>';
+      const sheet = sec.sheet ? `<span class="pill">${escapeHtml(sec.sheet)}</span>` : '';
       $list.append(`
         <div class="sec-card ${activeIdx === idx ? 'active' : ''}" data-sec="${idx}">
           <div>
             <div class="title">Section ${idx + 1}: ${escapeHtml(sec.title || 'Untitled')}</div>
             <div class="meta">
+              ${sheet}
               <span class="pill">${prog}</span>
               <span class="pill">Year ${sec.year || '?'}</span>
               <span class="pill">${(sec.groups || []).length} groups</span>
@@ -695,6 +850,7 @@ include('./includes/menu.php');
         </div>
       `);
     });
+    updateSchoolSummary();
   }
 
   function lectTagsHtml(row) {
@@ -1051,8 +1207,13 @@ include('./includes/menu.php');
     const data = await res.json();
     if (!data.success) throw new Error(data.message || 'Match failed');
     importSections = data.sections || [];
+    // Keep sheet name from parsed payload when server doesn't return it
+    importSections.forEach((sec, i) => {
+      if (!sec.sheet && sectionsPayload[i]?.sheet) sec.sheet = sectionsPayload[i].sheet;
+    });
     importSections.forEach(refreshSectionStats);
     renderSections();
+    updateSchoolSummary();
     if (activeIdx != null && importSections[activeIdx]) showSection(activeIdx);
     else if (importSections.length) showSection(0);
     return data;
@@ -1063,7 +1224,7 @@ include('./includes/menu.php');
   function renderConflicts(conf, rowNum) {
     const f = conf.facility || [];
     const g = conf.groups || {};
-    let html = `<div class="mb-2"><strong>Row ${rowNum}</strong>`;
+    let html = `<div class="mb-2"><strong>${escapeHtml(String(rowNum))}</strong>`;
     if (f.length) {
       html += `<div class="fw-semibold mt-1">Facility</div><ul>`;
       f.forEach(r => html += `<li>${escapeHtml(r.day)} ${fmtTime(r.start_time)}–${fmtTime(r.end_time)} (#${r.timetable_id || 'batch'})</li>`);
@@ -1079,6 +1240,7 @@ include('./includes/menu.php');
   }
 
   async function saveActiveSection() {
+    syncActiveSectionDom();
     const sec = importSections[activeIdx];
     if (!sec) return;
     if (!AY || !SEM) {
@@ -1086,75 +1248,166 @@ include('./includes/menu.php');
       return;
     }
 
-    // Sync all day/time from DOM
-    $('#matchBody tr').each(function () { syncRowFromDom($(this)); });
-
-    let groups = sec.groups || [];
-    if (!groups.length) {
-      const map = new Map();
-      (sec.rows || []).forEach(r => (r.groups || []).forEach(g => map.set(String(g.id), g)));
-      groups = Array.from(map.values());
-    }
-    if (!groups.length) {
-      alert('No groups for this section. Create intake/groups first.');
-      return;
-    }
-
-    const rows = (sec.rows || [])
-      .filter(r => r.module && r.day && r.start && r.end && r.facility)
-      .map(r => ({
-        module_id: r.module.id,
-        day: r.day,
-        start: r.start,
-        end: r.end,
-        facility_id: r.facility.id,
-        leader_id: r.lecturers?.leader?.id || 0,
-        other_lecturer_ids: (r.lecturers?.others || []).map(o => o.id).filter(Boolean)
-      }));
-
-    const skipped = (sec.rows || []).length - rows.length;
+    const rows = collectSaveRowsFromSections(activeIdx);
     if (!rows.length) {
-      alert('No complete rows to save. Each row needs module + facility + day/time (use Pick buttons).');
+      alert('No complete rows to save in this section. Need module + facility + day/time + groups.');
       return;
     }
 
-    let msg = `Save ${rows.length} plan(s) for ${groups.length} group(s)?`;
-    if (skipped) msg += `\n(${skipped} incomplete row(s) will be skipped)`;
-    if (!confirm(msg)) return;
+    if (!confirm(`Save ${rows.length} plan(s) for this section?`)) return;
 
     const $alert = $('#saveAlert').removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-info').text('Saving…');
     $('#conflictBox').addClass('d-none');
     $('#conflictBody').empty();
 
     try {
-      const res = await fetch('save_timetable_bulk.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          academic_year_id: AY,
-          semester: SEM,
-          groupIds: groups.map(g => g.id),
-          selectedGroupIds: groups.map(g => g.id),
-          rows
-        })
-      });
-      const data = await res.json();
-      let conflictHtml = '';
-      (data.results || []).forEach(r => {
-        if (r.status === 'conflict' && r.conflicts) {
-          conflictHtml += renderConflicts(r.conflicts, (r.row_index || 0) + 1);
-        }
-      });
-      if (conflictHtml) {
-        $('#conflictBody').html(conflictHtml);
-        $('#conflictBox').removeClass('d-none');
-      }
-      const cls = data.status === 'success' ? 'alert-success' : (data.status === 'partial' ? 'alert-warning' : 'alert-danger');
-      $alert.removeClass('alert-info').addClass(cls).text(data.message || 'Done');
+      const data = await postSaveRows(rows);
+      showSaveResult($alert, data);
     } catch (e) {
       console.error(e);
       $alert.removeClass('alert-info').addClass('alert-danger').text('Network error while saving.');
     }
+  }
+
+  async function postSaveRows(rows) {
+    const allGroupIds = Array.from(new Set(rows.flatMap(r => r.group_ids || [])));
+    const res = await fetch('save_timetable_bulk.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        academic_year_id: AY,
+        semester: SEM,
+        groupIds: allGroupIds,
+        selectedGroupIds: allGroupIds,
+        rows
+      })
+    });
+    return res.json();
+  }
+
+  function showSaveResult($alert, data) {
+    let conflictHtml = '';
+    (data.results || []).forEach(r => {
+      if (r.status === 'conflict' && r.conflicts) {
+        const label = (r.section_index != null ? `Sec ${r.section_index + 1} / ` : '') + `Row ${(r.row_index || 0) + 1}`;
+        conflictHtml += renderConflicts(r.conflicts, label);
+      }
+    });
+    if (conflictHtml) {
+      $('#conflictBody').html(conflictHtml);
+      $('#conflictBox').removeClass('d-none');
+    }
+    const cls = data.status === 'success' ? 'alert-success' : (data.status === 'partial' ? 'alert-warning' : 'alert-danger');
+    $alert.removeClass('alert-info').addClass(cls).text(data.message || 'Done');
+    $('#schoolActionStatus').text(data.message || '');
+    updateSchoolSummary();
+  }
+
+  async function saveAllSections() {
+    syncActiveSectionDom();
+    if (!AY || !SEM) {
+      alert('Academic year / semester not configured.');
+      return;
+    }
+    const rows = collectSaveRowsFromSections(null);
+    if (!rows.length) {
+      alert('No complete rows ready. Create missing groups and pick module/facility where needed.');
+      return;
+    }
+    const st = schoolStats();
+    const skipped = st.rows - rows.length;
+    let msg = `Save ${rows.length} plan(s) across ${st.sections} section(s) for the whole file?`;
+    if (skipped) msg += `\n(${skipped} incomplete row(s) will be skipped)`;
+    if (!confirm(msg)) return;
+
+    $('#schoolActionStatus').text('Saving all sections…');
+    const $alert = $('#saveAlert').removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-info').text('Saving whole school…');
+    $('#conflictBox').addClass('d-none');
+    $('#conflictBody').empty();
+    try {
+      const data = await postSaveRows(rows);
+      showSaveResult($alert, data);
+      setStatus(data.message || 'Save finished.', data.status === 'success' ? 'text-success' : 'text-warning');
+    } catch (e) {
+      console.error(e);
+      $alert.removeClass('alert-info').addClass('alert-danger').text('Network error while saving.');
+      $('#schoolActionStatus').text('Save failed.');
+    }
+  }
+
+  async function createAllMissingGroups() {
+    const campus_id = parseInt($('#defaultCampusId').val(), 10);
+    if (!campus_id) {
+      alert('Select a default campus first.');
+      return;
+    }
+    const items = collectMissingGroupItems();
+    if (!items.length) {
+      alert('No sections need groups, or programs are not matched yet. Open sections and fix program match first.');
+      return;
+    }
+    const summary = items.map(it => {
+      const p = ALL_PROGRAMS.find(x => String(x.id) === String(it.program_id));
+      return `${p?.name || ('Program ' + it.program_id)} Y${it.year_of_study} → Group ${it.group_numbers.join(', ')}`;
+    }).join('\n');
+    if (!confirm(`Create missing groups once (reuse if already exist):\n\n${summary}`)) return;
+
+    // Persist edits into parsedSections before rematch
+    syncActiveSectionDom();
+    persistOverridesToParsed();
+
+    $('#schoolActionStatus').text('Creating groups…');
+    $('#btnCreateAllGroups').prop('disabled', true);
+    try {
+      const res = await fetch('import_create_intake.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campus_id, items })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Create failed');
+
+      // Force program ids on rematch for sections that had programs
+      const payload = parsedSections.map((s, i) => {
+        const copy = { ...s, rows: (s.rows || []).map(r => ({ ...r })) };
+        const matched = importSections[i];
+        if (matched?.program?.id) copy.forced_program_id = matched.program.id;
+        return copy;
+      });
+      await rematchSections(payload);
+      $('#schoolActionStatus').text(data.message || 'Groups ready.');
+      setStatus(data.message || 'Groups created. Review then Save all.', 'text-success');
+    } catch (err) {
+      console.error(err);
+      $('#schoolActionStatus').text(err.message || 'Failed');
+      alert(err.message || 'Failed to create groups');
+    }
+    $('#btnCreateAllGroups').prop('disabled', false);
+  }
+
+  function persistOverridesToParsed() {
+    importSections.forEach((sec, si) => {
+      if (!parsedSections[si]) return;
+      if (!parsedSections[si].rows) parsedSections[si].rows = [];
+      (sec.rows || []).forEach((row, ri) => {
+        if (!parsedSections[si].rows[ri]) {
+          parsedSections[si].rows[ri] = {
+            day: row.day, start: row.start, end: row.end,
+            module_code: row.excel?.module_code || '',
+            module_name: row.excel?.module_name || '',
+            lecturers: row.excel?.lecturers || '',
+            classroom: row.excel?.classroom || '',
+            time_group_nums: []
+          };
+        }
+        const pr = parsedSections[si].rows[ri];
+        pr.day = row.day; pr.start = row.start; pr.end = row.end;
+        if (row.module?.id) pr.forced_module_id = row.module.id;
+        if (row.facility?.id) pr.forced_facility_id = row.facility.id;
+        if (row.lecturers?.leader?.id) pr.forced_leader_id = row.lecturers.leader.id;
+        pr.forced_other_lecturer_ids = (row.lecturers?.others || []).map(o => o.id).filter(Boolean);
+      });
+    });
   }
 
   function loadModules() {
@@ -1205,9 +1458,11 @@ include('./includes/menu.php');
     parsedSections = [];
     activeIdx = null;
     renderSections();
+    updateSchoolSummary();
     $('#btnParse').prop('disabled', true);
     $('#btnClear').prop('disabled', true);
     setStatus('');
+    $('#schoolActionStatus').text('');
   });
 
   $('#btnParse').on('click', async function () {
@@ -1217,20 +1472,23 @@ include('./includes/menu.php');
       return;
     }
     $('#btnParse').prop('disabled', true);
-    setStatus('Parsing Excel…');
+    setStatus('Parsing all Excel sheets…');
     try {
       const wb = XLSX.read(fileBuffer, { type: 'array' });
-      const aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, defval: '', raw: false });
-      const parsed = parseSheetToSections(aoa);
+      const parsed = parseWorkbookToSections(wb);
       if (!parsed.length) {
-        setStatus('No timetable sections found. Check Year/Group headers and Day/Time/Module columns.', 'text-danger');
+        setStatus('No timetable sections found across sheets. Check Year/Group headers and Day/Time/Module columns.', 'text-danger');
         $('#btnParse').prop('disabled', false);
         return;
       }
       parsedSections = parsed;
-      setStatus(`Parsed ${parsed.length} section(s). Matching…`);
+      setStatus(`Parsed ${parsed.length} section(s) from ${wb.SheetNames.length} sheet(s). Matching…`);
       await rematchSections(parsedSections);
-      setStatus(`Matched ${importSections.length} section(s). Fix any warnings with Pick buttons, then Save.`, 'text-success');
+      const st = schoolStats();
+      setStatus(
+        `Loaded ${st.sections} section(s), ${st.rows} rows (${st.ready} ready). Use Create all missing groups, then Save all sections.`,
+        'text-success'
+      );
     } catch (err) {
       console.error(err);
       setStatus('Parse/match error: ' + (err.message || err), 'text-danger');
@@ -1255,32 +1513,10 @@ include('./includes/menu.php');
       alert('Fill program, year, campus, group numbers and size.');
       return;
     }
-    if (!confirm(`Create Group ${group_numbers.join(' & ')} for year ${year_of_study}?`)) return;
+    if (!confirm(`Create Group ${group_numbers.join(' & ')} for year ${year_of_study}? (reuses existing if already created)`)) return;
 
-    // Capture current edits into parsed payload before rematch
-    $('#matchBody tr').each(function () {
-      const $tr = $(this);
-      const ri = parseInt($tr.data('row'), 10);
-      const row = syncRowFromDom($tr);
-      if (!parsedSections[activeIdx]) return;
-      if (!parsedSections[activeIdx].rows) parsedSections[activeIdx].rows = [];
-      if (!parsedSections[activeIdx].rows[ri]) {
-        parsedSections[activeIdx].rows[ri] = {
-          day: row.day, start: row.start, end: row.end,
-          module_code: row.excel?.module_code || '',
-          module_name: row.excel?.module_name || '',
-          lecturers: row.excel?.lecturers || '',
-          classroom: row.excel?.classroom || '',
-          time_group_nums: []
-        };
-      }
-      const pr = parsedSections[activeIdx].rows[ri];
-      pr.day = row.day; pr.start = row.start; pr.end = row.end;
-      if (row.module?.id) pr.forced_module_id = row.module.id;
-      if (row.facility?.id) pr.forced_facility_id = row.facility.id;
-      if (row.lecturers?.leader?.id) pr.forced_leader_id = row.lecturers.leader.id;
-      pr.forced_other_lecturer_ids = (row.lecturers?.others || []).map(o => o.id).filter(Boolean);
-    });
+    syncActiveSectionDom();
+    persistOverridesToParsed();
 
     $('#createStatus').text('Creating…');
     $('#btnCreateIntakeGroups').prop('disabled', true);
@@ -1288,7 +1524,14 @@ include('./includes/menu.php');
       const res = await fetch('import_create_intake.php', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ program_id, year_of_study, campus_id, group_numbers, size_each, size_mode })
+        body: JSON.stringify({
+          program_id,
+          year_of_study,
+          campus_id: campus_id || parseInt($('#defaultCampusId').val(), 10),
+          group_numbers,
+          size_each,
+          size_mode
+        })
       });
       const data = await res.json();
       if (!data.success) throw new Error(data.message || 'Create failed');
@@ -1300,7 +1543,7 @@ include('./includes/menu.php');
       });
       await rematchSections(payload);
       $('#createStatus').text((data.message || 'Created') + ' Rematched.');
-      setStatus('Groups created. Review picks, then Save.', 'text-success');
+      setStatus('Groups ready (created only if missing). Review then Save all.', 'text-success');
     } catch (err) {
       console.error(err);
       $('#createStatus').text(err.message || 'Failed');
@@ -1414,6 +1657,14 @@ include('./includes/menu.php');
   });
 
   $('#btnSaveSection').on('click', saveActiveSection);
+  $('#btnSaveAll').on('click', saveAllSections);
+  $('#btnCreateAllGroups').on('click', createAllMissingGroups);
+
+  // Keep section create campus in sync with default
+  $('#defaultCampusId').on('change', function () {
+    $('#createCampusId').val($(this).val());
+  });
+  $('#createCampusId').val($('#defaultCampusId').val());
 
   pickerModal = new bootstrap.Modal(document.getElementById('pickerModal'));
   lecturerModal = new bootstrap.Modal(document.getElementById('lecturerModal'));
