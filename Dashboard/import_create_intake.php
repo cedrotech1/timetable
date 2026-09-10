@@ -1,0 +1,166 @@
+<?php
+/**
+ * Create intake (promotion) + student groups during Excel import.
+ * POST JSON: {
+ *   program_id, year_of_study, campus_id,
+ *   group_numbers: [1,2],
+ *   size_each: 109,
+ *   size_mode: 'each'|'total'
+ * }
+ */
+session_start();
+header('Content-Type: application/json');
+error_reporting(E_ALL);
+ini_set('display_errors', 0);
+
+include('connection.php');
+
+function respond($ok, $message = '', $data = []) {
+    echo json_encode(array_merge(['success' => $ok, 'message' => $message], $data));
+    exit;
+}
+
+if (!isset($_SESSION['id'])) {
+    respond(false, 'Not logged in.');
+}
+
+$role = $_SESSION['role'] ?? '';
+if (!in_array($role, ['admin', 'registrar_office', 'dean_office'], true)) {
+    respond(false, 'Not allowed.');
+}
+
+$input = json_decode(file_get_contents('php://input'), true);
+if (!$input) {
+    respond(false, 'Invalid JSON.');
+}
+
+$program_id = intval($input['program_id'] ?? 0);
+$year_of_study = intval($input['year_of_study'] ?? 0);
+$campus_id = intval($input['campus_id'] ?? 0);
+$group_numbers = $input['group_numbers'] ?? [];
+if (!is_array($group_numbers)) $group_numbers = [];
+$group_numbers = array_values(array_unique(array_filter(array_map('intval', $group_numbers), function ($n) {
+    return $n > 0;
+})));
+$size_each = intval($input['size_each'] ?? 0);
+$size_mode = ($input['size_mode'] ?? 'each') === 'total' ? 'total' : 'each';
+$intake_year = intval($input['intake_year'] ?? date('Y'));
+$intake_month = intval($input['intake_month'] ?? date('n'));
+
+if (!$program_id) respond(false, 'Select a program.');
+if ($year_of_study < 1) respond(false, 'Year of study is required.');
+if (!$campus_id) respond(false, 'Select a campus.');
+if (empty($group_numbers)) respond(false, 'Provide at least one group number (e.g. 1, 2).');
+if ($size_each < 1) respond(false, 'Group size must be at least 1.');
+
+$prog = mysqli_query($connection, "SELECT id, name FROM program WHERE id = " . intval($program_id) . " LIMIT 1");
+if (!$prog || !mysqli_num_rows($prog)) {
+    respond(false, 'Program not found.');
+}
+$program = mysqli_fetch_assoc($prog);
+
+$camp = mysqli_query($connection, "SELECT id, name FROM campus WHERE id = " . intval($campus_id) . " LIMIT 1");
+if (!$camp || !mysqli_num_rows($camp)) {
+    respond(false, 'Campus not found.');
+}
+$campus = mysqli_fetch_assoc($camp);
+
+$count = count($group_numbers);
+if ($size_mode === 'total') {
+    $base = intdiv($size_each, $count);
+    $rem = $size_each % $count;
+    $sizes = [];
+    foreach ($group_numbers as $i => $n) {
+        $sizes[$n] = $base + ($i < $rem ? 1 : 0);
+    }
+    $total_students = $size_each;
+} else {
+    $sizes = [];
+    foreach ($group_numbers as $n) $sizes[$n] = $size_each;
+    $total_students = $size_each * $count;
+}
+
+mysqli_begin_transaction($connection);
+try {
+    // Reuse existing intake for same program + year_of_study + campus if present
+    $intake_id = 0;
+    $check = mysqli_prepare($connection, "SELECT id FROM intake WHERE program_id = ? AND year_of_study = ? AND campus_id = ? LIMIT 1");
+    mysqli_stmt_bind_param($check, 'iii', $program_id, $year_of_study, $campus_id);
+    mysqli_stmt_execute($check);
+    $cres = mysqli_stmt_get_result($check);
+    if ($cres && ($row = mysqli_fetch_assoc($cres))) {
+        $intake_id = (int)$row['id'];
+        // bump intake size
+        mysqli_query($connection, "UPDATE intake SET size = GREATEST(IFNULL(size,0), " . intval($total_students) . ") WHERE id = " . $intake_id);
+    } else {
+        $stmt = mysqli_prepare($connection, "INSERT INTO intake (year, month, year_of_study, size, program_id, campus_id) VALUES (?, ?, ?, ?, ?, ?)");
+        mysqli_stmt_bind_param($stmt, 'iiiiii', $intake_year, $intake_month, $year_of_study, $total_students, $program_id, $campus_id);
+        if (!mysqli_stmt_execute($stmt)) {
+            throw new Exception('Failed to create intake: ' . mysqli_error($connection));
+        }
+        $intake_id = (int)mysqli_insert_id($connection);
+        mysqli_stmt_close($stmt);
+    }
+    mysqli_stmt_close($check);
+
+    if (!$intake_id) {
+        throw new Exception('Could not resolve intake.');
+    }
+
+    $created = [];
+    $existing = [];
+    foreach ($group_numbers as $num) {
+        $name = 'Group ' . $num;
+        $gsize = (int)$sizes[$num];
+
+        $gq = mysqli_prepare($connection, "SELECT id, name, size FROM student_group WHERE intake_id = ? AND name = ? LIMIT 1");
+        mysqli_stmt_bind_param($gq, 'is', $intake_id, $name);
+        mysqli_stmt_execute($gq);
+        $gres = mysqli_stmt_get_result($gq);
+        if ($gres && ($grow = mysqli_fetch_assoc($gres))) {
+            // update size if needed
+            mysqli_query($connection, "UPDATE student_group SET size = " . $gsize . " WHERE id = " . intval($grow['id']));
+            $existing[] = [
+                'id' => (int)$grow['id'],
+                'name' => $name,
+                'size' => $gsize,
+                'program_id' => $program_id,
+                'program_name' => $program['name'],
+                'year_of_study' => $year_of_study,
+                'campus_name' => $campus['name']
+            ];
+        } else {
+            $ins = mysqli_prepare($connection, "INSERT INTO student_group (name, size, intake_id) VALUES (?, ?, ?)");
+            mysqli_stmt_bind_param($ins, 'sii', $name, $gsize, $intake_id);
+            if (!mysqli_stmt_execute($ins)) {
+                throw new Exception('Failed to create group: ' . mysqli_error($connection));
+            }
+            $gid = (int)mysqli_insert_id($connection);
+            mysqli_stmt_close($ins);
+            $created[] = [
+                'id' => $gid,
+                'name' => $name,
+                'size' => $gsize,
+                'program_id' => $program_id,
+                'program_name' => $program['name'],
+                'year_of_study' => $year_of_study,
+                'campus_name' => $campus['name']
+            ];
+        }
+        mysqli_stmt_close($gq);
+    }
+
+    mysqli_commit($connection);
+
+    $all = array_merge($existing, $created);
+    respond(true, 'Intake/groups ready (' . count($created) . ' created, ' . count($existing) . ' existing).', [
+        'intake_id' => $intake_id,
+        'program' => ['id' => $program_id, 'name' => $program['name']],
+        'campus' => ['id' => $campus_id, 'name' => $campus['name']],
+        'year_of_study' => $year_of_study,
+        'groups' => $all
+    ]);
+} catch (Exception $e) {
+    mysqli_rollback($connection);
+    respond(false, $e->getMessage());
+}

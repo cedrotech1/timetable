@@ -32,6 +32,17 @@ $canImport = in_array($user_role, ['admin', 'registrar_office', 'dean_office'], 
 if (!$canImport) {
     die('You do not have permission to import timetables.');
 }
+
+$campuses = [];
+$cq = mysqli_query($connection, "SELECT id, name FROM campus ORDER BY name");
+if ($cq) {
+    while ($r = mysqli_fetch_assoc($cq)) $campuses[] = $r;
+}
+$allPrograms = [];
+$pq = mysqli_query($connection, "SELECT id, name, code FROM program ORDER BY name");
+if ($pq) {
+    while ($r = mysqli_fetch_assoc($pq)) $allPrograms[] = $r;
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -206,6 +217,53 @@ include('./includes/menu.php');
     </div>
     <div class="imp-body">
       <div id="sectionMeta" class="meta mb-3"></div>
+
+      <div id="createGroupsPanel" class="panel mb-3 d-none" style="background:#fff8e6;border-color:#f0d78c;">
+        <div class="panel-title text-warning-emphasis"><i class="bi bi-plus-circle me-1"></i> No groups matched — create promotion / intake &amp; groups</div>
+        <p class="small text-muted mb-2">
+          Create the missing year intake and groups from this Excel section, then rematch automatically.
+        </p>
+        <div class="row g-2 align-items-end">
+          <div class="col-md-4">
+            <label class="form-label small mb-1">Program</label>
+            <select id="createProgramId" class="form-select form-select-sm"></select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label small mb-1">Year of study</label>
+            <input type="number" id="createYear" class="form-control form-control-sm" min="1" max="6" value="1">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Campus</label>
+            <select id="createCampusId" class="form-select form-select-sm">
+              <?php foreach ($campuses as $c): ?>
+                <option value="<?php echo (int)$c['id']; ?>"><?php echo htmlspecialchars($c['name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Group numbers</label>
+            <input type="text" id="createGroupNums" class="form-control form-control-sm" placeholder="e.g. 1,2">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Size</label>
+            <input type="number" id="createSize" class="form-control form-control-sm" min="1" placeholder="109">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small mb-1">Size means</label>
+            <select id="createSizeMode" class="form-select form-select-sm">
+              <option value="each">Per group (EACH GROUP)</option>
+              <option value="total">Total for all groups</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <button type="button" id="btnCreateIntakeGroups" class="btn btn-warning btn-sm">
+              <i class="bi bi-people"></i> Create intake &amp; groups, then rematch
+            </button>
+            <span id="createStatus" class="small ms-2 text-muted"></span>
+          </div>
+        </div>
+      </div>
+
       <div class="table-wrap">
         <table class="table table-sm table-bordered mb-0">
           <thead class="table-light">
@@ -243,8 +301,10 @@ include('./includes/menu.php');
 (function () {
   const AY = <?php echo json_encode($accademic_year_id); ?>;
   const SEM = <?php echo json_encode($semester); ?>;
+  const ALL_PROGRAMS = <?php echo json_encode($allPrograms); ?>;
 
   let fileBuffer = null;
+  let parsedSections = []; // raw parse before DB match
   let importSections = [];
   let activeIdx = null;
 
@@ -438,12 +498,46 @@ include('./includes/menu.php');
     $('#conflictBox').addClass('d-none');
 
     const $meta = $('#sectionMeta').empty();
-    if (sec.program) $meta.append(`<span class="pill"><i class="bi bi-mortarboard"></i> ${escapeHtml(sec.program.name)}</span>`);
+    if (sec.program) $meta.append(`<span class="pill"><i class="bi bi-mortarboard"></i> ${escapeHtml(sec.program.name)} <span class="text-muted">(${sec.program.match_score || '?'}%)</span></span>`);
     else $meta.append(`<span class="pill err">Program not matched</span>`);
     $meta.append(`<span class="pill">Year ${sec.year || '?'}</span>`);
+    if ((sec.group_numbers || []).length) {
+      $meta.append(`<span class="pill">Excel groups: ${(sec.group_numbers || []).join(', ')}</span>`);
+    }
     (sec.groups || []).forEach(g => {
       $meta.append(`<span class="pill ok">${escapeHtml(g.name)} (${g.size || 0})</span>`);
     });
+
+    // Create panel when no groups
+    const needs = !!sec.needs_groups || !(sec.groups || []).length;
+    const $panel = $('#createGroupsPanel');
+    if (needs) {
+      $panel.removeClass('d-none');
+      const $prog = $('#createProgramId').empty();
+      const cands = sec.program_candidates || [];
+      if (cands.length) {
+        cands.forEach(c => {
+          $prog.append(`<option value="${c.id}">${escapeHtml(c.name)} (${c.score})</option>`);
+        });
+      } else {
+        ALL_PROGRAMS.forEach(p => {
+          $prog.append(`<option value="${p.id}">${escapeHtml(p.name)}${p.code ? ' [' + escapeHtml(p.code) + ']' : ''}</option>`);
+        });
+      }
+      if (sec.program?.id) $prog.val(String(sec.program.id));
+      // Prefer candidate with transport/logistics if present
+      const tlm = (cands.length ? cands : ALL_PROGRAMS).find(p => /transport|logistics/i.test(p.name || ''));
+      if (tlm && /transport|logistics/i.test(sec.title || '')) $prog.val(String(tlm.id));
+
+      $('#createYear').val(sec.year || 1);
+      $('#createGroupNums').val((sec.group_numbers || []).join(',') || '1');
+      const sh = sec.size_hint || {};
+      if (sh.size) $('#createSize').val(sh.size);
+      if (sh.mode) $('#createSizeMode').val(sh.mode);
+      $('#createStatus').text('');
+    } else {
+      $panel.addClass('d-none');
+    }
 
     const $body = $('#matchBody').empty();
     (sec.rows || []).forEach((row, i) => {
@@ -468,6 +562,21 @@ include('./includes/menu.php');
         </tr>
       `);
     });
+  }
+
+  async function rematchSections(sectionsPayload) {
+    const res = await fetch('match_bulk_import.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sections: sectionsPayload })
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Match failed');
+    importSections = data.sections || [];
+    renderSections();
+    if (activeIdx != null && importSections[activeIdx]) showSection(activeIdx);
+    else if (importSections.length) showSection(0);
+    return data;
   }
 
   function fmtTime(t) { return String(t || '').slice(0, 5); }
@@ -600,28 +709,65 @@ include('./includes/menu.php');
         $('#btnParse').prop('disabled', false);
         return;
       }
+      parsedSections = parsed;
       setStatus(`Parsed ${parsed.length} section(s). Matching…`);
-      const res = await fetch('match_bulk_import.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sections: parsed })
-      });
-      const data = await res.json();
-      if (!data.success) {
-        setStatus(data.message || 'Match failed.', 'text-danger');
-        $('#btnParse').prop('disabled', false);
-        return;
-      }
-      importSections = data.sections || [];
-      renderSections();
-      if (importSections.length) showSection(0);
+      await rematchSections(parsedSections);
       const totalErr = importSections.reduce((s, x) => s + (x.stats?.errors || 0), 0);
-      setStatus(`Matched ${importSections.length} section(s). Open a section and Save.`, totalErr ? 'text-warning' : 'text-success');
+      setStatus(`Matched ${importSections.length} section(s). Open a section — create groups if needed, then Save.`, totalErr ? 'text-warning' : 'text-success');
     } catch (err) {
       console.error(err);
       setStatus('Parse/match error: ' + (err.message || err), 'text-danger');
     }
     $('#btnParse').prop('disabled', false);
+  });
+
+  $('#btnCreateIntakeGroups').on('click', async function () {
+    const sec = importSections[activeIdx];
+    if (!sec) return;
+    const program_id = parseInt($('#createProgramId').val(), 10);
+    const year_of_study = parseInt($('#createYear').val(), 10);
+    const campus_id = parseInt($('#createCampusId').val(), 10);
+    const group_numbers = String($('#createGroupNums').val() || '')
+      .split(/[,&\s]+/)
+      .map(x => parseInt(x, 10))
+      .filter(n => n > 0);
+    const size_each = parseInt($('#createSize').val(), 10);
+    const size_mode = $('#createSizeMode').val();
+
+    if (!program_id || !year_of_study || !campus_id || !group_numbers.length || !size_each) {
+      alert('Fill program, year, campus, group numbers and size.');
+      return;
+    }
+    if (!confirm(`Create Group ${group_numbers.join(' & ')} for year ${year_of_study}?`)) return;
+
+    $('#createStatus').text('Creating…');
+    $('#btnCreateIntakeGroups').prop('disabled', true);
+    try {
+      const res = await fetch('import_create_intake.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ program_id, year_of_study, campus_id, group_numbers, size_each, size_mode })
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || 'Create failed');
+
+      $('#createStatus').text(data.message || 'Created. Rematching…');
+
+      // Rematch this section with forced program
+      const payload = parsedSections.map((s, i) => {
+        const copy = { ...s };
+        if (i === activeIdx) copy.forced_program_id = program_id;
+        return copy;
+      });
+      await rematchSections(payload);
+      $('#createStatus').text(data.message + ' Rematched.');
+      setStatus('Groups created and section rematched. Review then Save.', 'text-success');
+    } catch (err) {
+      console.error(err);
+      $('#createStatus').text(err.message || 'Failed');
+      alert(err.message || 'Failed to create intake/groups');
+    }
+    $('#btnCreateIntakeGroups').prop('disabled', false);
   });
 
   $('#sectionsList').on('click', '[data-sec]', function () {
@@ -634,6 +780,7 @@ include('./includes/menu.php');
   $('#btnClear').on('click', function () {
     $('#excelFile').val('');
     fileBuffer = null;
+    parsedSections = [];
     importSections = [];
     activeIdx = null;
     renderSections();
@@ -642,6 +789,7 @@ include('./includes/menu.php');
     setStatus('');
     $('#saveAlert').addClass('d-none');
     $('#conflictBox').addClass('d-none');
+    $('#createGroupsPanel').addClass('d-none');
   });
 })();
 </script>

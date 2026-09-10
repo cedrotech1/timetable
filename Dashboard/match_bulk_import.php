@@ -88,47 +88,96 @@ while ($r = mysqli_fetch_assoc($gq)) {
     $groups[] = $r;
 }
 
-function match_program($programs, $hint, $year = null) {
-    $best = null;
-    $bestScore = 0;
+function match_program($programs, $hint, $year = null, $moduleProgramVotes = []) {
     $hintN = norm($hint);
+    $hintN = str_replace(['hounrs', 'honors'], 'honours', $hintN);
+    $stop = ['bachelor','master','business','administration','with','honours','in','of','the','and','group','year','programme','program','each'];
+    $hintTokens = array_values(array_filter(preg_split('/\s+/', $hintN), function ($t) use ($stop) {
+        return strlen($t) >= 4 && !in_array($t, $stop, true);
+    }));
+
+    $hintBachelor = (bool)preg_match('/\bbachelor\b/', $hintN);
+    $hintMaster = (bool)preg_match('/\bmaster\b/', $hintN);
+
+    $scored = [];
     foreach ($programs as $p) {
-        $score = max(
-            like_score($hint, $p['name']),
-            like_score($hint, $p['code'] ?? '')
-        );
-        // Prefer longer overlapping tokens
-        $tokens = preg_split('/\s+/', $hintN);
         $nameN = norm($p['name']);
+        $nameN = str_replace(['hounrs', 'honors'], 'honours', $nameN);
+        $score = 0;
+
+        // Exact / contains full hint fragment
+        $score = max($score, like_score($hint, $p['name']));
+
+        // Distinctive token hits (transport, logistics, accounting, finance…)
         $hits = 0;
-        foreach ($tokens as $t) {
-            if (strlen($t) >= 4 && strpos($nameN, $t) !== false) $hits++;
+        foreach ($hintTokens as $t) {
+            if (strpos($nameN, $t) !== false) $hits++;
         }
-        $score += min(30, $hits * 5);
-        if ($score > $bestScore) {
-            $bestScore = $score;
-            $best = $p;
+        if (!empty($hintTokens)) {
+            $score += (int)round(70 * ($hits / count($hintTokens)));
+        }
+
+        // Degree level must agree
+        $isMaster = (bool)preg_match('/\bmaster\b/', $nameN);
+        $isBachelor = (bool)preg_match('/\bbachelor\b/', $nameN);
+        if ($hintBachelor && $isMaster) $score -= 50;
+        if ($hintMaster && $isBachelor) $score -= 50;
+        if ($hintBachelor && $isBachelor) $score += 15;
+        if ($hintMaster && $isMaster) $score += 15;
+
+        // Votes from module codes already in this section
+        $pid = (int)$p['id'];
+        if (!empty($moduleProgramVotes[$pid])) {
+            $score += min(40, 12 * (int)$moduleProgramVotes[$pid]);
+        }
+
+        $scored[] = ['program' => $p, 'score' => $score];
+    }
+
+    usort($scored, function ($a, $b) { return $b['score'] <=> $a['score']; });
+    $best = $scored[0] ?? null;
+    if (!$best || $best['score'] < 55) {
+        return [null, $best['score'] ?? 0, array_slice($scored, 0, 8)];
+    }
+    return [$best['program'], $best['score'], array_slice($scored, 0, 8)];
+}
+
+function infer_program_votes_from_modules($modules, $rows) {
+    $votes = [];
+    foreach ($rows as $row) {
+        $code = strtoupper(preg_replace('/\s+/', '', (string)($row['module_code'] ?? '')));
+        $name = trim((string)($row['module_name'] ?? ''));
+        if ($code === '' && $name === '') continue;
+        [$mod] = match_module($modules, $code, $name, null, null);
+        if ($mod && !empty($mod['program_id'])) {
+            $pid = (int)$mod['program_id'];
+            $votes[$pid] = ($votes[$pid] ?? 0) + 1;
         }
     }
-    if ($bestScore < 45) return [null, $bestScore];
-    return [$best, $bestScore];
+    return $votes;
+}
+
+function parse_group_size_hint($text) {
+    // "GROUP 1 &2 = 109 EACH GROUP" or "= 260"
+    if (preg_match('/=\s*(\d+)\s*each/i', $text, $m)) {
+        return ['mode' => 'each', 'size' => (int)$m[1]];
+    }
+    if (preg_match('/=\s*(\d+)/', $text, $m)) {
+        return ['mode' => 'total', 'size' => (int)$m[1]];
+    }
+    return ['mode' => 'each', 'size' => 0];
 }
 
 function parse_group_numbers($text) {
     $nums = [];
-    if (preg_match_all('/\b(?:group|gp|g)\s*([0-9]+)\b/i', $text, $m)) {
+    // "GROUP 1 & 2" / "GROUP 1&2" / "GROUP 7"
+    if (preg_match('/group\s*((?:\d+\s*[&,and\s]*)+)/i', $text, $m)) {
+        if (preg_match_all('/\d+/', $m[1], $mm)) {
+            foreach ($mm[0] as $n) $nums[] = (int)$n;
+        }
+    }
+    if (preg_match_all('/\b(?:gp|g)\s*([0-9]+)\b/i', $text, $m)) {
         foreach ($m[1] as $n) $nums[] = (int)$n;
-    }
-    // "GROUP 1 & 2" / "1&2" / "1 &2"
-    if (preg_match('/group\s*((?:\d+\s*[&,]?\s*)+)/i', $text, $m)) {
-        if (preg_match_all('/\d+/', $m[1], $mm)) {
-            foreach ($mm[0] as $n) $nums[] = (int)$n;
-        }
-    }
-    if (preg_match('/=\s*\d+/', $text) && preg_match('/group\s+([^=]+)=/i', $text, $m)) {
-        if (preg_match_all('/\d+/', $m[1], $mm)) {
-            foreach ($mm[0] as $n) $nums[] = (int)$n;
-        }
     }
     return array_values(array_unique(array_filter($nums)));
 }
@@ -295,8 +344,22 @@ foreach ($input['sections'] as $secIndex => $sec) {
     $programHint = $sec['program_hint'] ?? $title;
     $groupHint = $sec['group_hint'] ?? $title;
     $groupNums = parse_group_numbers($groupHint . ' ' . $title);
+    $sizeHint = parse_group_size_hint($title . ' ' . $groupHint);
 
-    [$program, $pScore] = match_program($programs, $programHint, $year);
+    // Prefer program inferred from module codes in this section (TL* / AF* …)
+    $moduleVotes = infer_program_votes_from_modules($modules, $sec['rows'] ?? []);
+    // Allow forced program from UI after user picks / creates
+    if (!empty($sec['forced_program_id'])) {
+        $forcedId = (int)$sec['forced_program_id'];
+        $program = null;
+        foreach ($programs as $p) {
+            if ((int)$p['id'] === $forcedId) { $program = $p; break; }
+        }
+        $pScore = $program ? 100 : 0;
+        $programCandidates = [];
+    } else {
+        [$program, $pScore, $programCandidates] = match_program($programs, $programHint, $year, $moduleVotes);
+    }
     $programId = $program['id'] ?? null;
 
     $sectionGroups = match_groups($groups, $programId, $year ?: null, $groupNums, []);
@@ -335,14 +398,13 @@ foreach ($input['sections'] as $secIndex => $sec) {
         [$leader, $others, $lw] = match_lecturers($lecturers, $lecturersRaw);
         $warnings = array_merge($warnings, $lw);
 
-        // Prefer time-specific groups if present, else section groups
         $rowGroups = $sectionGroups;
         if (!empty($timeGroupNums) && $programId) {
             $tg = match_groups($groups, $programId, $year ?: null, $groupNums, $timeGroupNums);
             if (!empty($tg)) $rowGroups = $tg;
         }
         if (empty($rowGroups)) {
-            $warnings[] = 'No groups matched for this section/row';
+            $warnings[] = 'No groups matched for this section/row — create intake/groups below';
         }
 
         $status = empty($errors) ? (empty($warnings) ? 'ok' : 'warning') : 'error';
@@ -398,17 +460,30 @@ foreach ($input['sections'] as $secIndex => $sec) {
         ];
     }
 
+    $candOut = [];
+    foreach ($programCandidates as $c) {
+        $candOut[] = [
+            'id' => (int)$c['program']['id'],
+            'name' => $c['program']['name'],
+            'code' => $c['program']['code'] ?? '',
+            'score' => (int)$c['score']
+        ];
+    }
+
     $outSections[] = [
         'section_index' => $secIndex,
         'title' => $title,
         'year' => $year,
+        'group_numbers' => $groupNums,
+        'size_hint' => $sizeHint,
+        'needs_groups' => empty($sectionGroups),
         'program' => $program ? [
             'id' => (int)$program['id'],
             'name' => $program['name'],
             'code' => $program['code'],
             'match_score' => $pScore
         ] : null,
-        'group_numbers' => $groupNums,
+        'program_candidates' => $candOut,
         'groups' => array_map(function ($g) {
             return [
                 'id' => (int)$g['id'],
