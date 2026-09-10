@@ -111,6 +111,35 @@ if (isset($_GET['search']['value'])) {
 }
 
 $minCapacity = isset($_GET['minCapacity']) ? max(0, intval($_GET['minCapacity'])) : 0;
+$academicYearId = isset($_GET['academic_year_id']) ? intval($_GET['academic_year_id']) : 0;
+$semester = isset($_GET['semester']) ? trim(strval($_GET['semester'])) : '';
+
+// Sessions for availability check: [{day, start, end}, ...]
+$sessions = [];
+if (!empty($_GET['sessions'])) {
+    $decoded = json_decode($_GET['sessions'], true);
+    if (is_array($decoded)) {
+        foreach ($decoded as $s) {
+            $day = trim($s['day'] ?? '');
+            $start = trim($s['start'] ?? '');
+            $end = trim($s['end'] ?? '');
+            if ($day === '' || $start === '' || $end === '') {
+                continue;
+            }
+            // Normalize to HH:MM:SS
+            if (preg_match('/^\d{2}:\d{2}$/', $start)) $start .= ':00';
+            if (preg_match('/^\d{2}:\d{2}$/', $end)) $end .= ':00';
+            if ($start >= $end) {
+                continue;
+            }
+            $sessions[] = [
+                'day' => $day,
+                'start' => $start,
+                'end' => $end,
+            ];
+        }
+    }
+}
 
 // Use the start and length parameters directly from DataTables
 $offset = $start;
@@ -119,6 +148,43 @@ $perPage = $length;
 $searchEsc = mysqli_real_escape_string($connection, $search);
 $schoolIdEsc = $school_id ? intval($school_id) : 0;
 $minCapacityEsc = intval($minCapacity);
+$academicYearEsc = intval($academicYearId);
+$semesterEsc = mysqli_real_escape_string($connection, $semester);
+
+/**
+ * Facilities already booked for overlapping sessions in this academic year + semester.
+ */
+function buildAvailabilityCondition($connection, $sessions, $academicYearEsc, $semesterEsc) {
+    if (empty($sessions) || !$academicYearEsc || $semesterEsc === '') {
+        return '';
+    }
+
+    $overlapParts = [];
+    foreach ($sessions as $s) {
+        $day = mysqli_real_escape_string($connection, $s['day']);
+        $start = mysqli_real_escape_string($connection, $s['start']);
+        $end = mysqli_real_escape_string($connection, $s['end']);
+        // Overlap: existing.start < requested.end AND existing.end > requested.start
+        $overlapParts[] = "(ts.day = '$day' AND ts.start_time < '$end' AND ts.end_time > '$start')";
+    }
+
+    if (empty($overlapParts)) {
+        return '';
+    }
+
+    $overlapSql = implode(' OR ', $overlapParts);
+    return " AND f.id NOT IN (
+        SELECT DISTINCT t.facility_id
+        FROM timetable t
+        INNER JOIN timetable_sessions ts ON ts.timetable_id = t.id
+        WHERE t.facility_id IS NOT NULL
+          AND t.academic_year_id = $academicYearEsc
+          AND t.semester = '$semesterEsc'
+          AND ($overlapSql)
+    )";
+}
+
+$availabilityCondition = buildAvailabilityCondition($connection, $sessions, $academicYearEsc, $semesterEsc);
 
 // Count total matching facilities
 $countSql = "
@@ -137,18 +203,15 @@ if ($school_id) {
         SELECT 1 FROM site_school ss 
         WHERE ss.site_id = s.id AND ss.school_id = $schoolIdEsc
     )";
-    
-    // If you have additional site-based restrictions, add them here
-    // For example, if deans have specific site access beyond just school:
-    if ($user_role === 'dean') {
-        // Add any additional dean-specific site restrictions here if needed
-        // $whereConditions[] = "additional_condition_for_dean";
-    }
 }
 
 // Add search condition
 if ($search !== '') {
-    $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%')";
+    $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+}
+
+if ($minCapacityEsc > 0) {
+    $whereConditions[] = "f.capacity >= $minCapacityEsc";
 }
 
 // Combine all conditions
@@ -156,9 +219,14 @@ if (!empty($whereConditions)) {
     $countSql .= " WHERE " . implode(' AND ', $whereConditions);
 }
 
+// Append availability filter (starts with AND ...)
+if ($availabilityCondition !== '') {
+    $countSql .= (stripos($countSql, ' WHERE ') !== false ? '' : ' WHERE 1=1') . $availabilityCondition;
+}
+
 $countResult = mysqli_query($connection, $countSql);
 if (!$countResult) {
-    echo json_encode(['success' => false, 'message' => 'Count query failed']);
+    echo json_encode(['success' => false, 'message' => 'Count query failed', 'error' => mysqli_error($connection)]);
     exit;
 }
 
@@ -189,24 +257,35 @@ $sql = "
     JOIN site s ON f.site = s.id
 ";
 
-// Add school filter only if not admin/registrar
+$dataWhere = [];
 if (!in_array($user_role, ['admin', 'registrar_office'], true) && $school_id) {
-    $sql .= " WHERE EXISTS (
+    $dataWhere[] = "EXISTS (
         SELECT 1 FROM site_school ss 
         WHERE ss.site_id = s.id AND ss.school_id = $schoolIdEsc
     )";
-    $whereClause = true;
 }
 
 if ($search !== '') {
-    $sql .= (strpos($sql, 'WHERE') !== false ? ' AND' : ' WHERE') . " (f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%')";
+    $dataWhere[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+}
+
+if ($minCapacityEsc > 0) {
+    $dataWhere[] = "f.capacity >= $minCapacityEsc";
+}
+
+if (!empty($dataWhere)) {
+    $sql .= " WHERE " . implode(' AND ', $dataWhere);
+}
+
+if ($availabilityCondition !== '') {
+    $sql .= (stripos($sql, ' WHERE ') !== false ? '' : ' WHERE 1=1') . $availabilityCondition;
 }
 
 $sql .= " ORDER BY f.name ASC LIMIT $offset, $perPage";
 
 $result = mysqli_query($connection, $sql);
 if (!$result) {
-    echo json_encode(['success' => false, 'message' => 'Facilities query failed']);
+    echo json_encode(['success' => false, 'message' => 'Facilities query failed', 'error' => mysqli_error($connection)]);
     exit;
 }
 

@@ -229,6 +229,10 @@
   function clearSchedule() {
     currentSchedule = null;
     localStorage.setItem(STORAGE_KEY, '[]');
+    localStorage.removeItem('selectedFacility');
+    window.dispatchEvent(new CustomEvent('scheduleUpdated', {
+      detail: { schedule: null }
+    }));
     renderSchedule();
     showToast('Schedule cleared');
     toggleFormVisibility(true);
@@ -243,9 +247,14 @@
       // If no schedule, save empty array
       localStorage.setItem(STORAGE_KEY, '[]');
     }
+
+    // Session changed → previous facility choice may no longer be free
+    localStorage.removeItem('selectedFacility');
     
-    // Debug: Log the saved data
-    console.log('Saved schedule data:', JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+    // Notify facility selector to reload available rooms
+    window.dispatchEvent(new CustomEvent('scheduleUpdated', {
+      detail: { schedule: currentSchedule }
+    }));
   }
   
   // Show toast notification

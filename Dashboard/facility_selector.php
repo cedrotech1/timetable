@@ -58,6 +58,9 @@
     <body class="bg-gray-100 font-sans antialiased">
         <div class="">
             <h2 class="text-3xl font-bold text-gray-800 mb-6 fade-in">Select Facility</h2>
+            <p id="availabilityHint" class="text-sm text-gray-600 mb-4 hidden">
+                Showing facilities free for the selected session time in the current academic year &amp; semester.
+            </p>
 
             <!-- Selected Facility Card -->
             <div id="selectedFacilityCard" class="bg-white rounded-xl shadow-lg p-6 mb-6 hidden fade-in">
@@ -81,6 +84,9 @@
                 
                     <div class="flex items-center">
                         <span class="text-gray-600"><i class="bi bi-people mr-2"></i><strong>Required Capacity:</strong> <span id="requiredCapacity" class="font-semibold">0</span> students</span>
+                    </div>
+                    <div class="flex items-center" id="sessionFilterInfo">
+                        <span class="text-gray-600 text-sm"><i class="bi bi-clock mr-2"></i><span id="sessionFilterLabel">No session set</span></span>
                     </div>
                     <div class="text-end">
                         <button id="refreshBtn" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 hover-scale flex items-center">
@@ -111,27 +117,36 @@
 
         <script>
         $(function() {
-            // Function to get selected groups from localStorage
+            const ACADEMIC_YEAR_ID = <?= json_encode(isset($accademic_year_id) ? $accademic_year_id : null) ?>;
+            const SEMESTER = <?= json_encode(isset($semester) ? $semester : null) ?>;
+
             function getSelectedGroups() {
                 return JSON.parse(localStorage.getItem('selectedGroups')) || [];
             }
-            
-            // Function to calculate the exact required capacity from selected groups
+
+            function getScheduleSessions() {
+                const sessions = JSON.parse(localStorage.getItem('compactSchedules') || '[]');
+                return Array.isArray(sessions) ? sessions.filter(s => s && s.day && s.start && s.end) : [];
+            }
+
+            function formatSessionLabel(sessions) {
+                if (!sessions.length) return 'No session set';
+                return sessions.map(s => `${s.day} ${s.start}-${s.end}`).join(', ');
+            }
+
             function getRequiredCapacity() {
                 const selectedGroups = getSelectedGroups();
                 if (selectedGroups.length === 0) return 0;
                 return selectedGroups.reduce((total, group) => total + (parseInt(group.size) || 0), 0);
             }
 
-            // Function to get capacity status
             function getCapacityStatus(capacity, required) {
-                if (required === 0) return 'ok'; // If no capacity required, show as ok
+                if (required === 0) return 'ok';
                 if (capacity >= required * 1.2) return 'ok';
                 if (capacity >= required * 0.8) return 'warning';
                 return 'over';
             }
 
-            // Function to show/hide selected facility card
             function showSelectedFacility() {
                 const selectedFacility = JSON.parse(localStorage.getItem('selectedFacility'));
                 if (!selectedFacility) {
@@ -151,20 +166,17 @@
                 return true;
             }
 
-            // Update capacity display
-            function updateRequiredCapacity() {
-                const capacity = getRequiredCapacity();
-                $('#requiredCapacity').text(capacity);
-                if ($.fn.DataTable.isDataTable('#facilitiesTable')) {
-                    table.ajax.reload();
+            function updateSessionFilterLabel() {
+                const sessions = getScheduleSessions();
+                $('#sessionFilterLabel').text(formatSessionLabel(sessions));
+                if (sessions.length) {
+                    $('#availabilityHint').removeClass('hidden');
+                } else {
+                    $('#availabilityHint').addClass('hidden');
                 }
             }
 
-            // Check if there are selected groups
-            const selectedGroups = getSelectedGroups();
-            
-            if (selectedGroups.length === 0) {
-                // Hide the table and show a message if no groups are selected
+            function showPrerequisiteMessage(message) {
                 $('#facilitySelectorTable').html(`
                     <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                         <div class="flex">
@@ -172,17 +184,38 @@
                                 <i class="bi bi-exclamation-triangle text-yellow-400 text-xl"></i>
                             </div>
                             <div class="ml-3">
-                                <p class="text-sm text-yellow-700">
-                                    No groups selected. Please select groups first before choosing a facility. <a href="timetable_set.php#facilities" onclick="window.location.reload(); return false;" class="text-blue-600 hover:underline">Get facilities</a>
-                                </p>
+                                <p class="text-sm text-yellow-700">${message}</p>
                             </div>
                         </div>
                     </div>
                 `);
+            }
+
+            const selectedGroups = getSelectedGroups();
+            const sessions = getScheduleSessions();
+
+            // Always listen so setting/changing session refreshes this section
+            window.addEventListener('scheduleUpdated', function() {
+                window.location.reload();
+            });
+
+            if (selectedGroups.length === 0) {
+                showPrerequisiteMessage('No groups selected. Please select groups first before choosing a facility.');
                 return;
             }
 
-            // Initialize DataTable with pagination
+            if (!sessions.length) {
+                showPrerequisiteMessage('No session time set. Please set day and time first so only free facilities are shown.');
+                return;
+            }
+
+            if (!ACADEMIC_YEAR_ID || !SEMESTER) {
+                showPrerequisiteMessage('Academic year or semester is not configured in system settings.');
+                return;
+            }
+
+            updateSessionFilterLabel();
+
             let table = $('#facilitiesTable').DataTable({
                 processing: true,
                 serverSide: true,
@@ -190,21 +223,21 @@
                     url: 'get_facilities_with_site.php',
                     type: 'GET',
                     data: function(d) {
-                        // Add any additional parameters you need to send to the server
-                        d.draw = d.draw || 1;
-                        d.start = d.start || 0;
-                        d.length = d.length || 5; // Default to 5 items per page
+                        const currentSessions = getScheduleSessions();
                         return {
-                            draw: d.draw,
-                            start: d.start,
-                            length: d.length,
+                            draw: d.draw || 1,
+                            start: d.start || 0,
+                            length: d.length || 5,
                             search: d.search,
                             order: d.order,
-                            columns: d.columns
+                            columns: d.columns,
+                            academic_year_id: ACADEMIC_YEAR_ID,
+                            semester: SEMESTER,
+                            sessions: JSON.stringify(currentSessions),
+                            minCapacity: getRequiredCapacity()
                         };
                     },
                     dataSrc: function(json) {
-                        console.log('Server response:', json); // Debug log
                         if (!json || !Array.isArray(json.data)) {
                             console.error('Invalid data format from server:', json);
                             return [];
@@ -214,8 +247,6 @@
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
                         console.error('Response:', xhr.responseText);
-                        // Return empty data to prevent breaking the table
-                        return [];
                     }
                 },
                 createdRow: function(row, data) {
@@ -226,7 +257,7 @@
                 columns: [
                     { 
                         data: 'buildname',
-                        render: function(data, type, row) {
+                        render: function(data) {
                             return data || 'N/A';
                         }
                     },
@@ -274,9 +305,9 @@
                             const requiredCapacity = getRequiredCapacity();
                             const status = getCapacityStatus(row.capacity, requiredCapacity);
                             const statusText = {
-                                'ok': 'Adequate',
-                                'warning': 'Limited',
-                                'over': 'Insufficient'
+                                'ok': 'Available',
+                                'warning': 'Limited space',
+                                'over': 'Too small'
                             };
                             const statusColors = {
                                 'ok': 'bg-green-100 text-green-800',
@@ -298,60 +329,56 @@
                             const buttonClass = status === 'over' ? 'bg-red-600 hover:bg-red-700' : 'bg-blue-600 hover:bg-blue-700';
                             return `<button class="${buttonClass} text-white px-3 py-1 rounded-md hover-scale selectFacilityBtn" 
                                     data-fac='${JSON.stringify(row).replace(/'/g, "&apos;")}'
-                                    title="Select this facility">
+                                    title="Select this available facility">
                                 Select
                             </button>`;
                         }
                     }
                 ],
                 paging: true,
-                pageLength: 5, // Show 5 records per page
-                lengthMenu: [5, 10, 25, 50], // Options for records per page
+                pageLength: 5,
+                lengthMenu: [5, 10, 25, 50],
                 lengthChange: true,
                 searching: true,
                 ordering: true,
-                processing: true,
-                serverSide: true, // Using server-side processing for better performance
                 deferRender: true,
                 responsive: true,
                 autoWidth: false,
                 language: {
+                    emptyTable: 'No available facilities for this session time',
+                    zeroRecords: 'No available facilities match your search',
                     processing: '<div class="flex justify-center"><svg class="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg></div>'
-                },
-                initComplete: function() {
-                    // Add custom search input
-                    $('#searchInput').on('keyup', function() {
-                        table.search(this.value).draw();
-                    });
                 }
             });
 
-            // Refresh button reloads the table data and updates capacity display
+            function reloadFacilitiesForSchedule() {
+                // Full reload keeps availability filter in sync with the latest session
+                window.location.reload();
+            }
+
             $('#refreshBtn').on('click', function() {
-                const selectedGroups = getSelectedGroups();
-                if (selectedGroups.length === 0) {
-                    window.location.reload(); // Reload the page to show the no groups message
+                if (getSelectedGroups().length === 0 || getScheduleSessions().length === 0) {
+                    window.location.reload();
                 } else {
-                    updateRequiredCapacity();
+                    $('#requiredCapacity').text(getRequiredCapacity());
+                    table.ajax.reload();
                 }
             });
 
-            // Select facility button click
             $('#facilitiesTable tbody').on('click', '.selectFacilityBtn', function() {
                 const facData = $(this).data('fac');
                 localStorage.setItem('selectedFacility', JSON.stringify(facData));
                 showSelectedFacility();
             });
 
-            // Change facility button click
             $('#changeFacilityBtn').on('click', function() {
                 localStorage.removeItem('selectedFacility');
                 showSelectedFacility();
-                updateRequiredCapacity();
+                $('#requiredCapacity').text(getRequiredCapacity());
+                table.ajax.reload();
             });
 
-            // Initial setup
-            updateRequiredCapacity();
+            $('#requiredCapacity').text(getRequiredCapacity());
             showSelectedFacility();
         });
         </script>
