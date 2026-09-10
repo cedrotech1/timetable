@@ -80,16 +80,26 @@
 
             <!-- Facility Selector Table -->
             <div id="facilitySelectorTable" class="bg-white rounded-xl shadow-lg p-6 fade-in">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4 items-center">
                     <div class="flex items-center">
                         <span class="text-gray-600"><i class="bi bi-people mr-2"></i><strong>Required Capacity:</strong> <span id="requiredCapacity" class="font-semibold">0</span> students</span>
                     </div>
                     <div class="flex items-center" id="sessionFilterInfo">
                         <span class="text-gray-600 text-sm"><i class="bi bi-clock mr-2"></i><span id="sessionFilterLabel">No session set</span></span>
                     </div>
+                    <div class="flex items-center gap-2">
+                        <label for="minCapacityFilter" class="text-gray-600 text-sm whitespace-nowrap mb-0">
+                            <i class="bi bi-funnel mr-1"></i>Min capacity
+                        </label>
+                        <input type="number" id="minCapacityFilter" min="0" step="10"
+                               class="form-control form-control-sm" style="width: 100px;"
+                               placeholder="e.g. 400">
+                        <button type="button" id="fitRequiredBtn" class="btn btn-sm btn-outline-primary" title="Use required capacity">
+                            Fit required
+                        </button>
+                    </div>
                     <div class="text-end">
-                        <button id="refreshBtn" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 hover-scale flex items-center">
+                        <button id="refreshBtn" class="bg-gray-100 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-200 hover-scale flex items-center ms-auto">
                             <i class="bi bi-arrow-clockwise mr-2"></i> Refresh
                         </button>
                     </div>
@@ -214,7 +224,19 @@
                 return;
             }
 
+            function getMinCapacityFilter() {
+                const raw = $('#minCapacityFilter').val();
+                if (raw === '' || raw === null || typeof raw === 'undefined') return 0;
+                const n = parseInt(raw, 10);
+                return Number.isFinite(n) && n > 0 ? n : 0;
+            }
+
             updateSessionFilterLabel();
+
+            // Default filter: only rooms that can hold the required students
+            const requiredCap = getRequiredCapacity();
+            $('#requiredCapacity').text(requiredCap);
+            $('#minCapacityFilter').val(requiredCap > 0 ? requiredCap : '');
 
             let table = $('#facilitiesTable').DataTable({
                 processing: true,
@@ -231,7 +253,8 @@
                             'search[value]': (d.search && d.search.value) ? d.search.value : '',
                             academic_year_id: ACADEMIC_YEAR_ID,
                             semester: SEMESTER,
-                            sessions: JSON.stringify(currentSessions)
+                            sessions: JSON.stringify(currentSessions),
+                            minCapacity: getMinCapacityFilter()
                         };
                     },
                     dataSrc: function(json) {
@@ -244,7 +267,6 @@
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
                         console.error('Response:', xhr.responseText);
-                        // Stop the infinite processing spinner
                         if ($.fn.DataTable.isDataTable('#facilitiesTable')) {
                             table.processing(false);
                         }
@@ -346,8 +368,8 @@
                 responsive: true,
                 autoWidth: false,
                 language: {
-                    emptyTable: 'No available facilities for this session time',
-                    zeroRecords: 'No available facilities match your search',
+                    emptyTable: 'No available facilities match this session time and capacity filter',
+                    zeroRecords: 'No available facilities match your search / capacity filter',
                     processing: '<div class="flex justify-center"><svg class="animate-spin h-5 w-5 text-blue-600" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path></svg></div>'
                 }
             });
@@ -366,6 +388,20 @@
                 }
             });
 
+            $('#fitRequiredBtn').on('click', function() {
+                const required = getRequiredCapacity();
+                $('#minCapacityFilter').val(required > 0 ? required : '');
+                table.ajax.reload();
+            });
+
+            let capacityFilterTimer = null;
+            $('#minCapacityFilter').on('input change', function() {
+                clearTimeout(capacityFilterTimer);
+                capacityFilterTimer = setTimeout(function() {
+                    table.ajax.reload();
+                }, 300);
+            });
+
             $('#facilitiesTable tbody').on('click', '.selectFacilityBtn', function() {
                 const facData = $(this).data('fac');
                 localStorage.setItem('selectedFacility', JSON.stringify(facData));
@@ -379,7 +415,6 @@
                 table.ajax.reload();
             });
 
-            $('#requiredCapacity').text(getRequiredCapacity());
             showSelectedFacility();
         });
         </script>

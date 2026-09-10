@@ -151,6 +151,8 @@ $searchEsc = mysqli_real_escape_string($connection, $search);
 $schoolIdEsc = $school_id ? intval($school_id) : 0;
 $academicYearEsc = intval($academicYearId);
 $semesterEsc = mysqli_real_escape_string($connection, $semester);
+$minCapacity = isset($req['minCapacity']) ? max(0, intval($req['minCapacity'])) : 0;
+$minCapacityEsc = intval($minCapacity);
 
 /**
  * Facilities already booked for overlapping sessions in this academic year + semester.
@@ -206,12 +208,19 @@ if ($school_id) {
     )";
 }
 
-// Add search condition
+// Add search condition (name/site/building, and capacity if search is numeric)
 if ($search !== '') {
-    $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+    if (ctype_digit($search)) {
+        $capacitySearch = intval($search);
+        $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%' OR f.capacity = $capacitySearch OR f.capacity >= $capacitySearch)";
+    } else {
+        $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+    }
 }
 
-// Note: do not hard-filter by minCapacity here — capacity is shown as status in the UI
+if ($minCapacityEsc > 0) {
+    $whereConditions[] = "f.capacity >= $minCapacityEsc";
+}
 
 // Combine all conditions
 if (!empty($whereConditions)) {
@@ -265,7 +274,16 @@ if (!in_array($user_role, ['admin', 'registrar_office'], true) && $school_id) {
 }
 
 if ($search !== '') {
-    $dataWhere[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+    if (ctype_digit($search)) {
+        $capacitySearch = intval($search);
+        $dataWhere[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%' OR f.capacity = $capacitySearch OR f.capacity >= $capacitySearch)";
+    } else {
+        $dataWhere[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
+    }
+}
+
+if ($minCapacityEsc > 0) {
+    $dataWhere[] = "f.capacity >= $minCapacityEsc";
 }
 
 if (!empty($dataWhere)) {
@@ -276,7 +294,7 @@ if ($availabilityCondition !== '') {
     $sql .= (stripos($sql, ' WHERE ') !== false ? '' : ' WHERE 1=1') . $availabilityCondition;
 }
 
-$sql .= " ORDER BY f.name ASC LIMIT $offset, $perPage";
+$sql .= " ORDER BY f.capacity DESC, f.name ASC LIMIT $offset, $perPage";
 
 $result = mysqli_query($connection, $sql);
 if (!$result) {
