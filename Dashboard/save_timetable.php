@@ -126,7 +126,7 @@ $conflicts = [
     'lecturers' => []          // map lect_id => array of rows
 ];
 
-// 1) Facility conflicts
+// 1) Facility conflicts (only against Approved bookings)
 $facility_q = mysqli_prepare($connection, "
     SELECT t.id AS timetable_id, s.day, s.start_time, s.end_time
     FROM timetable t
@@ -134,6 +134,7 @@ $facility_q = mysqli_prepare($connection, "
     WHERE t.facility_id = ?
       AND t.academic_year_id = ?
       AND t.semester = ?
+      AND LOWER(t.status) = 'approved'
       AND s.day = ?
       AND s.start_time < ?
       AND s.end_time > ?
@@ -235,15 +236,28 @@ if ($has_conflict && $ignore_conflicts) {
 mysqli_begin_transaction($connection);
 
 try {
-    // Insert timetable
-    $status = 'pending';
-    $stmt = mysqli_prepare($connection, "
-        INSERT INTO timetable (module_id, leader_lecturer_id, facility_id, semester, academic_year_id, status, createdby)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ");
-    mysqli_stmt_bind_param($stmt, "iiiiisi",
-        $module_id, $leader_id, $facility_id, $semester, $academic_year_id, $status, $user_id
-    );
+    // Admin / registrar teaching plans are approved immediately (no pending)
+    $user_role = $_SESSION['role'] ?? '';
+    $autoApprove = in_array($user_role, ['admin', 'registrar_office'], true);
+    $status = $autoApprove ? 'Approved' : 'pending';
+
+    if ($autoApprove) {
+        $stmt = mysqli_prepare($connection, "
+            INSERT INTO timetable (module_id, leader_lecturer_id, facility_id, semester, academic_year_id, status, approvedby, createdby)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        mysqli_stmt_bind_param($stmt, "iiiiisii",
+            $module_id, $leader_id, $facility_id, $semester, $academic_year_id, $status, $user_id, $user_id
+        );
+    } else {
+        $stmt = mysqli_prepare($connection, "
+            INSERT INTO timetable (module_id, leader_lecturer_id, facility_id, semester, academic_year_id, status, createdby)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        ");
+        mysqli_stmt_bind_param($stmt, "iiiiisi",
+            $module_id, $leader_id, $facility_id, $semester, $academic_year_id, $status, $user_id
+        );
+    }
     mysqli_stmt_execute($stmt);
     $timetable_id = mysqli_insert_id($connection);
     mysqli_stmt_close($stmt);
@@ -288,8 +302,11 @@ try {
 
     echo json_encode([
         "status" => "success",
-        "message" => "Timetable scheduled successfully!",
-        "timetable_id" => $timetable_id
+        "message" => $autoApprove
+            ? "Timetable scheduled and approved successfully!"
+            : "Timetable scheduled successfully!",
+        "timetable_id" => $timetable_id,
+        "approval_status" => $status
     ]);
 } catch (Exception $ex) {
     mysqli_rollback($connection);

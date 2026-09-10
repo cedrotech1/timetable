@@ -183,6 +183,7 @@ function buildAvailabilityCondition($connection, $sessions, $academicYearEsc, $s
         WHERE t.facility_id = f.id
           AND t.academic_year_id = $academicYearEsc
           AND t.semester = '$semesterEsc'
+          AND LOWER(t.status) = 'approved'
           AND ($overlapSql)
     )";
 }
