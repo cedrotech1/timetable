@@ -435,7 +435,8 @@ include('./includes/menu.php');
             <select id="intakeSelect" class="form-select form-select-sm" disabled>
               <option value="">-- Select intake --</option>
             </select>
-            <div class="small text-muted mt-2">Year of study &amp; campus</div>
+            <div id="intakeHint" class="small text-muted mt-2">Year of study &amp; campus</div>
+            <div id="intakeEmptyAlert" class="alert alert-warning py-2 px-3 mt-2 mb-0 d-none small" role="alert"></div>
           </div>
         </div>
         <div class="col-lg-5">
@@ -1194,6 +1195,8 @@ include('./includes/menu.php');
     if (p.school_name) bits.push(p.school_name);
     if (p.college_name) bits.push(p.college_name);
     if (p.campus_names && p.campus_names.length) bits.push(p.campus_names.join('/'));
+    const hasIntakes = Array.isArray(p.intakes) && p.intakes.length > 0;
+    if (!hasIntakes) bits.push('No intakes');
     const meta = bits.length ? ` — ${bits.join(' · ')}` : '';
     return `${p.name || 'Program'}${meta}`;
   }
@@ -1206,7 +1209,10 @@ include('./includes/menu.php');
     programs.forEach(p => {
       if (!programMatchesSearch(p, q)) return;
       shown += 1;
-      $sel.append(`<option value="${p.id}" title="${escapeHtml(programSearchHaystack(p))}">${escapeHtml(programOptionLabel(p))}</option>`);
+      const hasIntakes = Array.isArray(p.intakes) && p.intakes.length > 0;
+      $sel.append(
+        `<option value="${p.id}" ${hasIntakes ? '' : 'data-no-intake="1"'} title="${escapeHtml(programSearchHaystack(p))}">${escapeHtml(programOptionLabel(p))}</option>`
+      );
     });
     if (!shown) {
       $sel.append('<option value="">No programs match search</option>');
@@ -1370,13 +1376,40 @@ include('./includes/menu.php');
     selectedProgram = programs.find(p => String(p.id) === String(id)) || null;
     selectedIntake = null;
     const $intake = $('#intakeSelect').empty().prop('disabled', true);
-    $('#groupsCheckList').html('<span class="text-muted small">Select an intake</span>');
-    if (!selectedProgram) return;
+    const $alert = $('#intakeEmptyAlert').addClass('d-none').empty();
+    $('#intakeHint').text('Year of study & campus').removeClass('text-danger fw-semibold');
+    $('#groupsCheckList').html('<span class="text-muted small">Select a program and intake first</span>');
+
+    if (!selectedProgram) {
+      $intake.append('<option value="">-- Select intake --</option>');
+      return;
+    }
+
+    const intakes = selectedProgram.intakes || [];
+    if (!intakes.length) {
+      $intake.append('<option value="">No intakes available</option>');
+      $('#intakeHint').text('This program has no intakes / student groups.').addClass('text-danger fw-semibold');
+      $alert.removeClass('d-none').html(
+        `<i class="bi bi-exclamation-triangle-fill me-1"></i>` +
+        `<strong>${escapeHtml(selectedProgram.name || 'This program')}</strong> has no intakes. ` +
+        `You cannot select groups for it. Choose another program.`
+      );
+      $('#groupsCheckList').html(`
+        <div class="alert alert-warning mb-0 py-2 px-3 small">
+          <i class="bi bi-people me-1"></i>
+          No student groups — program has no intakes.
+        </div>
+      `);
+      return;
+    }
+
     $intake.append('<option value="">-- Select intake --</option>');
-    (selectedProgram.intakes || []).forEach(i => {
+    intakes.forEach(i => {
       $intake.append(`<option value="${i.id}">Year ${i.year_of_study} — ${escapeHtml(i.campus_name)}</option>`);
     });
     $intake.prop('disabled', false);
+    $('#intakeHint').text(`${intakes.length} intake(s) — pick year & campus`);
+    $('#groupsCheckList').html('<span class="text-muted small">Select an intake to see groups</span>');
   });
 
   $('#intakeSelect').on('change', function () {
