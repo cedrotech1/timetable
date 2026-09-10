@@ -230,7 +230,30 @@ include('./includes/menu.php');
   </div>
 
   <div id="bulkResultAlert" class="alert d-none" role="alert"></div>
+  <div id="bulkConflictDetails" class="card d-none mb-3 border-danger">
+    <div class="card-header text-danger fw-semibold">Conflict details</div>
+    <div class="card-body small" id="bulkConflictBody"></div>
+  </div>
 </main>
+
+<!-- Preview before save (same idea as timetable_set.php) -->
+<div class="modal fade" id="bulkPreviewModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Preview bulk timetable</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="bulkPreviewContent"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="btnConfirmBulkSave">
+          <i class="bi bi-check-circle"></i> Confirm &amp; Save
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Shared searchable picker modal (module / facility) -->
 <div class="modal fade" id="pickerModal" tabindex="-1" aria-hidden="true">
@@ -551,6 +574,10 @@ include('./includes/menu.php');
   }
 
   function openLecturerPicker($tr) {
+    if (!selectedGroups.length) {
+      alert('Please select at least one group first before choosing lecturers.');
+      return;
+    }
     activeRow = $tr;
     const current = getRowLecturers($tr);
     draftLecturers = {
@@ -991,37 +1018,207 @@ include('./includes/menu.php');
     syncGroupChecks();
     $('#bulkTableBody').empty();
     $('#bulkResultAlert').addClass('d-none');
+    $('#bulkConflictDetails').addClass('d-none');
   });
 
-  $('#btnSaveAll').on('click', async function () {
-    const $alert = $('#bulkResultAlert').removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-info').text('Saving...');
-    if (!selectedGroups.length) {
-      $alert.removeClass('alert-info').addClass('alert-danger').text('Select at least one group.');
-      return;
+  function fmtTime(t) {
+    return String(t || '').slice(0, 5);
+  }
+
+  function timesOverlap(aStart, aEnd, bStart, bEnd) {
+    return aStart < bEnd && aEnd > bStart;
+  }
+
+  function validateBulkRows() {
+    const issues = [];
+    if (!AY || !SEM) {
+      issues.push({ global: true, message: 'Academic year / semester not configured.' });
+      return { ok: false, issues, rows: [] };
     }
-    const $rows = $('#bulkTableBody tr');
-    if (!$rows.length) {
-      $alert.removeClass('alert-info').addClass('alert-danger').text('Add at least one plan row.');
-      return;
+    if (!selectedGroups.length) {
+      issues.push({ global: true, message: 'Please select at least one group.' });
+      return { ok: false, issues, rows: [] };
+    }
+
+    const $trs = $('#bulkTableBody tr');
+    if (!$trs.length) {
+      issues.push({ global: true, message: 'Please add at least one plan row (session).' });
+      return { ok: false, issues, rows: [] };
     }
 
     const rows = [];
-    let invalid = false;
-    $rows.each(function () {
+    const reqCap = requiredCapacity();
+
+    $trs.each(function (idx) {
       const $tr = $(this);
       $tr.removeClass('row-ok row-fail');
+      $tr.find('.row-status').removeClass('text-danger text-success').addClass('text-muted');
+
       const row = collectRow($tr);
-      if (!row.module_id || !row.day || !row.start || !row.end || !row.facility_id) {
-        invalid = true;
+      const missing = [];
+      if (!row.module_id) missing.push('module');
+      if (!row.day) missing.push('day');
+      if (!row.start) missing.push('start');
+      if (!row.end) missing.push('end');
+      if (!row.facility_id) missing.push('facility');
+
+      if (missing.length) {
+        issues.push({ row: idx, message: 'Missing: ' + missing.join(', ') });
         $tr.addClass('row-fail');
-        $tr.find('.row-status').text('Incomplete').addClass('text-danger');
+        $tr.find('.row-status').text('Missing: ' + missing.join(', ')).removeClass('text-muted').addClass('text-danger');
+      } else if (row.start >= row.end) {
+        issues.push({ row: idx, message: `Invalid time range: ${row.start} - ${row.end}` });
+        $tr.addClass('row-fail');
+        $tr.find('.row-status').text('Invalid time range').removeClass('text-muted').addClass('text-danger');
+      } else {
+        const facCap = parseInt($tr.find('.btn-pick-facility').data('capacity'), 10) || 0;
+        if (reqCap > 0 && facCap > 0 && facCap < reqCap) {
+          issues.push({
+            row: idx,
+            soft: true,
+            message: `Facility capacity (${facCap}) is below required students (${reqCap}).`
+          });
+          $tr.find('.row-status').text(`Capacity low (${facCap}<${reqCap})`).removeClass('text-muted').addClass('text-danger');
+        } else {
+          $tr.find('.row-status').text('Ready');
+        }
       }
       rows.push(row);
     });
-    if (invalid) {
-      $alert.removeClass('alert-info').addClass('alert-danger').text('Fill module, day, times and facility on every row.');
-      return;
+
+    // Within-batch overlap (same shared groups → overlapping times conflict)
+    for (let i = 0; i < rows.length; i++) {
+      for (let j = i + 1; j < rows.length; j++) {
+        const a = rows[i], b = rows[j];
+        if (!a.day || !b.day || a.day !== b.day) continue;
+        if (!a.start || !a.end || !b.start || !b.end) continue;
+        if (!timesOverlap(a.start, a.end, b.start, b.end)) continue;
+
+        issues.push({
+          row: j,
+          message: `Overlaps row ${i + 1} on ${a.day} (${a.start}-${a.end} / ${b.start}-${b.end}) — same groups.`
+        });
+        const $trJ = $('#bulkTableBody tr').eq(j);
+        $trJ.addClass('row-fail');
+        $trJ.find('.row-status').text(`Overlaps row ${i + 1}`).removeClass('text-muted').addClass('text-danger');
+
+        if (a.facility_id && a.facility_id === b.facility_id) {
+          issues.push({
+            row: j,
+            message: `Same facility as row ${i + 1} in overlapping time.`
+          });
+        }
+      }
     }
+
+    const hardIssues = issues.filter(x => !x.soft);
+    return { ok: hardIssues.length === 0, issues, rows, softWarnings: issues.filter(x => x.soft) };
+  }
+
+  function renderConflictsHtml(conf, rowNum) {
+    const groupNameById = Object.fromEntries(selectedGroups.map(g => [String(g.id), g.name]));
+    const f = conf.facility || [];
+    const g = conf.groups || {};
+    const l = conf.lecturers || {};
+    const li = (txt) => `<li class="mono">${escapeHtml(txt)}</li>`;
+    let html = `<div class="mb-3"><strong>Row ${rowNum}</strong>`;
+
+    if (f.length) {
+      html += `<h6 class="mt-2 mb-1"><i class="bi bi-building me-1"></i> Facility conflicts</h6><ul class="mb-1">`;
+      f.forEach(r => {
+        const src = r.source === 'batch' ? ' (another row in this save)' : ` (timetable #${r.timetable_id})`;
+        html += li(`Day ${r.day}: ${fmtTime(r.start_time)} - ${fmtTime(r.end_time)}${src}`);
+      });
+      html += `</ul>`;
+    }
+
+    const gKeys = Object.keys(g);
+    if (gKeys.length) {
+      html += `<h6 class="mt-2 mb-1"><i class="bi bi-people me-1"></i> Group conflicts</h6>`;
+      gKeys.forEach(k => {
+        const arr = g[k] || [];
+        const name = groupNameById[String(k)] || `Group ${k}`;
+        html += `<div class="small fw-bold">${escapeHtml(name)}</div><ul class="mb-1">`;
+        arr.forEach(r => {
+          const src = r.source === 'batch' ? ' (another row in this save)' : ` (timetable #${r.timetable_id})`;
+          html += li(`Day ${r.day}: ${fmtTime(r.start_time)} - ${fmtTime(r.end_time)}${src}`);
+        });
+        html += `</ul>`;
+      });
+    }
+
+    const lKeys = Object.keys(l);
+    if (lKeys.length) {
+      html += `<h6 class="mt-2 mb-1 text-muted"><i class="bi bi-person-badge me-1"></i> Lecturer conflicts (info only)</h6>`;
+      lKeys.forEach(k => {
+        const arr = l[k] || [];
+        html += `<div class="small fw-bold">Lecturer ${escapeHtml(k)}</div><ul class="mb-1">`;
+        arr.forEach(r => {
+          html += li(`Day ${r.day}: ${fmtTime(r.start_time)} - ${fmtTime(r.end_time)} (timetable #${r.timetable_id})`);
+        });
+        html += `</ul>`;
+      });
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  function buildPreviewHtml(rows) {
+    const reqCap = requiredCapacity();
+    let html = `
+      <div class="alert alert-info mb-3">
+        <div><strong>Academic year:</strong> ${escapeHtml(String(AY))} · <strong>Semester:</strong> ${escapeHtml(String(SEM))}</div>
+        <div><strong>Groups (${selectedGroups.length}):</strong> ${selectedGroups.map(g => escapeHtml(g.name)).join(', ')}</div>
+        <div><strong>Required capacity:</strong> ${reqCap}</div>
+        <div><strong>Plans to save:</strong> ${rows.length}</div>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+          <thead class="table-light">
+            <tr><th>#</th><th>Module</th><th>Day</th><th>Time</th><th>Facility</th><th>Lecturers</th></tr>
+          </thead>
+          <tbody>
+    `;
+    rows.forEach((row, i) => {
+      const $tr = $('#bulkTableBody tr').eq(i);
+      const modTxt = $tr.find('.btn-pick-module').text().replace(/\s*Click to change\s*/i, '').trim();
+      const facTxt = $tr.find('.btn-pick-facility strong').first().text() || ('#' + row.facility_id);
+      const facCap = $tr.find('.btn-pick-facility').data('capacity') || '';
+      const lect = row.lecturers || { leader: null, others: [] };
+      const lectParts = [];
+      if (lect.leader) lectParts.push(escapeHtml(lectName(lect.leader)) + ' <span class="badge bg-primary">Leader</span>');
+      (lect.others || []).forEach(o => lectParts.push(escapeHtml(lectName(o)) + ' <span class="badge bg-success">Lecturer</span>'));
+      html += `
+        <tr>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(modTxt)}</td>
+          <td>${escapeHtml(row.day)}</td>
+          <td>${escapeHtml(row.start)} – ${escapeHtml(row.end)}</td>
+          <td>${escapeHtml(facTxt)}${facCap ? ` (${facCap})` : ''}</td>
+          <td>${lectParts.length ? lectParts.join('<br>') : '<span class="text-muted">None</span>'}</td>
+        </tr>
+      `;
+    });
+    html += `</tbody></table></div>
+      <div class="alert alert-secondary mb-0"><i class="bi bi-info-circle"></i> Review details above before saving.</div>`;
+    return html;
+  }
+
+  async function doBulkSave(rows) {
+    const $alert = $('#bulkResultAlert').removeClass('d-none alert-success alert-danger alert-warning').addClass('alert-info').text('Saving...');
+    $('#bulkConflictDetails').addClass('d-none');
+    $('#bulkConflictBody').empty();
+
+    const payloadRows = rows.map(r => ({
+      module_id: r.module_id,
+      day: r.day,
+      start: r.start,
+      end: r.end,
+      facility_id: r.facility_id,
+      leader_id: r.leader_id || 0,
+      other_lecturer_ids: r.other_lecturer_ids || []
+    }));
 
     try {
       const res = await fetch('save_timetable_bulk.php', {
@@ -1030,34 +1227,87 @@ include('./includes/menu.php');
         body: JSON.stringify({
           academic_year_id: AY,
           semester: SEM,
+          selectedGroupIds: selectedGroups.map(g => g.id),
           groupIds: selectedGroups.map(g => g.id),
-          rows
+          rows: payloadRows
         })
       });
       const data = await res.json();
+      let conflictHtml = '';
+
       (data.results || []).forEach(r => {
         const $tr = $('#bulkTableBody tr').eq(r.row_index);
         if (!$tr.length) return;
         if (r.status === 'success') {
           $tr.addClass('row-ok').removeClass('row-fail');
-          $tr.find('.row-status').removeClass('text-danger').addClass('text-success').text(r.approval_status || 'Saved');
+          $tr.find('.row-status').removeClass('text-danger text-muted').addClass('text-success')
+            .text(r.approval_status || 'Saved');
+        } else if (r.status === 'conflict') {
+          $tr.addClass('row-fail').removeClass('row-ok');
+          $tr.find('.row-status').removeClass('text-success text-muted').addClass('text-danger').text('Conflict');
+          if (r.conflicts) conflictHtml += renderConflictsHtml(r.conflicts, (r.row_index || 0) + 1);
         } else {
           $tr.addClass('row-fail').removeClass('row-ok');
-          $tr.find('.row-status').removeClass('text-success').addClass('text-danger')
-            .text(r.status === 'conflict' ? 'Conflict' : (r.message || 'Error'));
+          $tr.find('.row-status').removeClass('text-success text-muted').addClass('text-danger')
+            .text(r.message || 'Error');
         }
       });
+
+      if (conflictHtml) {
+        $('#bulkConflictBody').html(conflictHtml);
+        $('#bulkConflictDetails').removeClass('d-none');
+      }
+
       const cls = data.status === 'success' ? 'alert-success' : (data.status === 'partial' ? 'alert-warning' : 'alert-danger');
       $alert.removeClass('alert-info alert-success alert-danger alert-warning').addClass(cls).text(data.message || 'Done');
     } catch (e) {
       console.error(e);
-      $alert.removeClass('alert-info').addClass('alert-danger').text('Network error while saving.');
+      $alert.removeClass('alert-info').addClass('alert-danger').text('Network error while saving. Please try again.');
     }
+  }
+
+  let pendingSaveRows = null;
+  let bulkPreviewModal;
+
+  $('#btnSaveAll').on('click', function () {
+    const result = validateBulkRows();
+    const $alert = $('#bulkResultAlert').removeClass('d-none alert-success alert-danger alert-warning alert-info');
+    $('#bulkConflictDetails').addClass('d-none');
+
+    if (!result.ok) {
+      const msg = result.issues.filter(i => !i.soft).map(i =>
+        i.global ? i.message : `Row ${(i.row || 0) + 1}: ${i.message}`
+      ).join(' ');
+      $alert.addClass('alert-danger').text(msg || 'Please fix validation errors.');
+      return;
+    }
+
+    if (result.softWarnings && result.softWarnings.length) {
+      const warn = result.softWarnings.map(w => `Row ${w.row + 1}: ${w.message}`).join('\n');
+      if (!confirm(warn + '\n\nContinue to preview anyway?')) {
+        $alert.addClass('alert-warning').text('Save cancelled — fix facility capacity or continue after confirm.');
+        return;
+      }
+    }
+
+    pendingSaveRows = result.rows;
+    $('#bulkPreviewContent').html(buildPreviewHtml(result.rows));
+    bulkPreviewModal.show();
+    $alert.addClass('d-none');
+  });
+
+  $('#btnConfirmBulkSave').on('click', async function () {
+    if (!pendingSaveRows) return;
+    bulkPreviewModal.hide();
+    const rows = pendingSaveRows;
+    pendingSaveRows = null;
+    await doBulkSave(rows);
   });
 
   // Init
   pickerModal = new bootstrap.Modal(document.getElementById('pickerModal'));
   lecturerModal = new bootstrap.Modal(document.getElementById('lecturerModal'));
+  bulkPreviewModal = new bootstrap.Modal(document.getElementById('bulkPreviewModal'));
   renderSelectedGroups();
   loadOrganization();
   Promise.all([loadModules(), loadLecturers()]).then(() => addRow());

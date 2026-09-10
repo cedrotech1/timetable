@@ -27,20 +27,32 @@ function fetch_all_stmt_bulk($stmt) {
     return $rows;
 }
 
+function times_overlap_bulk($startA, $endA, $startB, $endB) {
+    return ($startA < $endB) && ($endA > $startB);
+}
+
 /**
- * Save one teaching-plan row. Returns ['status'=>..., 'message'=>..., ...]
+ * Save one teaching-plan row — same rules as save_timetable.php
+ * Returns ['status'=>..., 'message'=>..., ...]
  */
-function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_id, $semester, $groups, $row, $ignore_conflicts = false) {
+function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_id, $semester, $groups, $row, $ignore_conflicts = false, $batchBooked = []) {
     $module_id = intval($row['module_id'] ?? 0);
     $leader_id = intval($row['leader_id'] ?? 0);
     $facility_id = intval($row['facility_id'] ?? 0);
     $day = trim($row['day'] ?? '');
     $start = trim($row['start'] ?? '');
     $end = trim($row['end'] ?? '');
-    $other_lecturers = $row['other_lecturer_ids'] ?? [];
+    $other_lecturers = $row['other_lecturer_ids'] ?? $row['otherLecturerIds'] ?? [];
+    if (!is_array($other_lecturers)) $other_lecturers = [];
+
+    // Drop invalid / duplicate of leader (same as single plan intent)
+    $other_lecturers = array_values(array_filter(array_map('intval', $other_lecturers), function ($lid) use ($leader_id) {
+        return $lid > 0 && $lid !== $leader_id;
+    }));
 
     $missing = [];
     if (!$module_id) $missing[] = 'module';
+    // module leader optional (same as save_timetable.php)
     if (!$facility_id) $missing[] = 'facility';
     if ($day === '') $missing[] = 'day';
     if ($start === '') $missing[] = 'start';
@@ -50,20 +62,50 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
     if (empty($groups)) $missing[] = 'groups';
 
     if (!empty($missing)) {
-        return ['status' => 'error', 'message' => 'Missing: ' . implode(', ', $missing)];
+        return ['status' => 'error', 'message' => 'Missing required fields: ' . implode(', ', $missing)];
     }
 
     $startSql = time_to_sql_bulk($start);
     $endSql = time_to_sql_bulk($end);
     if ($startSql >= $endSql) {
-        return ['status' => 'error', 'message' => "Invalid time range: {$start} - {$end}"];
+        return ['status' => 'error', 'message' => "Invalid time range for {$day}: {$start} - {$end}"];
     }
 
     $norm_sessions = [['day' => $day, 'start' => $startSql, 'end' => $endSql]];
-
     $conflicts = ['facility' => [], 'groups' => [], 'lecturers' => []];
 
-    // Facility conflicts (Approved only)
+    // Within-batch overlaps (same groups shared across all bulk rows)
+    foreach ($batchBooked as $prev) {
+        if (!isset($prev['day'], $prev['start'], $prev['end'])) continue;
+        if (strcasecmp($prev['day'], $day) !== 0) continue;
+        if (!times_overlap_bulk($startSql, $endSql, $prev['start'], $prev['end'])) continue;
+
+        // Groups always overlap when times overlap in bulk (shared groups)
+        foreach ($groups as $gid) {
+            $gid = intval($gid);
+            if (!isset($conflicts['groups'][$gid])) $conflicts['groups'][$gid] = [];
+            $conflicts['groups'][$gid][] = [
+                'timetable_id' => $prev['timetable_id'] ?? 0,
+                'group_id' => $gid,
+                'day' => $day,
+                'start_time' => $prev['start'],
+                'end_time' => $prev['end'],
+                'source' => 'batch'
+            ];
+        }
+
+        if (intval($prev['facility_id'] ?? 0) === $facility_id) {
+            $conflicts['facility'][] = [
+                'timetable_id' => $prev['timetable_id'] ?? 0,
+                'day' => $day,
+                'start_time' => $prev['start'],
+                'end_time' => $prev['end'],
+                'source' => 'batch'
+            ];
+        }
+    }
+
+    // Facility conflicts (Approved only) — same as save_timetable.php
     $facility_q = mysqli_prepare($connection, "
         SELECT t.id AS timetable_id, s.day, s.start_time, s.end_time
         FROM timetable t
@@ -81,14 +123,13 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
             $facility_id, $academic_year_id, $semester, $s['day'], $s['end'], $s['start']
         );
         mysqli_stmt_execute($facility_q);
-        $rows = fetch_all_stmt_bulk($facility_q);
-        foreach ($rows as $r) {
+        foreach (fetch_all_stmt_bulk($facility_q) as $r) {
             $conflicts['facility'][] = $r;
         }
     }
     mysqli_stmt_close($facility_q);
 
-    // Group conflicts
+    // Group conflicts — same as save_timetable.php
     $group_q = mysqli_prepare($connection, "
         SELECT t.id AS timetable_id, tg.group_id, s.day, s.start_time, s.end_time
         FROM timetable t
@@ -110,22 +151,50 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
             mysqli_stmt_execute($group_q);
             $rows = fetch_all_stmt_bulk($group_q);
             if (!empty($rows)) {
-                if (!isset($conflicts['groups'][$gid])) {
-                    $conflicts['groups'][$gid] = [];
-                }
-                foreach ($rows as $r) {
-                    $conflicts['groups'][$gid][] = $r;
-                }
+                if (!isset($conflicts['groups'][$gid])) $conflicts['groups'][$gid] = [];
+                foreach ($rows as $r) $conflicts['groups'][$gid][] = $r;
             }
         }
     }
     mysqli_stmt_close($group_q);
 
+    // Lecturer conflicts collected (not blocking) — same as save_timetable.php
+    $lect_q = mysqli_prepare($connection, "
+        SELECT DISTINCT t.id AS timetable_id, s.day, s.start_time, s.end_time
+        FROM timetable t
+        JOIN timetable_sessions s ON s.timetable_id = t.id
+        LEFT JOIN timetable_lecturers tl ON tl.timetable_id = t.id
+        WHERE (t.leader_lecturer_id = ? OR tl.lect_id = ?)
+          AND t.academic_year_id = ?
+          AND t.semester = ?
+          AND s.day = ?
+          AND s.start_time < ?
+          AND s.end_time > ?
+    ");
+    $all_lect_ids = array_unique(array_filter(array_merge([$leader_id], $other_lecturers)));
+    foreach ($all_lect_ids as $lid) {
+        $lid = intval($lid);
+        if ($lid <= 0) continue;
+        foreach ($norm_sessions as $s) {
+            mysqli_stmt_bind_param($lect_q, "iiiisss",
+                $lid, $lid, $academic_year_id, $semester, $s['day'], $s['end'], $s['start']
+            );
+            mysqli_stmt_execute($lect_q);
+            $rows = fetch_all_stmt_bulk($lect_q);
+            if (!empty($rows)) {
+                if (!isset($conflicts['lecturers'][$lid])) $conflicts['lecturers'][$lid] = [];
+                foreach ($rows as $r) $conflicts['lecturers'][$lid][] = $r;
+            }
+        }
+    }
+    mysqli_stmt_close($lect_q);
+
+    // Only facility + group conflicts block (lecturer conflicts ignored) — same as single
     $has_conflict = !empty($conflicts['facility']) || !empty($conflicts['groups']);
     if ($has_conflict && !$ignore_conflicts) {
         return [
             'status' => 'conflict',
-            'message' => 'Conflicts detected.',
+            'message' => 'Conflicts detected. Please review.',
             'conflicts' => $conflicts
         ];
     }
@@ -192,7 +261,14 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
             'status' => 'success',
             'message' => $autoApprove ? 'Approved' : 'Pending',
             'timetable_id' => $timetable_id,
-            'approval_status' => $status
+            'approval_status' => $status,
+            'booked' => [
+                'timetable_id' => $timetable_id,
+                'facility_id' => $facility_id,
+                'day' => $day,
+                'start' => $startSql,
+                'end' => $endSql
+            ]
         ];
     } catch (Exception $ex) {
         mysqli_rollback($connection);
@@ -209,7 +285,7 @@ $user_role = $_SESSION['role'] ?? '';
 
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
-    sendBulkResponse('error', 'No valid JSON data received.');
+    sendBulkResponse('error', 'No valid JSON data received. Please check your input.');
 }
 
 $academic_year_id = intval($input['academic_year_id'] ?? 0);
@@ -218,20 +294,24 @@ $groups = $input['groupIds'] ?? $input['selectedGroupIds'] ?? [];
 $rows = $input['rows'] ?? [];
 $ignore_conflicts = !empty($input['ignoreConflicts']);
 
-if (!$academic_year_id || !$semester) {
-    sendBulkResponse('error', 'Academic year and semester are required.');
+if (!$academic_year_id) {
+    sendBulkResponse('error', 'Missing required fields: academic year');
+}
+if (!$semester) {
+    sendBulkResponse('error', 'Missing required fields: semester');
 }
 if (empty($groups)) {
     sendBulkResponse('error', 'Please select at least one group.');
 }
 if (empty($rows) || !is_array($rows)) {
-    sendBulkResponse('error', 'Please add at least one plan row.');
+    sendBulkResponse('error', 'Please add at least one session / plan row.');
 }
 
-$groups = array_values(array_unique(array_map('intval', $groups)));
+$groups = array_values(array_unique(array_filter(array_map('intval', $groups))));
 $results = [];
 $successCount = 0;
 $failCount = 0;
+$batchBooked = [];
 
 foreach ($rows as $index => $row) {
     $result = saveOneTimetableRow(
@@ -242,19 +322,28 @@ foreach ($rows as $index => $row) {
         $semester,
         $groups,
         $row,
-        $ignore_conflicts
+        $ignore_conflicts,
+        $batchBooked
     );
-    $result['row_index'] = $index;
-    $results[] = $result;
     if (($result['status'] ?? '') === 'success') {
         $successCount++;
+        if (!empty($result['booked'])) {
+            $batchBooked[] = $result['booked'];
+        }
+        unset($result['booked']);
     } else {
         $failCount++;
     }
+    $result['row_index'] = $index;
+    $results[] = $result;
 }
 
 $overall = $failCount === 0 ? 'success' : ($successCount > 0 ? 'partial' : 'error');
-sendBulkResponse($overall, "Saved {$successCount} of " . count($rows) . " plan(s).", [
+$msg = $failCount === 0
+    ? "Saved {$successCount} of " . count($rows) . " plan(s)."
+    : "Saved {$successCount} of " . count($rows) . " plan(s). {$failCount} failed (conflicts or errors).";
+
+sendBulkResponse($overall, $msg, [
     'results' => $results,
     'success_count' => $successCount,
     'fail_count' => $failCount
