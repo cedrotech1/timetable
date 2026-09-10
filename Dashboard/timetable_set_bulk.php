@@ -191,7 +191,7 @@ include('./includes/menu.php');
           </div>
         </div>
       </div>
-      <p class="small text-muted mt-2 mb-0">Modules are limited to the selected groups’ program / year / semester. Facilities already saved (approved or pending) or set on another overlapping row are treated as taken.</p>
+      <p class="small text-muted mt-2 mb-0">Modules are limited to the selected groups’ program(s). Year/semester matches appear first; other program modules follow. Facilities already saved (approved or pending) or set on another overlapping row are treated as taken.</p>
       <div class="mt-3">
         <div class="small text-muted mb-1">Selected groups (<span id="selectedGroupCount">0</span>) — capacity: <strong id="requiredCapacity">0</strong></div>
         <div id="selectedGroupChips"></div>
@@ -568,14 +568,17 @@ include('./includes/menu.php');
 
     if (mode === 'module') {
       if (!selectedGroups.length) {
-        alert('Please select at least one group first. Modules are filtered by those groups.');
+        alert('Please select at least one group first. Modules are filtered by those groups’ programs.');
         return;
       }
-      const matched = modulesForSelectedGroups();
-      $('#pickerModalTitle').text('Search module (matching selected groups)');
+      const list = modulesForSelectedGroups();
+      const priorityCount = list.filter(m => m._priority).length;
+      $('#pickerModalTitle').text('Search module (program modules)');
       const years = [...new Set(selectedGroups.map(g => g.year_of_study).filter(Boolean))].join(', ');
       const progIds = [...new Set(selectedGroups.map(g => g.program_id).filter(Boolean))];
-      $('#pickerHint').text(`${matched.length} modules for program(s) ${progIds.join(', ')} · year ${years || '?'} · semester ${SEM || '?'}`);
+      $('#pickerHint').text(
+        `${list.length} program modules · ${priorityCount} match year ${years || '?'} / sem ${SEM || '?'} (shown first) · program(s) ${progIds.join(', ')}`
+      );
       renderPickerList();
       pickerModal.show();
     } else if (mode === 'facility') {
@@ -734,21 +737,35 @@ include('./includes/menu.php');
       const matched = modulesForSelectedGroups();
       const items = matched.filter(m => {
         if (!q) return true;
-        return `${m.code || ''} ${m.name || ''} ${m.program_name || ''}`.toLowerCase().includes(q);
-      }).slice(0, 400);
+        return `${m.code || ''} ${m.name || ''} ${m.program_name || ''} ${m.year || ''} ${m.semester || ''}`.toLowerCase().includes(q);
+      }).slice(0, 500);
 
       if (!selectedGroups.length) {
-        $list.html('<div class="text-muted">Select groups first to see matching modules.</div>');
+        $list.html('<div class="text-muted">Select groups first to see program modules.</div>');
         return;
       }
       if (!items.length) {
-        $list.html('<div class="text-muted">No modules match these groups (program / year / semester).</div>');
+        $list.html('<div class="text-muted">No modules found for the selected program(s).</div>');
         return;
       }
+
+      let shownPriorityHead = false;
+      let shownOtherHead = false;
       items.forEach(m => {
+        if (m._priority && !shownPriorityHead) {
+          $list.append(`<div class="small fw-semibold text-primary mb-2 mt-1">Recommended — Year / Semester match</div>`);
+          shownPriorityHead = true;
+        }
+        if (!m._priority && !shownOtherHead) {
+          $list.append(`<div class="small fw-semibold text-muted mb-2 mt-3">Other modules in this program</div>`);
+          shownOtherHead = true;
+        }
+        const badge = m._priority
+          ? '<span class="badge bg-primary ms-1">Y/S match</span>'
+          : '<span class="badge bg-secondary ms-1">Program</span>';
         $list.append(`
           <div class="picker-item" data-type="module" data-id="${m.id}">
-            <div class="fw-semibold">${escapeHtml(m.code ? m.code + ' — ' : '')}${escapeHtml(m.name)}</div>
+            <div class="fw-semibold">${escapeHtml(m.code ? m.code + ' — ' : '')}${escapeHtml(m.name)} ${badge}</div>
             <div class="small text-muted">Year ${m.year ?? 'N/A'} · Sem ${m.semester ?? 'N/A'} · ${escapeHtml(m.program_name || '')}</div>
           </div>
         `);
@@ -861,19 +878,46 @@ include('./includes/menu.php');
       });
   }
 
-  function moduleMatchesGroups(m) {
+  function selectedProgramIds() {
+    return [...new Set(selectedGroups.map(g => String(g.program_id)).filter(id => id && id !== '0' && id !== 'undefined'))];
+  }
+
+  function moduleInSelectedPrograms(m) {
     if (!selectedGroups.length) return false;
+    const progIds = selectedProgramIds();
+    return progIds.includes(String(m.program_id));
+  }
+
+  /** Year + semester match for selected groups (recommended / priority). */
+  function moduleYearSemPriority(m) {
+    if (!moduleInSelectedPrograms(m)) return false;
     return selectedGroups.some(g => {
-      const sameProgram = String(m.program_id) === String(g.program_id);
+      if (String(m.program_id) !== String(g.program_id)) return false;
       const sameYear = String(m.year) === String(g.year_of_study);
       const sameSem = !SEM || String(m.semester) === String(SEM);
-      return sameProgram && sameYear && sameSem;
+      return sameYear && sameSem;
     });
   }
 
+  /** All modules for selected program(s); year/semester matches first. */
   function modulesForSelectedGroups() {
     if (!selectedGroups.length) return [];
-    return modulesCache.filter(moduleMatchesGroups);
+    const progIds = selectedProgramIds();
+    const list = modulesCache
+      .filter(m => progIds.includes(String(m.program_id)))
+      .map(m => ({ ...m, _priority: moduleYearSemPriority(m) }));
+
+    list.sort((a, b) => {
+      if (a._priority !== b._priority) return a._priority ? -1 : 1;
+      const ya = parseInt(a.year, 10) || 0;
+      const yb = parseInt(b.year, 10) || 0;
+      if (ya !== yb) return ya - yb;
+      const sa = parseInt(a.semester, 10) || 0;
+      const sb = parseInt(b.semester, 10) || 0;
+      if (sa !== sb) return sa - sb;
+      return String(a.code || a.name || '').localeCompare(String(b.code || b.name || ''));
+    });
+    return list;
   }
 
   function clearInvalidModulesOnRows() {
@@ -882,7 +926,7 @@ include('./includes/menu.php');
       const mid = parseInt($tr.find('.btn-pick-module').data('id'), 10) || 0;
       if (!mid) return;
       const m = modulesCache.find(x => String(x.id) === String(mid));
-      if (!m || !moduleMatchesGroups(m)) {
+      if (!m || !moduleInSelectedPrograms(m)) {
         setModuleBtn($tr, null);
         $tr.find('.row-status').text('Re-pick module (groups changed)').removeClass('text-success').addClass('text-muted');
       }
@@ -1172,10 +1216,10 @@ include('./includes/menu.php');
         $tr.find('.row-status').text('Invalid time range').removeClass('text-muted').addClass('text-danger');
       } else {
         const m = modulesCache.find(x => String(x.id) === String(row.module_id));
-        if (!m || !moduleMatchesGroups(m)) {
-          issues.push({ row: idx, message: 'Module does not match selected groups (program / year / semester).' });
+        if (!m || !moduleInSelectedPrograms(m)) {
+          issues.push({ row: idx, message: 'Module is not in the selected groups’ program(s).' });
           $tr.addClass('row-fail');
-          $tr.find('.row-status').text('Module not for these groups').removeClass('text-muted').addClass('text-danger');
+          $tr.find('.row-status').text('Module not in program').removeClass('text-muted').addClass('text-danger');
         } else {
           const facCap = parseInt($tr.find('.btn-pick-facility').data('capacity'), 10) || 0;
           if (reqCap > 0 && facCap > 0 && facCap < reqCap) {
