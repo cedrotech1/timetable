@@ -151,7 +151,7 @@ foreach ($norm_sessions as $s) {
 }
 mysqli_stmt_close($facility_q);
 
-// 2) Group conflicts
+// 2) Group conflicts (approved + pending)
 $group_q = mysqli_prepare($connection, "
     SELECT t.id AS timetable_id, tg.group_id, s.day, s.start_time, s.end_time
     FROM timetable t
@@ -160,6 +160,7 @@ $group_q = mysqli_prepare($connection, "
     WHERE tg.group_id = ?
       AND t.academic_year_id = ?
       AND t.semester = ?
+      AND LOWER(t.status) IN ('approved', 'pending')
       AND s.day = ?
       AND s.start_time < ?
       AND s.end_time > ?

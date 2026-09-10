@@ -172,11 +172,11 @@ include('./includes/menu.php');
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
           <label class="form-label small mb-1">Program</label>
-          <input type="search" id="programSearch" class="form-control form-control-sm mb-1" placeholder="Search program by name or code...">
+          <input type="search" id="programSearch" class="form-control form-control-sm mb-1" placeholder="Search by program, school, college, campus...">
           <select id="programSelect" class="form-select form-select-sm" size="6" style="min-height: 140px;">
             <option value="">-- Select program --</option>
           </select>
-          <div class="small text-muted mt-1"><span id="programMatchCount">0</span> programs shown</div>
+          <div class="small text-muted mt-1"><span id="programMatchCount">0</span> programs shown · search name, code, school, college, campus</div>
         </div>
         <div class="col-md-3">
           <label class="form-label small mb-1">Intake</label>
@@ -227,7 +227,9 @@ include('./includes/menu.php');
         </table>
       </div>
       <p class="small text-muted mt-2 mb-0">
-        Lecturers: pick one <strong>Module Leader</strong> and any number of <strong>Lecturers</strong> (same as single teaching plan). Facility modal lists all free rooms for that day/time.
+        Lecturers: pick one <strong>Module Leader</strong> and any number of <strong>Lecturers</strong>.
+        <strong>Facility</strong> and <strong>group</strong> time overlaps are blocked (including approved/pending and other rows here).
+        Lecturer overlaps are allowed.
       </p>
     </div>
   </div>
@@ -813,17 +815,44 @@ include('./includes/menu.php');
     }
   }
 
+  function programSearchHaystack(p) {
+    return [
+      p.name,
+      p.code,
+      p.school_name,
+      p.college_name,
+      p.department_name,
+      ...(p.campus_names || [])
+    ].filter(Boolean).join(' ').toLowerCase();
+  }
+
+  function programMatchesSearch(p, q) {
+    if (!q) return true;
+    const hay = programSearchHaystack(p);
+    // All words must match somewhere (e.g. "huye nursing" → campus + program)
+    const tokens = q.split(/\s+/).filter(Boolean);
+    return tokens.every(t => hay.includes(t));
+  }
+
+  function programOptionLabel(p) {
+    const bits = [];
+    if (p.code) bits.push(`[${p.code}]`);
+    if (p.school_name) bits.push(p.school_name);
+    if (p.college_name) bits.push(p.college_name);
+    if (p.campus_names && p.campus_names.length) bits.push(p.campus_names.join('/'));
+    const meta = bits.length ? ` — ${bits.join(' · ')}` : '';
+    return `${p.name || 'Program'}${meta}`;
+  }
+
   function renderProgramOptions() {
     const q = ($('#programSearch').val() || '').toLowerCase().trim();
     const current = $('#programSelect').val();
     const $sel = $('#programSelect').empty();
     let shown = 0;
     programs.forEach(p => {
-      const label = `${p.name}${p.code ? ' [' + p.code + ']' : ''}${p.school_name ? ' (' + p.school_name + ')' : ''}`;
-      const hay = `${p.name || ''} ${p.code || ''} ${p.school_name || ''}`.toLowerCase();
-      if (q && !hay.includes(q)) return;
+      if (!programMatchesSearch(p, q)) return;
       shown += 1;
-      $sel.append(`<option value="${p.id}">${escapeHtml(label)}</option>`);
+      $sel.append(`<option value="${p.id}" title="${escapeHtml(programSearchHaystack(p))}">${escapeHtml(programOptionLabel(p))}</option>`);
     });
     if (!shown) {
       $sel.append('<option value="">No programs match search</option>');
@@ -850,22 +879,36 @@ include('./includes/menu.php');
           (college.schools || []).forEach(school => {
             if (!canAccessAllSchools && userSchoolId && String(school.id) !== String(userSchoolId)) return;
             (school.all_programs || []).forEach(prog => {
+              const intakes = (prog.intakes || []).map(intake => ({
+                id: intake.id,
+                year_of_study: intake.year_of_study || intake.year || 1,
+                campus_name: intake.campus_name || intake.campus?.name || 'Unassigned',
+                groups: intake.groups || []
+              }));
+              const campus_names = [...new Set(intakes.map(i => i.campus_name).filter(n => n && n !== 'Unassigned'))];
               programs.push({
                 id: prog.id,
                 name: prog.name,
                 code: prog.code,
                 school_id: school.id,
                 school_name: school.name,
-                intakes: (prog.intakes || []).map(intake => ({
-                  id: intake.id,
-                  year_of_study: intake.year_of_study || intake.year || 1,
-                  campus_name: intake.campus_name || intake.campus?.name || 'Unassigned',
-                  groups: intake.groups || []
-                }))
+                college_id: college.id,
+                college_name: college.name,
+                department_id: prog.department_id || null,
+                campus_names,
+                intakes
               });
             });
           });
         });
+        // Prefer unique by id (same program shouldn't appear twice)
+        const byId = new Map();
+        programs.forEach(p => {
+          if (!byId.has(String(p.id))) byId.set(String(p.id), p);
+        });
+        programs = Array.from(byId.values()).sort((a, b) =>
+          String(a.name || '').localeCompare(String(b.name || ''))
+        );
         renderProgramOptions();
       })
       .fail(() => alert('Failed to load organization structure.'));
@@ -1299,11 +1342,14 @@ include('./includes/menu.php');
     }
 
     const lKeys = Object.keys(l);
-    if (lKeys.length) {
-      html += `<h6 class="mt-2 mb-1 text-muted"><i class="bi bi-person-badge me-1"></i> Lecturer conflicts (info only)</h6>`;
+    // Lecturer overlaps are informational only — do not treat as blockers
+    if (lKeys.length && !f.length && !gKeys.length) {
+      html += `<div class="text-muted small mt-1">Lecturer time overlaps exist but are allowed.</div>`;
+    } else if (lKeys.length) {
+      html += `<h6 class="mt-2 mb-1 text-muted"><i class="bi bi-person-badge me-1"></i> Lecturer overlaps (allowed)</h6>`;
       lKeys.forEach(k => {
         const arr = l[k] || [];
-        html += `<div class="small fw-bold">Lecturer ${escapeHtml(k)}</div><ul class="mb-1">`;
+        html += `<div class="small fw-bold text-muted">Lecturer ${escapeHtml(k)}</div><ul class="mb-1 text-muted">`;
         arr.forEach(r => {
           html += li(`Day ${r.day}: ${fmtTime(r.start_time)} - ${fmtTime(r.end_time)} (timetable #${r.timetable_id})`);
         });

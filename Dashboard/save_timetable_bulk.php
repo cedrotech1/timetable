@@ -129,7 +129,7 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
     }
     mysqli_stmt_close($facility_q);
 
-    // Group conflicts — same as save_timetable.php
+    // Group conflicts (approved + pending — lecturer conflicts do not block)
     $group_q = mysqli_prepare($connection, "
         SELECT t.id AS timetable_id, tg.group_id, s.day, s.start_time, s.end_time
         FROM timetable t
@@ -138,6 +138,7 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
         WHERE tg.group_id = ?
           AND t.academic_year_id = ?
           AND t.semester = ?
+          AND LOWER(t.status) IN ('approved', 'pending')
           AND s.day = ?
           AND s.start_time < ?
           AND s.end_time > ?
@@ -189,12 +190,12 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
     }
     mysqli_stmt_close($lect_q);
 
-    // Only facility + group conflicts block (lecturer conflicts ignored) — same as single
+    // Only facility + group conflicts block (lecturer conflicts ignored)
     $has_conflict = !empty($conflicts['facility']) || !empty($conflicts['groups']);
     if ($has_conflict && !$ignore_conflicts) {
         return [
             'status' => 'conflict',
-            'message' => 'Conflicts detected. Please review.',
+            'message' => 'Conflicts detected (facility or groups). Lecturer overlaps are allowed.',
             'conflicts' => $conflicts
         ];
     }
