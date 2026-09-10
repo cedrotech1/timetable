@@ -24,6 +24,15 @@ if (!$input || empty($input['sections']) || !is_array($input['sections'])) {
     respond(false, 'No sections to match. Upload and parse an Excel file first.');
 }
 
+$systemSemester = isset($input['semester']) ? trim((string)$input['semester']) : '';
+// Fallback: load from system table
+if ($systemSemester === '') {
+    $sys = mysqli_query($connection, "SELECT semester FROM system LIMIT 1");
+    if ($sys && ($sr = mysqli_fetch_assoc($sys))) {
+        $systemSemester = (string)($sr['semester'] ?? '');
+    }
+}
+
 function norm($s) {
     $s = strtolower(trim((string)$s));
     $s = preg_replace('/\s+/', ' ', $s);
@@ -146,12 +155,15 @@ function infer_program_votes_from_modules($modules, $rows) {
     $votes = [];
     foreach ($rows as $row) {
         $code = strtoupper(preg_replace('/\s+/', '', (string)($row['module_code'] ?? '')));
-        $name = trim((string)($row['module_name'] ?? ''));
-        if ($code === '' && $name === '') continue;
-        [$mod] = match_module($modules, $code, $name, null, null);
-        if ($mod && !empty($mod['program_id'])) {
-            $pid = (int)$mod['program_id'];
-            $votes[$pid] = ($votes[$pid] ?? 0) + 1;
+        if ($code === '') continue;
+        // Exact code only for voting
+        foreach ($modules as $m) {
+            $mCode = strtoupper(preg_replace('/\s+/', '', (string)$m['code']));
+            if ($mCode === $code && !empty($m['program_id'])) {
+                $pid = (int)$m['program_id'];
+                $votes[$pid] = ($votes[$pid] ?? 0) + 1;
+                break;
+            }
         }
     }
     return $votes;
@@ -209,28 +221,59 @@ function match_groups($groups, $programId, $year, $groupNums, $timeGroupNums = [
     return array_values($matched);
 }
 
-function match_module($modules, $code, $name, $programId = null, $year = null) {
-    $codeN = strtoupper(trim((string)$code));
-    $codeN = preg_replace('/\s+/', '', $codeN);
-    $best = null;
-    $bestScore = 0;
-    foreach ($modules as $m) {
-        $mCode = strtoupper(preg_replace('/\s+/', '', (string)$m['code']));
-        $score = 0;
-        if ($codeN !== '' && $mCode === $codeN) $score = 100;
-        elseif ($codeN !== '' && $mCode !== '' && (strpos($mCode, $codeN) !== false || strpos($codeN, $mCode) !== false)) $score = 85;
-        else $score = like_score($name, $m['name']);
+function match_module($modules, $code, $name, $programId = null, $year = null, $semester = null) {
+    $codeN = strtoupper(preg_replace('/\s+/', '', (string)$code));
+    $nameN = norm($name);
 
-        if ($programId && (int)$m['program_id'] === (int)$programId) $score += 10;
-        if ($year && (string)$m['year'] === (string)$year) $score += 5;
-
-        if ($score > $bestScore) {
-            $bestScore = $score;
-            $best = $m;
+    // Prefer exact CODE match only (same as picking a real module in timetable_set)
+    $exactCode = [];
+    if ($codeN !== '') {
+        foreach ($modules as $m) {
+            $mCode = strtoupper(preg_replace('/\s+/', '', (string)$m['code']));
+            if ($mCode === $codeN) $exactCode[] = $m;
         }
     }
-    if ($bestScore < 50) return [null, $bestScore];
-    return [$best, $bestScore];
+
+    if (!empty($exactCode)) {
+        usort($exactCode, function ($a, $b) use ($programId, $year, $semester) {
+            $sa = 0; $sb = 0;
+            if ($programId && (int)$a['program_id'] === (int)$programId) $sa += 20;
+            if ($programId && (int)$b['program_id'] === (int)$programId) $sb += 20;
+            if ($year && (string)$a['year'] === (string)$year) $sa += 10;
+            if ($year && (string)$b['year'] === (string)$year) $sb += 10;
+            if ($semester !== null && $semester !== '' && (string)$a['semester'] === (string)$semester) $sa += 10;
+            if ($semester !== null && $semester !== '' && (string)$b['semester'] === (string)$semester) $sb += 10;
+            return $sb <=> $sa;
+        });
+        return [$exactCode[0], 100, $exactCode];
+    }
+
+    // No exact code in system → do NOT invent another module by fuzzy name
+    // (prevents ESP2112 → CL80311). Offer same-program candidates for manual pick.
+    $candidates = [];
+    foreach ($modules as $m) {
+        if ($programId && (int)$m['program_id'] !== (int)$programId) continue;
+        if ($year && (string)$m['year'] !== (string)$year) continue;
+        if ($semester !== null && $semester !== '' && (string)$m['semester'] !== (string)$semester) continue;
+        $candidates[] = $m;
+    }
+    // If too few, loosen to program only
+    if (count($candidates) < 3 && $programId) {
+        $candidates = array_values(array_filter($modules, function ($m) use ($programId) {
+            return (int)$m['program_id'] === (int)$programId;
+        }));
+    }
+
+    // Optional: exact name within program (only if excel had no usable code)
+    if ($codeN === '' && $nameN !== '') {
+        foreach ($candidates as $m) {
+            if (norm($m['name']) === $nameN) {
+                return [$m, 95, $candidates];
+            }
+        }
+    }
+
+    return [null, 0, array_slice($candidates, 0, 40)];
 }
 
 function match_facility($facilities, $room, $capacity = null) {
@@ -384,19 +427,108 @@ foreach ($input['sections'] as $secIndex => $sec) {
 
         if ($day === '') $errors[] = 'Missing day';
         if ($start === '' || $end === '') $errors[] = 'Missing time';
-        if ($moduleCode === '' && $moduleName === '') $errors[] = 'Missing module';
+        if ($moduleCode === '' && $moduleName === '' && empty($row['forced_module_id'])) {
+            $warnings[] = 'No module in Excel — pick a system module';
+        }
 
-        [$mod, $mScore] = match_module($modules, $moduleCode, $moduleName, $programId, $year ?: null);
-        if (!$mod) $errors[] = 'Module not matched: ' . ($moduleCode ?: $moduleName);
-        elseif ($mScore < 90) $warnings[] = "Module weak match ({$mScore}%): {$mod['code']} — {$mod['name']}";
+        $mod = null;
+        $mScore = 0;
+        $moduleCandidates = [];
 
-        [$fac, $fScore] = match_facility($facilities, $classroom, $capacity);
-        if ($classroom !== '' && !$fac) $errors[] = 'Facility not matched: ' . $classroom;
-        elseif ($classroom === '') $warnings[] = 'No classroom in Excel';
-        elseif ($fScore < 70) $warnings[] = "Facility weak match ({$fScore}%): {$fac['name']}";
+        // Manual override from import UI (must be a real system module id)
+        if (!empty($row['forced_module_id'])) {
+            $fid = (int)$row['forced_module_id'];
+            foreach ($modules as $m) {
+                if ((int)$m['id'] === $fid) {
+                    $mod = $m;
+                    $mScore = 100;
+                    break;
+                }
+            }
+            if (!$mod) $warnings[] = 'Selected module id not found in system';
+        } else {
+            [$mod, $mScore, $moduleCandidates] = match_module(
+                $modules,
+                $moduleCode,
+                $moduleName,
+                $programId,
+                $year ?: null,
+                $systemSemester
+            );
+            if (!$mod) {
+                $warnings[] = 'Module code not in system: ' . ($moduleCode ?: $moduleName) . ' — pick one below';
+            }
+        }
 
-        [$leader, $others, $lw] = match_lecturers($lecturers, $lecturersRaw);
-        $warnings = array_merge($warnings, $lw);
+        // Always offer program modules for manual pick (like timetable_set module selector)
+        if (empty($moduleCandidates) && $programId) {
+            foreach ($modules as $m) {
+                if ((int)$m['program_id'] !== (int)$programId) continue;
+                if ($year && (string)$m['year'] !== (string)$year) continue;
+                if ($systemSemester !== '' && (string)$m['semester'] !== (string)$systemSemester) continue;
+                $moduleCandidates[] = $m;
+            }
+            if (count($moduleCandidates) < 3) {
+                $moduleCandidates = array_values(array_filter($modules, function ($m) use ($programId) {
+                    return (int)$m['program_id'] === (int)$programId;
+                }));
+            }
+        }
+
+        $fac = null;
+        $fScore = 0;
+        if (!empty($row['forced_facility_id'])) {
+            $ffid = (int)$row['forced_facility_id'];
+            foreach ($facilities as $f) {
+                if ((int)$f['id'] === $ffid) {
+                    $fac = $f;
+                    $fScore = 100;
+                    break;
+                }
+            }
+            if (!$fac) $warnings[] = 'Selected facility not found';
+        } else {
+            [$fac, $fScore] = match_facility($facilities, $classroom, $capacity);
+            if ($classroom !== '' && !$fac) $warnings[] = 'Facility not matched: ' . $classroom . ' — pick one below';
+            elseif ($classroom === '') $warnings[] = 'No classroom in Excel — pick a facility';
+            elseif ($fScore < 70) $warnings[] = "Facility weak match ({$fScore}%): {$fac['name']}";
+        }
+
+        $leader = null;
+        $others = [];
+        if (!empty($row['forced_leader_id']) || !empty($row['forced_other_lecturer_ids'])) {
+            $flid = (int)($row['forced_leader_id'] ?? 0);
+            $fothers = $row['forced_other_lecturer_ids'] ?? [];
+            if (!is_array($fothers)) $fothers = [];
+            foreach ($lecturers as $l) {
+                if ($flid && (int)$l['id'] === $flid) {
+                    $leader = [
+                        'id' => (int)$l['id'],
+                        'names' => $l['names'] ?? ($l['name'] ?? ''),
+                        'email' => $l['email'] ?? '',
+                        'ur_email' => $l['ur_email'] ?? ''
+                    ];
+                }
+            }
+            foreach ($fothers as $oid) {
+                $oid = (int)$oid;
+                if (!$oid || ($leader && (int)$leader['id'] === $oid)) continue;
+                foreach ($lecturers as $l) {
+                    if ((int)$l['id'] === $oid) {
+                        $others[] = [
+                            'id' => (int)$l['id'],
+                            'names' => $l['names'] ?? ($l['name'] ?? ''),
+                            'email' => $l['email'] ?? '',
+                            'ur_email' => $l['ur_email'] ?? ''
+                        ];
+                        break;
+                    }
+                }
+            }
+        } else {
+            [$leader, $others, $lw] = match_lecturers($lecturers, $lecturersRaw);
+            $warnings = array_merge($warnings, $lw);
+        }
 
         $rowGroups = $sectionGroups;
         if (!empty($timeGroupNums) && $programId) {
@@ -411,6 +543,19 @@ foreach ($input['sections'] as $secIndex => $sec) {
         if ($status === 'ok') $okCount++;
         elseif ($status === 'warning') { $okCount++; $warnCount++; }
         else $errCount++;
+
+        $candOut = [];
+        foreach (array_slice($moduleCandidates ?: [], 0, 40) as $mc) {
+            $candOut[] = [
+                'id' => (int)$mc['id'],
+                'code' => $mc['code'],
+                'name' => $mc['name'],
+                'year' => $mc['year'],
+                'semester' => $mc['semester'],
+                'program_id' => (int)$mc['program_id'],
+                'credits' => $mc['credits'] ?? null
+            ];
+        }
 
         $matchedRows[] = [
             'row_index' => $rowIndex,
@@ -433,8 +578,10 @@ foreach ($input['sections'] as $secIndex => $sec) {
                 'name' => $mod['name'],
                 'year' => $mod['year'],
                 'semester' => $mod['semester'],
-                'program_id' => (int)$mod['program_id']
+                'program_id' => (int)$mod['program_id'],
+                'credits' => $mod['credits'] ?? null
             ] : null,
+            'module_candidates' => $candOut,
             'facility' => $fac ? [
                 'id' => (int)$fac['id'],
                 'name' => $fac['name'],

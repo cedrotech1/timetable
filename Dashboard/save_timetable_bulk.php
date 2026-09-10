@@ -65,6 +65,18 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
         return ['status' => 'error', 'message' => 'Missing required fields: ' . implode(', ', $missing)];
     }
 
+    // Module must exist in system (same idea as timetable_set selectedModuleId)
+    $modChk = mysqli_prepare($connection, "SELECT id FROM module WHERE id = ? LIMIT 1");
+    if ($modChk) {
+        mysqli_stmt_bind_param($modChk, 'i', $module_id);
+        mysqli_stmt_execute($modChk);
+        $modRes = mysqli_stmt_get_result($modChk);
+        if (!$modRes || !mysqli_fetch_assoc($modRes)) {
+            return ['status' => 'error', 'message' => 'Module not found in system (id ' . $module_id . ')'];
+        }
+        mysqli_stmt_close($modChk);
+    }
+
     $startSql = time_to_sql_bulk($start);
     $endSql = time_to_sql_bulk($end);
     if ($startSql >= $endSql) {
