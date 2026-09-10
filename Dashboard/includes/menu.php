@@ -147,6 +147,11 @@
                 <i class="bi bi-calendar-check"></i><span>Add Teaching Plan</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_set_bulk.php">
+                <i class="bi bi-table"></i><span>Bulk Teaching Plan</span>
+            </a>
+        </li>
 
         <!-- general timetable -->
          <li class="nav-item">
@@ -267,6 +272,11 @@ if ($role == 'dean_office') {
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_set_bulk.php">
+                <i class="bi bi-table"></i><span>Bulk Teaching Plan</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link collapsed" href="school-timetable.php">
                 <i class="bi bi-calendar-check"></i><span>School Timetable</span>
             </a>
@@ -308,6 +318,11 @@ if ($role == 'registrar_office') {
        <li class="nav-item">
             <a class="nav-link collapsed" href="timetable_set.php">
                 <i class="bi bi-calendar-check"></i><span>Add Teaching Plan</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_set_bulk.php">
+                <i class="bi bi-table"></i><span>Bulk Teaching Plan</span>
             </a>
         </li>
         <li class="nav-item">

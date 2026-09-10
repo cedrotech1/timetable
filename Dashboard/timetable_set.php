@@ -156,9 +156,14 @@ include ('./includes/menu.php');
           for <?php echo htmlspecialchars($school_name ?: 'Assigned School'); ?>
         <?php endif; ?>
       </h2>
-      <button type="button" id="btnDeleteDataTop" class="btn btn-danger btn-reset-data">
-        <i class="bi bi-trash"></i> Reset Data
-      </button>
+      <div class="d-flex gap-2 align-items-center">
+        <a href="timetable_set_bulk.php" class="btn btn-outline-light btn-sm">
+          <i class="bi bi-table"></i> Bulk plan
+        </a>
+        <button type="button" id="btnDeleteDataTop" class="btn btn-danger btn-reset-data">
+          <i class="bi bi-trash"></i> Reset Data
+        </button>
+      </div>
     </div>
 
    
