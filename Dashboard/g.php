@@ -1,14 +1,23 @@
 <?php
 // session_start();
 
+// session_start();
 $user_id = $_SESSION['id'];
-$stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-$school = $result->fetch_assoc();
-$userSchoolId = $school['school'];
+$userRole = $_SESSION['role'] ?? '';
 
+if ($userRole === 'registrar_office') {
+    // For registrar_office role, set school to null to indicate all schools
+    $userSchoolId = null;
+} else {
+    // For other roles, get their assigned school
+    $stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $school = $result->fetch_assoc();
+    $userSchoolId = $school ? $school['school'] : null;
+    $stmt->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -183,14 +192,22 @@ $userSchoolId = $school['school'];
       </div>
 
       <div id="groupsSection" class="mb-4 d-none">
-        <h5 class="fw-semibold">Groups</h5>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+          <h5 class="fw-semibold mb-0">Groups</h5>
+          <div class="btn-group btn-group-sm">
+            <button type="button" id="selectAllGroupsBtn" class="btn btn-outline-primary">Select all</button>
+            <button type="button" id="clearGroupsBtn" class="btn btn-outline-secondary">Clear</button>
+          </div>
+        </div>
+        <p class="small text-muted mb-2">Check as many groups as you need, then click <strong>Done</strong>.</p>
         <ul id="groupsList" class="list-group"></ul>
+        <div class="mt-2 small fw-semibold text-primary" id="setupSelectedCount">0 group(s) selected</div>
       </div>
     </div>
 
     <div class="d-flex justify-content-between">
       <button id="cancelSetupBtn" class="btn btn-outline-secondary">Cancel</button>
-      <button id="setupCompleteBtn" class="btn btn-primary d-none">Complete Setup</button>
+      <button id="setupCompleteBtn" class="btn btn-primary d-none">Done</button>
     </div>
   </div>
 
@@ -216,7 +233,8 @@ $userSchoolId = $school['school'];
 <script>
 $(function() {
   const STUDENTS_PER_GROUP = 20;
-  const userSchoolId = <?= json_encode($userSchoolId) ?>;
+  const userSchoolId = <?= $userSchoolId !== null ? json_encode($userSchoolId) : 'null' ?>;
+  const isRegistrarOffice = <?= $userRole === 'registrar_office' ? 'true' : 'false' ?>;
   let programs = [];
   let selectedProgram = null;
   let selectedIntake = null;
@@ -242,19 +260,36 @@ $(function() {
     $('#totalStudents').text(`Total students in selected groups: ${total}`);
   }
 
+  function isSetupOpen() {
+    return !$('#setupForm').hasClass('d-none');
+  }
+
+  function updateSetupSelectedCount() {
+    $('#setupSelectedCount').text(`${selectedGroups.length} group(s) selected`);
+  }
+
   // Show/hide setup form and group info
+  // Important: do NOT close the setup form while the user is still checking groups
   function updateUIState() {
-    if(selectedGroups.length > 0) {
-      // We have groups - show the groups list
-      $('#setupForm').addClass('d-none');
+    const setupOpen = isSetupOpen();
+
+    if (selectedGroups.length > 0) {
       $('#emptyState').addClass('d-none');
       $('#selectedGroupsContainer').removeClass('d-none');
+      if (!setupOpen) {
+        $('#setupForm').addClass('d-none');
+      }
     } else {
-      // No groups - show empty state
-      $('#setupForm').addClass('d-none');
-      $('#emptyState').removeClass('d-none');
       $('#selectedGroupsContainer').addClass('d-none');
+      if (!setupOpen) {
+        $('#setupForm').addClass('d-none');
+        $('#emptyState').removeClass('d-none');
+      } else {
+        $('#emptyState').addClass('d-none');
+      }
     }
+
+    updateSetupSelectedCount();
   }
 
   // Reset all selectors
@@ -270,8 +305,10 @@ $(function() {
 
   // Show setup form
   function showSetupForm() {
+    $('#emptyState').addClass('d-none');
     $('#setupForm').removeClass('d-none');
     resetSelectors();
+    updateSetupSelectedCount();
   }
 
   // Hide setup form
@@ -283,19 +320,44 @@ $(function() {
   function renderPrograms() {
     const $sel = $('#programSelect').empty().append('<option value="">-- Select Program --</option>');
     
-    // Show all programs for the user's school
-    const filteredPrograms = programs.filter(p => p.school_id == userSchoolId);
+    // Show all programs for registrar_office, otherwise filter by user's school
+    const filteredPrograms = isRegistrarOffice 
+      ? programs 
+      : programs.filter(p => p.school_id == userSchoolId);
     
     filteredPrograms.forEach(p => {
-      $sel.append(`<option value="${p.id}">${p.name}${p.code ? ' (' + p.code + ')' : ''}</option>`);
+      // Only show school name if it exists
+      const schoolInfo = p.school_name ? ` (${p.school_name})` : '';
+      const programCode = p.code ? ` [${p.code}]` : '';
+      
+      const hasNoIntake = !p.intakes?.length;
+      $sel.append(`<option value="${p.id}" 
+        data-has-intake="${!hasNoIntake}"
+        class="${hasNoIntake ? 'text-danger' : ''}"
+        ${hasNoIntake ? 'disabled' : ''}>
+        ${p.name}${programCode}${schoolInfo}${hasNoIntake ? ' (No student group found)' : ''}
+      </option>`);
     }); 
+    
+    if (filteredPrograms.length === 0) {
+      $sel.append('<option value="" disabled>No programs available</option>');
+    }
+    
     $('#programSection').removeClass('d-none');
   }
 
   // Render intakes dropdown in 'Year X - Campus' format
   function renderIntakes() {
-    if (!selectedProgram || !selectedProgram.intakes?.length) return $('#intakeSection').addClass('d-none');
-    const $sel = $('#intakeSelect').empty().append('<option value="">-- Select Intake --</option>');
+    const $sel = $('#intakeSelect').empty();
+    
+    // Always show the program name and indicate if no intakes
+    if (!selectedProgram || !selectedProgram.intakes?.length) {
+      $sel.append('<option value="">No intakes available (Program: ' + selectedProgram.name + ')</option>');
+      $('#intakeSection').removeClass('d-none');
+      return;
+    }
+    
+    $sel.append('<option value="">-- Select Intake --</option>');
     
     // Sort intakes by year of study (ascending) and then by campus name (A-Z)
     const sortedIntakes = [...selectedProgram.intakes].sort((a, b) => {
@@ -325,10 +387,10 @@ $(function() {
 
     const $list = $('#groupsList').empty();
     selectedIntake.groups.forEach(group => {
-      const isChecked = selectedGroups.some(g => g.id === group.id);
+      const isChecked = selectedGroups.some(g => String(g.id) === String(group.id));
       const li = $(`
         <li class="list-group-item d-flex align-items-center">
-          <input class="form-check-input me-2" type="checkbox" id="grp${group.id}" value="${group.id}" ${isChecked ? 'checked' : ''}>
+          <input class="form-check-input me-2 group-checkbox" type="checkbox" id="grp${group.id}" value="${group.id}" ${isChecked ? 'checked' : ''}>
           <label class="form-check-label flex-grow-1" for="grp${group.id}">${group.name} (${group.size || STUDENTS_PER_GROUP} students)</label>
         </li>
       `);
@@ -336,13 +398,15 @@ $(function() {
     });
     $('#groupsSection').removeClass('d-none');
     $('#setupCompleteBtn').removeClass('d-none');
+    updateSetupSelectedCount();
   }
 
   // Render selected groups cards with full info
   function renderSelectedGroups() {
     const $container = $('#selectedGroupsList').empty();
     selectedGroups.forEach(group => {
-      const campusInitials = group.campusName.split(' ').map(word => word[0]).join('').toUpperCase();
+      const campusName = group.campusName || ''; // Provide empty string as fallback
+      const campusInitials = campusName.split(' ').map(word => word[0] || '').join('').toUpperCase();
       const card = $(`
         <div class="card">
           <div class="card-header d-flex justify-content-between align-items-center">
@@ -387,16 +451,16 @@ $(function() {
 
   // Add group to selectedGroups with only essential information
   function addGroup(group, program, intake) {
-    if (!selectedGroups.some(g => g.id === group.id)) {
+    if (!selectedGroups.some(g => String(g.id) === String(group.id))) {
       selectedGroups.push({
         id: group.id,
         name: group.name,
         size: group.size,
         programName: program.name,
-        yearOfStudy: intake.year_of_study || 1,
+        yearOfStudy: intake.year_of_study || intake.year || 1,
         campusName: intake.campus_name || (intake.campus?.name || 'Unassigned')
       });
-      clickCount++; // Increment click counter
+      clickCount = selectedGroups.length;
       updateClickCounter();
       saveSelectedGroups();
     }
@@ -404,8 +468,8 @@ $(function() {
 
   // Remove group by id
   function removeGroup(id) {
-    selectedGroups = selectedGroups.filter(g => g.id !== id);
-    clickCount--; // Decrement click counter
+    selectedGroups = selectedGroups.filter(g => String(g.id) !== String(id));
+    clickCount = selectedGroups.length;
     updateClickCounter();
     saveSelectedGroups();
   }
@@ -458,6 +522,7 @@ $(function() {
                   programWithIntakes.intakes.push({
                     id: intake.id,
                     year: intake.year,
+                    year_of_study: intake.year_of_study || intake.year || 1,
                     month: intake.month,
                     campus_id: campusId,
                     campus_name: campusName,
@@ -557,10 +622,10 @@ $(function() {
     }
   });
 
-  // Group checkbox change
+  // Group checkbox change — keep picker open so many groups can be checked
   $('#groupsList').on('change', 'input[type=checkbox]', function() {
     const groupId = $(this).val();
-    const group = selectedIntake.groups.find(g => g.id == groupId);
+    const group = selectedIntake.groups.find(g => String(g.id) === String(groupId));
     if (!group) return;
 
     if (this.checked) {
@@ -568,17 +633,41 @@ $(function() {
     } else {
       removeGroup(group.id);
     }
+
+    // Refresh selected cards without closing the setup form
     renderSelectedGroups();
   });
 
-  // Remove button on selected groups card
-  $('#selectedGroupsList').on('click', '.remove-btn', function() {
+  // Select all groups in the current intake
+  $('#selectAllGroupsBtn').on('click', function() {
+    if (!selectedIntake?.groups?.length || !selectedProgram) return;
+    selectedIntake.groups.forEach(group => {
+      addGroup(group, selectedProgram, selectedIntake);
+    });
+    renderGroups();
+    renderSelectedGroups();
+  });
+
+  // Clear only groups from the current intake list (uncheck + remove those)
+  $('#clearGroupsBtn').on('click', function() {
+    if (!selectedIntake?.groups?.length) return;
+    const currentIds = selectedIntake.groups.map(g => String(g.id));
+    selectedGroups = selectedGroups.filter(g => !currentIds.includes(String(g.id)));
+    clickCount = selectedGroups.length;
+    updateClickCounter();
+    saveSelectedGroups();
+    renderGroups();
+    renderSelectedGroups();
+  });
+
+  // Remove button on selected groups card (no page reload)
+  $('#selectedGroupsList').on('click', '.remove-btn', function(e) {
+    e.preventDefault();
     const id = $(this).data('id');
     removeGroup(id);
     renderSelectedGroups();
-
-    // Uncheck if visible in groups list
     $(`#groupsList input[type=checkbox][value="${id}"]`).prop('checked', false);
+    updateSetupSelectedCount();
   });
 
   // Setup Complete button click

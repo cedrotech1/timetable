@@ -142,6 +142,12 @@
             </a>
         </li>
 
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_set.php">
+                <i class="bi bi-calendar-check"></i><span>Add Teaching Plan</span>
+            </a>
+        </li>
+
         <!-- general timetable -->
          <li class="nav-item">
             <a class="nav-link collapsed" href="general_timetable.php">

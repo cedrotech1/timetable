@@ -11,9 +11,10 @@ header('Content-Type: application/json');
 $user_id = $_SESSION['id'] ?? null;
 $user_role = $_SESSION['role'] ?? '';
 $user_school_id = null;
+$canAccessAllSchools = in_array($user_role, ['admin', 'registrar_office'], true);
 
-// For registrar_office, show all schools
-if ($user_role !== 'registrar_office') {
+// Admin / registrar_office can see all schools
+if (!$canAccessAllSchools) {
     // For other roles, get their assigned school
     $stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
     $stmt->bind_param("i", $user_id);
@@ -231,12 +232,12 @@ function getOrganizationStructure($connection) {
                 
                 // Get schools for this college
                 $schools = [];
-                global $user_school_id, $user_role;
+                global $user_school_id, $user_role, $canAccessAllSchools;
                 
                 $schoolQuery = "SELECT id, name FROM school WHERE college_id = ?";
                 
-                // For non-registrar roles, only show their assigned school
-                if ($user_role !== 'registrar_office' && $user_school_id) {
+                // For school-scoped roles, only show their assigned school
+                if (!$canAccessAllSchools && $user_school_id) {
                     $schoolQuery .= " AND id = " . intval($user_school_id);
                 }
                 

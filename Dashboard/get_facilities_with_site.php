@@ -50,8 +50,8 @@ try {
     $user_role = $_SESSION['role'] ?? '';
 
     // Handle role-based access control
-    if ($user_role === 'registrar_office') {
-        // Registrar office can see all facilities
+    if (in_array($user_role, ['admin', 'registrar_office'], true)) {
+        // Admin and registrar office can see all facilities
         $school_id = null;
     } else if ($user_role === 'dean') {
         // For deans, get their school and associated sites
@@ -189,8 +189,8 @@ $sql = "
     JOIN site s ON f.site = s.id
 ";
 
-// Add school filter only if not registrar_office
-if ($user_role !== 'registrar_office' && $school_id) {
+// Add school filter only if not admin/registrar
+if (!in_array($user_role, ['admin', 'registrar_office'], true) && $school_id) {
     $sql .= " WHERE EXISTS (
         SELECT 1 FROM site_school ss 
         WHERE ss.site_id = s.id AND ss.school_id = $schoolIdEsc

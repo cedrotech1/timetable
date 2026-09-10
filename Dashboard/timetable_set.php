@@ -26,9 +26,10 @@ if ($accademic_year_id) {
 
 $user_id = $_SESSION['id'];
 $user_role = $_SESSION['role'] ?? '';
+$canAccessAllSchools = in_array($user_role, ['admin', 'registrar_office'], true);
 
-// For registrar_office role, we don't need to check school ID
-if ($user_role !== 'registrar_office') {
+// Admin and registrar_office can add teaching plans across all schools
+if (!$canAccessAllSchools) {
     $stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
@@ -42,7 +43,7 @@ if ($user_role !== 'registrar_office') {
         exit;
     }
 } else {
-    $schoolId = null; // For registrar_office, we'll handle this specially in the queries
+    $schoolId = null; // All schools
 }
 // select school name
 $school_name = '';
@@ -145,7 +146,7 @@ include ('./includes/menu.php');
       <h2 class="text-light mb-0">
         Schedule Timetable for academic year: <?php echo htmlspecialchars($academic_year_label ?: '-'); ?>, 
         Semester <?php echo htmlspecialchars($semester ?: '-'); ?>
-        <?php if ($user_role === 'registrar_office'): ?>
+        <?php if ($canAccessAllSchools): ?>
           (All Schools)
         <?php else: ?>
           for <?php echo htmlspecialchars($school_name ?: 'Assigned School'); ?>
