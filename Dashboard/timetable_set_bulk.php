@@ -78,7 +78,8 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     .page-title h2 { font-size: 1.1rem; margin: 0; color: #fff; }
     #bulkTable th { white-space: nowrap; font-size: 0.8rem; background: #f8f9fa; }
     #bulkTable td { vertical-align: middle; }
-    #bulkTable .col-module, #bulkTable .col-facility, #bulkTable .col-leader { min-width: 180px; }
+    #bulkTable .col-module, #bulkTable .col-facility { min-width: 180px; }
+    #bulkTable .col-lecturers { min-width: 220px; max-width: 280px; }
     .picker-btn {
       width: 100%;
       text-align: left;
@@ -95,6 +96,15 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
       background: #e9ecef; border-radius: 999px; padding: 4px 10px; margin: 2px; font-size: 0.85rem;
     }
     .group-chip button { border: 0; background: transparent; color: #dc3545; }
+    .lect-tag {
+      display: inline-flex; align-items: center; gap: 4px;
+      border-radius: 999px; padding: 3px 8px; margin: 2px; font-size: 0.72rem; font-weight: 600;
+    }
+    .lect-tag.leader { background: #012a70; color: #fff; }
+    .lect-tag.other { background: #e8f5e9; color: #198754; border: 1px solid #a5d6a7; }
+    .lect-tag .role { opacity: 0.85; font-weight: 500; font-size: 0.65rem; }
+    .lect-tag button { border: 0; background: transparent; color: inherit; line-height: 1; padding: 0 0 0 2px; }
+    .lecturers-cell .btn-pick-lecturers { margin-top: 4px; }
     .picker-list { max-height: 420px; overflow: auto; }
     .picker-item {
       cursor: pointer;
@@ -112,6 +122,14 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
     .picker-item.too-small { opacity: 0.7; }
     .picker-item.too-small .cap-badge { background: #dc3545; }
     .picker-item.ok-cap .cap-badge { background: #198754; }
+    .lect-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 8px;
+      border: 1px solid #e9ecef; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+    }
+    .lect-row .lect-actions { flex-shrink: 0; display: flex; gap: 4px; flex-wrap: wrap; }
+    .lect-row .lect-actions .btn { font-size: 0.72rem; padding: 2px 8px; min-width: auto; }
+    .lect-row.selected-leader { background: #eef2ff; border-color: #c5d2ff; }
+    .lect-row.selected-other { background: #f0fdf4; border-color: #bbf7d0; }
   </style>
 </head>
 <body>
@@ -180,7 +198,7 @@ include('./includes/menu.php');
 
   <div class="card mb-3">
     <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <span class="fw-semibold">2. Add plan rows — click Module / Facility / Leader to search in a modal</span>
+      <span class="fw-semibold">2. Add plan rows — Module / Facility / Lecturers open searchable modals</span>
       <div class="d-flex gap-2">
         <button type="button" id="btnAddRow" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> Add row</button>
         <button type="button" id="btnSaveAll" class="btn btn-sm btn-success"><i class="bi bi-save"></i> Save all</button>
@@ -197,7 +215,7 @@ include('./includes/menu.php');
               <th>Start</th>
               <th>End</th>
               <th class="col-facility">Facility</th>
-              <th class="col-leader">Module leader</th>
+              <th class="col-lecturers">Lecturers</th>
               <th>Status</th>
               <th>Actions</th>
             </tr>
@@ -206,7 +224,7 @@ include('./includes/menu.php');
         </table>
       </div>
       <p class="small text-muted mt-2 mb-0">
-        Facility modal lists <strong>all free rooms</strong> for that day/time (any capacity). Use search/min capacity to filter. Required group capacity is shown for guidance.
+        Lecturers: pick one <strong>Module Leader</strong> and any number of <strong>Lecturers</strong> (same as single teaching plan). Facility modal lists all free rooms for that day/time.
       </p>
     </div>
   </div>
@@ -214,7 +232,7 @@ include('./includes/menu.php');
   <div id="bulkResultAlert" class="alert d-none" role="alert"></div>
 </main>
 
-<!-- Shared searchable picker modal -->
+<!-- Shared searchable picker modal (module / facility) -->
 <div class="modal fade" id="pickerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
@@ -246,6 +264,34 @@ include('./includes/menu.php');
   </div>
 </div>
 
+<!-- Lecturers modal: Module Leader + Lecturers (like timetable_set.php) -->
+<div class="modal fade" id="lecturerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Select Module Leader &amp; Lecturers</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3">
+          <div class="small text-muted mb-1">Selected for this row</div>
+          <div id="lectModalTags" class="border rounded p-2 bg-light min-h-40">
+            <span class="text-muted small">None yet — use Module Leader / Add Lecturer below</span>
+          </div>
+        </div>
+        <label class="form-label small mb-1">Search lecturers</label>
+        <input type="search" id="lectModalSearch" class="form-control mb-2" placeholder="Name or email...">
+        <div id="lectModalHint" class="small text-muted mb-2"></div>
+        <div id="lectModalList" class="picker-list"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="btnClearRowLecturers">Clear all</button>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
 <script src="assets/js/main.js"></script>
 <script>
@@ -265,14 +311,76 @@ include('./includes/menu.php');
   let modulesCache = [];
   let lecturersCache = [];
   let activeRow = null;
-  let pickerMode = null; // module | facility | leader
+  let pickerMode = null; // module | facility
   let facilityCache = [];
   let pickerModal;
+  let lecturerModal;
+  let draftLecturers = { leader: null, others: [] };
 
   function escapeHtml(str) {
     return String(str ?? '').replace(/[&<>"']/g, c => ({
       '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
     }[c]));
+  }
+
+  function lectName(l) {
+    return (l && (l.names || l.name)) || (l?.id ? ('User ' + l.id) : '');
+  }
+
+  function emptyLecturers() {
+    return { leader: null, others: [] };
+  }
+
+  function getRowLecturers($tr) {
+    try {
+      const raw = $tr.attr('data-lecturers');
+      if (!raw) return emptyLecturers();
+      const parsed = JSON.parse(raw);
+      return {
+        leader: parsed.leader || null,
+        others: Array.isArray(parsed.others) ? parsed.others : []
+      };
+    } catch (e) {
+      return emptyLecturers();
+    }
+  }
+
+  function setRowLecturers($tr, selection) {
+    const clean = {
+      leader: selection?.leader || null,
+      others: Array.isArray(selection?.others) ? selection.others : []
+    };
+    $tr.attr('data-lecturers', JSON.stringify(clean));
+    renderLecturersCell($tr);
+  }
+
+  function renderLecturersCell($tr) {
+    const sel = getRowLecturers($tr);
+    const $wrap = $tr.find('.lecturers-tags').empty();
+    if (!sel.leader && !sel.others.length) {
+      $wrap.html('<span class="text-muted small">No lecturers</span>');
+    } else {
+      if (sel.leader) {
+        $wrap.append(`
+          <span class="lect-tag leader" data-role="leader" data-id="${sel.leader.id}">
+            ${escapeHtml(lectName(sel.leader))}
+            <span class="role">Leader</span>
+            <button type="button" title="Remove">&times;</button>
+          </span>
+        `);
+      }
+      sel.others.forEach(l => {
+        $wrap.append(`
+          <span class="lect-tag other" data-role="other" data-id="${l.id}">
+            ${escapeHtml(lectName(l))}
+            <span class="role">Lecturer</span>
+            <button type="button" title="Remove">&times;</button>
+          </span>
+        `);
+      });
+    }
+    const count = (sel.leader ? 1 : 0) + sel.others.length;
+    $tr.find('.btn-pick-lecturers').text(count ? `Edit lecturers (${count})` : 'Add lecturers...');
   }
 
   function requiredCapacity() {
@@ -322,17 +430,6 @@ include('./includes/menu.php');
     }
   }
 
-  function setLeaderBtn($tr, lect) {
-    const $btn = $tr.find('.btn-pick-leader');
-    if (lect && lect.id) {
-      $btn.data('id', lect.id);
-      $btn.html(`${escapeHtml(lect.names || lect.name || ('User ' + lect.id))}<div class="muted">Click to change</div>`);
-    } else {
-      $btn.data('id', '');
-      $btn.html('<span class="text-muted">Search leader (optional)...</span>');
-    }
-  }
-
   function setFacilityBtn($tr, fac) {
     const $btn = $tr.find('.btn-pick-facility');
     if (fac && fac.id) {
@@ -354,7 +451,7 @@ include('./includes/menu.php');
     rowSeq += 1;
     const id = 'row_' + rowSeq;
     const tr = $(`
-      <tr data-row-id="${id}">
+      <tr data-row-id="${id}" data-lecturers='{"leader":null,"others":[]}'>
         <td class="row-num"></td>
         <td class="col-module">
           <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-module" data-id="">
@@ -369,10 +466,9 @@ include('./includes/menu.php');
             <span class="text-muted">Search free facility...</span>
           </button>
         </td>
-        <td class="col-leader">
-          <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-leader" data-id="">
-            <span class="text-muted">Search leader (optional)...</span>
-          </button>
+        <td class="col-lecturers lecturers-cell">
+          <div class="lecturers-tags"></div>
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100 btn-pick-lecturers">Add lecturers...</button>
         </td>
         <td class="row-status text-muted">Ready</td>
         <td class="text-nowrap">
@@ -387,10 +483,6 @@ include('./includes/menu.php');
       const m = modulesCache.find(x => String(x.id) === String(preset.module_id));
       if (m) setModuleBtn(tr, m);
     }
-    if (preset.leader_id) {
-      const l = lecturersCache.find(x => String(x.id) === String(preset.leader_id));
-      if (l) setLeaderBtn(tr, l);
-    }
     if (preset.facility_id) {
       setFacilityBtn(tr, {
         id: preset.facility_id,
@@ -399,6 +491,20 @@ include('./includes/menu.php');
         site_name: preset.facility_site || '',
         buildname: preset.facility_building || ''
       });
+    }
+
+    if (preset.lecturers) {
+      setRowLecturers(tr, preset.lecturers);
+    } else if (preset.leader_id || (preset.other_lecturer_ids && preset.other_lecturer_ids.length)) {
+      const leader = preset.leader_id
+        ? (lecturersCache.find(x => String(x.id) === String(preset.leader_id)) || { id: preset.leader_id, names: 'User ' + preset.leader_id })
+        : null;
+      const others = (preset.other_lecturer_ids || []).map(oid =>
+        lecturersCache.find(x => String(x.id) === String(oid)) || { id: oid, names: 'User ' + oid }
+      ).filter(l => !leader || String(l.id) !== String(leader.id));
+      setRowLecturers(tr, { leader, others });
+    } else {
+      renderLecturersCell(tr);
     }
 
     renumberRows();
@@ -412,14 +518,16 @@ include('./includes/menu.php');
   }
 
   function collectRow($tr) {
+    const lect = getRowLecturers($tr);
     return {
       module_id: parseInt($tr.find('.btn-pick-module').data('id'), 10) || 0,
       day: $tr.find('.day-select').val() || '',
       start: $tr.find('.start-select').val() || '',
       end: $tr.find('.end-select').val() || '',
       facility_id: parseInt($tr.find('.btn-pick-facility').data('id'), 10) || 0,
-      leader_id: parseInt($tr.find('.btn-pick-leader').data('id'), 10) || 0,
-      other_lecturer_ids: []
+      leader_id: lect.leader ? (parseInt(lect.leader.id, 10) || 0) : 0,
+      other_lecturer_ids: (lect.others || []).map(o => parseInt(o.id, 10)).filter(Boolean),
+      lecturers: lect
     };
   }
 
@@ -437,14 +545,91 @@ include('./includes/menu.php');
       $('#pickerHint').text(`${modulesCache.length} modules loaded`);
       renderPickerList();
       pickerModal.show();
-    } else if (mode === 'leader') {
-      $('#pickerModalTitle').text('Search module leader');
-      $('#pickerHint').text(`${lecturersCache.length} lecturers loaded — optional`);
-      renderPickerList();
-      pickerModal.show();
     } else if (mode === 'facility') {
       openFacilityPicker($tr);
     }
+  }
+
+  function openLecturerPicker($tr) {
+    activeRow = $tr;
+    const current = getRowLecturers($tr);
+    draftLecturers = {
+      leader: current.leader ? { ...current.leader } : null,
+      others: (current.others || []).map(o => ({ ...o }))
+    };
+    $('#lectModalSearch').val('');
+    renderLecturerModalTags();
+    renderLecturerModalList();
+    lecturerModal.show();
+  }
+
+  function renderLecturerModalTags() {
+    const $tags = $('#lectModalTags').empty();
+    if (!draftLecturers.leader && !draftLecturers.others.length) {
+      $tags.html('<span class="text-muted small">None yet — use Module Leader / Add Lecturer below</span>');
+      return;
+    }
+    if (draftLecturers.leader) {
+      $tags.append(`
+        <span class="lect-tag leader" data-role="leader" data-id="${draftLecturers.leader.id}">
+          ${escapeHtml(lectName(draftLecturers.leader))}
+          <span class="role">Module Leader</span>
+          <button type="button" title="Remove">&times;</button>
+        </span>
+      `);
+    }
+    draftLecturers.others.forEach(l => {
+      $tags.append(`
+        <span class="lect-tag other" data-role="other" data-id="${l.id}">
+          ${escapeHtml(lectName(l))}
+          <span class="role">Lecturer</span>
+          <button type="button" title="Remove">&times;</button>
+        </span>
+      `);
+    });
+  }
+
+  function renderLecturerModalList() {
+    const q = ($('#lectModalSearch').val() || '').toLowerCase().trim();
+    const $list = $('#lectModalList').empty();
+    const items = lecturersCache.filter(l => {
+      if (!q) return true;
+      return `${l.names || ''} ${l.name || ''} ${l.email || ''} ${l.ur_email || ''}`.toLowerCase().includes(q);
+    }).slice(0, 400);
+
+    $('#lectModalHint').text(`${items.length} shown of ${lecturersCache.length} lecturers`);
+
+    if (!items.length) {
+      $list.html('<div class="text-muted">No lecturers match.</div>');
+      return;
+    }
+
+    items.forEach(l => {
+      const isLeader = draftLecturers.leader && String(draftLecturers.leader.id) === String(l.id);
+      const isOther = draftLecturers.others.some(o => String(o.id) === String(l.id));
+      const rowClass = isLeader ? 'selected-leader' : (isOther ? 'selected-other' : '');
+      $list.append(`
+        <div class="lect-row ${rowClass}" data-id="${l.id}">
+          <div>
+            <div class="fw-semibold">${escapeHtml(lectName(l))}</div>
+            <div class="small text-muted">${escapeHtml(l.ur_email || l.email || '')}</div>
+          </div>
+          <div class="lect-actions">
+            <button type="button" class="btn btn-primary btn-sm btn-set-leader" ${isLeader ? 'disabled' : ''}>
+              ${isLeader ? 'Module Leader ✓' : 'Module Leader'}
+            </button>
+            <button type="button" class="btn btn-success btn-sm btn-add-lecturer" ${isLeader || isOther ? 'disabled' : ''}>
+              ${isOther ? 'Lecturer ✓' : 'Add Lecturer'}
+            </button>
+          </div>
+        </div>
+      `);
+    });
+  }
+
+  function applyDraftLecturersToRow() {
+    if (!activeRow) return;
+    setRowLecturers(activeRow, draftLecturers);
   }
 
   function openFacilityPicker($tr) {
@@ -474,7 +659,6 @@ include('./includes/menu.php');
     $('#pickerRequiredCap').text(requiredCapacity());
     pickerModal.show();
 
-    // Load ALL free rooms for slot (no min capacity) so user can see every capacity
     $.ajax({
       url: 'get_facilities_with_site.php',
       type: 'POST',
@@ -522,27 +706,6 @@ include('./includes/menu.php');
           <div class="picker-item" data-type="module" data-id="${m.id}">
             <div class="fw-semibold">${escapeHtml(m.code ? m.code + ' — ' : '')}${escapeHtml(m.name)}</div>
             <div class="small text-muted">Year ${m.year ?? 'N/A'} · Sem ${m.semester ?? 'N/A'} · ${escapeHtml(m.program_name || '')}</div>
-          </div>
-        `);
-      });
-      return;
-    }
-
-    if (pickerMode === 'leader') {
-      $list.append(`
-        <div class="picker-item" data-type="leader" data-id="">
-          <div class="fw-semibold text-muted">No leader (clear)</div>
-        </div>
-      `);
-      const items = lecturersCache.filter(l => {
-        if (!q) return true;
-        return `${l.names || ''} ${l.name || ''} ${l.email || ''} ${l.ur_email || ''}`.toLowerCase().includes(q);
-      }).slice(0, 400);
-      items.forEach(l => {
-        $list.append(`
-          <div class="picker-item" data-type="leader" data-id="${l.id}">
-            <div class="fw-semibold">${escapeHtml(l.names || l.name || ('User ' + l.id))}</div>
-            <div class="small text-muted">${escapeHtml(l.ur_email || l.email || '')}</div>
           </div>
         `);
       });
@@ -710,17 +873,31 @@ include('./includes/menu.php');
     const $facBtn = $tr.find('.btn-pick-facility');
     data.facility_name = $facBtn.find('strong').first().text();
     data.facility_capacity = $facBtn.data('capacity');
+    data.lecturers = getRowLecturers($tr);
     addRow(data);
   });
 
   $('#bulkTableBody').on('click', '.btn-pick-module', function () {
     openPicker('module', $(this).closest('tr'));
   });
-  $('#bulkTableBody').on('click', '.btn-pick-leader', function () {
-    openPicker('leader', $(this).closest('tr'));
-  });
   $('#bulkTableBody').on('click', '.btn-pick-facility', function () {
     openPicker('facility', $(this).closest('tr'));
+  });
+  $('#bulkTableBody').on('click', '.btn-pick-lecturers', function () {
+    openLecturerPicker($(this).closest('tr'));
+  });
+
+  // Remove lecturer tag from row cell
+  $('#bulkTableBody').on('click', '.lecturers-tags .lect-tag button', function (e) {
+    e.stopPropagation();
+    const $tr = $(this).closest('tr');
+    const $tag = $(this).closest('.lect-tag');
+    const role = $tag.data('role');
+    const id = String($tag.data('id'));
+    const sel = getRowLecturers($tr);
+    if (role === 'leader') sel.leader = null;
+    else sel.others = sel.others.filter(o => String(o.id) !== id);
+    setRowLecturers($tr, sel);
   });
 
   $('#bulkTableBody').on('change', '.day-select, .start-select, .end-select', function () {
@@ -747,18 +924,64 @@ include('./includes/menu.php');
     if (type === 'module') {
       const m = modulesCache.find(x => String(x.id) === String(id));
       setModuleBtn(activeRow, m);
-    } else if (type === 'leader') {
-      if (!id) setLeaderBtn(activeRow, null);
-      else {
-        const l = lecturersCache.find(x => String(x.id) === String(id));
-        setLeaderBtn(activeRow, l);
-      }
     } else if (type === 'facility') {
       const f = facilityCache.find(x => String(x.id) === String(id));
       setFacilityBtn(activeRow, f);
       activeRow.find('.row-status').text('Facility set').addClass('text-muted');
     }
     pickerModal.hide();
+  });
+
+  // Lecturer modal events
+  let lectSearchTimer = null;
+  $('#lectModalSearch').on('input', function () {
+    clearTimeout(lectSearchTimer);
+    lectSearchTimer = setTimeout(renderLecturerModalList, 150);
+  });
+
+  $('#lectModalList').on('click', '.btn-set-leader', function () {
+    const id = $(this).closest('.lect-row').data('id');
+    const l = lecturersCache.find(x => String(x.id) === String(id));
+    if (!l) return;
+    draftLecturers.leader = { id: l.id, names: lectName(l), email: l.email || '', ur_email: l.ur_email || '' };
+    draftLecturers.others = draftLecturers.others.filter(o => String(o.id) !== String(l.id));
+    renderLecturerModalTags();
+    renderLecturerModalList();
+    applyDraftLecturersToRow();
+  });
+
+  $('#lectModalList').on('click', '.btn-add-lecturer', function () {
+    const id = $(this).closest('.lect-row').data('id');
+    const l = lecturersCache.find(x => String(x.id) === String(id));
+    if (!l) return;
+    if (draftLecturers.leader && String(draftLecturers.leader.id) === String(l.id)) return;
+    if (draftLecturers.others.some(o => String(o.id) === String(l.id))) return;
+    draftLecturers.others.push({ id: l.id, names: lectName(l), email: l.email || '', ur_email: l.ur_email || '' });
+    renderLecturerModalTags();
+    renderLecturerModalList();
+    applyDraftLecturersToRow();
+  });
+
+  $('#lectModalTags').on('click', '.lect-tag button', function () {
+    const $tag = $(this).closest('.lect-tag');
+    const role = $tag.data('role');
+    const id = String($tag.data('id'));
+    if (role === 'leader') draftLecturers.leader = null;
+    else draftLecturers.others = draftLecturers.others.filter(o => String(o.id) !== id);
+    renderLecturerModalTags();
+    renderLecturerModalList();
+    applyDraftLecturersToRow();
+  });
+
+  $('#btnClearRowLecturers').on('click', function () {
+    draftLecturers = emptyLecturers();
+    renderLecturerModalTags();
+    renderLecturerModalList();
+    applyDraftLecturersToRow();
+  });
+
+  $('#lecturerModal').on('hidden.bs.modal', function () {
+    applyDraftLecturersToRow();
   });
 
   $('#btnClearBulk').on('click', function () {
@@ -834,6 +1057,7 @@ include('./includes/menu.php');
 
   // Init
   pickerModal = new bootstrap.Modal(document.getElementById('pickerModal'));
+  lecturerModal = new bootstrap.Modal(document.getElementById('lecturerModal'));
   renderSelectedGroups();
   loadOrganization();
   Promise.all([loadModules(), loadLecturers()]).then(() => addRow());
