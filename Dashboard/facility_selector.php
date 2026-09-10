@@ -221,20 +221,17 @@
                 serverSide: true,
                 ajax: {
                     url: 'get_facilities_with_site.php',
-                    type: 'GET',
+                    type: 'POST',
                     data: function(d) {
                         const currentSessions = getScheduleSessions();
                         return {
                             draw: d.draw || 1,
                             start: d.start || 0,
                             length: d.length || 5,
-                            search: d.search,
-                            order: d.order,
-                            columns: d.columns,
+                            'search[value]': (d.search && d.search.value) ? d.search.value : '',
                             academic_year_id: ACADEMIC_YEAR_ID,
                             semester: SEMESTER,
-                            sessions: JSON.stringify(currentSessions),
-                            minCapacity: getRequiredCapacity()
+                            sessions: JSON.stringify(currentSessions)
                         };
                     },
                     dataSrc: function(json) {
@@ -247,6 +244,10 @@
                     error: function(xhr, status, error) {
                         console.error('AJAX Error:', status, error);
                         console.error('Response:', xhr.responseText);
+                        // Stop the infinite processing spinner
+                        if ($.fn.DataTable.isDataTable('#facilitiesTable')) {
+                            table.processing(false);
+                        }
                     }
                 },
                 createdRow: function(row, data) {

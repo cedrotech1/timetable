@@ -53,7 +53,8 @@ try {
     if (in_array($user_role, ['admin', 'registrar_office'], true)) {
         // Admin and registrar office can see all facilities
         $school_id = null;
-    } else if ($user_role === 'dean') {
+    // Also treat dean_office like school-scoped users
+    } else if ($user_role === 'dean' || $user_role === 'dean_office') {
         // For deans, get their school and associated sites
         $stmt = $connection->prepare("SELECT school FROM users WHERE id = ?");
         if (!$stmt) {
@@ -100,42 +101,43 @@ try {
             sendError('No school ID found for your account', 403);
         }
     }
-// Get pagination parameters from DataTables
-$start = isset($_GET['start']) ? intval($_GET['start']) : 0;
-$length = isset($_GET['length']) ? intval($_GET['length']) : 5; // Default to 5 items per page
+// Read from POST or GET (DataTables may use either)
+$req = array_merge($_GET, $_POST);
+
+$start = isset($req['start']) ? intval($req['start']) : 0;
+$length = isset($req['length']) ? intval($req['length']) : 5;
 $search = '';
 
-// Handle search parameter safely
-if (isset($_GET['search']['value'])) {
-    $search = trim(strval($_GET['search']['value']));
+if (isset($req['search']['value'])) {
+    $search = trim(strval($req['search']['value']));
+} elseif (isset($req['search[value]'])) {
+    $search = trim(strval($req['search[value]']));
 }
 
-$minCapacity = isset($_GET['minCapacity']) ? max(0, intval($_GET['minCapacity'])) : 0;
-$academicYearId = isset($_GET['academic_year_id']) ? intval($_GET['academic_year_id']) : 0;
-$semester = isset($_GET['semester']) ? trim(strval($_GET['semester'])) : '';
+$academicYearId = isset($req['academic_year_id']) ? intval($req['academic_year_id']) : 0;
+$semester = isset($req['semester']) ? trim(strval($req['semester'])) : '';
 
 // Sessions for availability check: [{day, start, end}, ...]
 $sessions = [];
-if (!empty($_GET['sessions'])) {
-    $decoded = json_decode($_GET['sessions'], true);
+if (!empty($req['sessions'])) {
+    $decoded = json_decode($req['sessions'], true);
     if (is_array($decoded)) {
         foreach ($decoded as $s) {
             $day = trim($s['day'] ?? '');
-            $start = trim($s['start'] ?? '');
-            $end = trim($s['end'] ?? '');
-            if ($day === '' || $start === '' || $end === '') {
+            $startTime = trim($s['start'] ?? '');
+            $endTime = trim($s['end'] ?? '');
+            if ($day === '' || $startTime === '' || $endTime === '') {
                 continue;
             }
-            // Normalize to HH:MM:SS
-            if (preg_match('/^\d{2}:\d{2}$/', $start)) $start .= ':00';
-            if (preg_match('/^\d{2}:\d{2}$/', $end)) $end .= ':00';
-            if ($start >= $end) {
+            if (preg_match('/^\d{2}:\d{2}$/', $startTime)) $startTime .= ':00';
+            if (preg_match('/^\d{2}:\d{2}$/', $endTime)) $endTime .= ':00';
+            if ($startTime >= $endTime) {
                 continue;
             }
             $sessions[] = [
                 'day' => $day,
-                'start' => $start,
-                'end' => $end,
+                'start' => $startTime,
+                'end' => $endTime,
             ];
         }
     }
@@ -143,11 +145,10 @@ if (!empty($_GET['sessions'])) {
 
 // Use the start and length parameters directly from DataTables
 $offset = $start;
-$perPage = $length;
+$perPage = max(1, $length);
 
 $searchEsc = mysqli_real_escape_string($connection, $search);
 $schoolIdEsc = $school_id ? intval($school_id) : 0;
-$minCapacityEsc = intval($minCapacity);
 $academicYearEsc = intval($academicYearId);
 $semesterEsc = mysqli_real_escape_string($connection, $semester);
 
@@ -173,11 +174,11 @@ function buildAvailabilityCondition($connection, $sessions, $academicYearEsc, $s
     }
 
     $overlapSql = implode(' OR ', $overlapParts);
-    return " AND f.id NOT IN (
-        SELECT DISTINCT t.facility_id
+    return " AND NOT EXISTS (
+        SELECT 1
         FROM timetable t
         INNER JOIN timetable_sessions ts ON ts.timetable_id = t.id
-        WHERE t.facility_id IS NOT NULL
+        WHERE t.facility_id = f.id
           AND t.academic_year_id = $academicYearEsc
           AND t.semester = '$semesterEsc'
           AND ($overlapSql)
@@ -210,9 +211,7 @@ if ($search !== '') {
     $whereConditions[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
 }
 
-if ($minCapacityEsc > 0) {
-    $whereConditions[] = "f.capacity >= $minCapacityEsc";
-}
+// Note: do not hard-filter by minCapacity here — capacity is shown as status in the UI
 
 // Combine all conditions
 if (!empty($whereConditions)) {
@@ -269,10 +268,6 @@ if ($search !== '') {
     $dataWhere[] = "(f.name LIKE '%$searchEsc%' OR s.name LIKE '%$searchEsc%' OR f.buildname LIKE '%$searchEsc%')";
 }
 
-if ($minCapacityEsc > 0) {
-    $dataWhere[] = "f.capacity >= $minCapacityEsc";
-}
-
 if (!empty($dataWhere)) {
     $sql .= " WHERE " . implode(' AND ', $dataWhere);
 }
@@ -295,7 +290,7 @@ while ($facility = mysqli_fetch_assoc($result)) {
 }
 
 // Prepare the response in DataTables expected format
-$draw = isset($_GET['draw']) ? intval($_GET['draw']) : 1;
+$draw = isset($req['draw']) ? intval($req['draw']) : 1;
 
 // Format the facilities data to match the expected structure
 $formattedData = [];
@@ -325,38 +320,15 @@ foreach ($facilities as $facility) {
 
 $response = [
     'draw' => $draw,
-    'recordsTotal' => $totalRecords,    // Total records in the database
-    'recordsFiltered' => $filteredRecords, // Total records after filtering (same as total for now)
+    'recordsTotal' => $totalRecords,
+    'recordsFiltered' => $filteredRecords,
     'data' => $formattedData
 ];
 
-// Log the response for debugging
-error_log('Sending response: ' . print_r($response, true));
-
-// Set content type and prevent caching
 header('Content-Type: application/json');
 header('Cache-Control: no-cache, must-revalidate');
 header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
 
-// Clear any previous output
-ob_clean();
-
-// Output the JSON
-$json = json_encode($response);
-
-// Check for JSON encoding errors
-if ($json === false) {
-    $response = [
-        'draw' => $draw,
-        'recordsTotal' => 0,
-        'recordsFiltered' => 0,
-        'data' => [],
-        'error' => 'JSON Encode Error: ' . json_last_error_msg()
-    ];
-    $json = json_encode($response);
-}
-
-// Output the response
 ob_clean();
 echo json_encode($response);
 exit;
