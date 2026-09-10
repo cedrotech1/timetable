@@ -113,7 +113,7 @@ function saveOneTimetableRow($connection, $user_id, $user_role, $academic_year_i
         WHERE t.facility_id = ?
           AND t.academic_year_id = ?
           AND t.semester = ?
-          AND LOWER(t.status) = 'approved'
+          AND LOWER(t.status) IN ('approved', 'pending')
           AND s.day = ?
           AND s.start_time < ?
           AND s.end_time > ?

@@ -172,9 +172,11 @@ include('./includes/menu.php');
       <div class="row g-2 align-items-end">
         <div class="col-md-4">
           <label class="form-label small mb-1">Program</label>
-          <select id="programSelect" class="form-select form-select-sm">
+          <input type="search" id="programSearch" class="form-control form-control-sm mb-1" placeholder="Search program by name or code...">
+          <select id="programSelect" class="form-select form-select-sm" size="6" style="min-height: 140px;">
             <option value="">-- Select program --</option>
           </select>
+          <div class="small text-muted mt-1"><span id="programMatchCount">0</span> programs shown</div>
         </div>
         <div class="col-md-3">
           <label class="form-label small mb-1">Intake</label>
@@ -189,6 +191,7 @@ include('./includes/menu.php');
           </div>
         </div>
       </div>
+      <p class="small text-muted mt-2 mb-0">Modules are limited to the selected groups’ program / year / semester. Facilities already saved (approved or pending) or set on another overlapping row are treated as taken.</p>
       <div class="mt-3">
         <div class="small text-muted mb-1">Selected groups (<span id="selectedGroupCount">0</span>) — capacity: <strong id="requiredCapacity">0</strong></div>
         <div id="selectedGroupChips"></div>
@@ -564,8 +567,15 @@ include('./includes/menu.php');
     $('.facility-only').toggleClass('d-none', mode !== 'facility');
 
     if (mode === 'module') {
-      $('#pickerModalTitle').text('Search module');
-      $('#pickerHint').text(`${modulesCache.length} modules loaded`);
+      if (!selectedGroups.length) {
+        alert('Please select at least one group first. Modules are filtered by those groups.');
+        return;
+      }
+      const matched = modulesForSelectedGroups();
+      $('#pickerModalTitle').text('Search module (matching selected groups)');
+      const years = [...new Set(selectedGroups.map(g => g.year_of_study).filter(Boolean))].join(', ');
+      const progIds = [...new Set(selectedGroups.map(g => g.program_id).filter(Boolean))];
+      $('#pickerHint').text(`${matched.length} modules for program(s) ${progIds.join(', ')} · year ${years || '?'} · semester ${SEM || '?'}`);
       renderPickerList();
       pickerModal.show();
     } else if (mode === 'facility') {
@@ -681,7 +691,7 @@ include('./includes/menu.php');
     }
 
     $('#pickerModalTitle').text(`Free facilities — ${day} ${start}-${end}`);
-    $('#pickerHint').text('Loading all free facilities for this slot...');
+    $('#pickerHint').text('Loading free facilities (excludes approved/pending bookings and rooms set on other rows)...');
     $('#pickerList').html('<div class="text-center py-4 text-muted">Loading...</div>');
     $('#pickerRequiredCap').text(requiredCapacity());
     pickerModal.show();
@@ -703,7 +713,9 @@ include('./includes/menu.php');
     }).done(function (json) {
       facilityCache = Array.isArray(json?.data) ? json.data : [];
       facilityCache.sort((a, b) => (b.capacity || 0) - (a.capacity || 0));
-      $('#pickerHint').text(`${facilityCache.length} free facilities (all capacities). Required students: ${requiredCapacity()}.`);
+      const taken = getTakenFacilityIds(activeRow, day, start, end);
+      const freeCount = facilityCache.filter(f => !taken.has(String(f.id))).length;
+      $('#pickerHint').text(`${freeCount} free facilities shown (saved approved/pending excluded; ${taken.size} already set on other overlapping rows). Required students: ${requiredCapacity()}.`);
       renderPickerList();
     }).fail(function (xhr) {
       console.error(xhr.responseText);
@@ -719,13 +731,18 @@ include('./includes/menu.php');
     const req = requiredCapacity();
 
     if (pickerMode === 'module') {
-      const items = modulesCache.filter(m => {
+      const matched = modulesForSelectedGroups();
+      const items = matched.filter(m => {
         if (!q) return true;
         return `${m.code || ''} ${m.name || ''} ${m.program_name || ''}`.toLowerCase().includes(q);
       }).slice(0, 400);
 
+      if (!selectedGroups.length) {
+        $list.html('<div class="text-muted">Select groups first to see matching modules.</div>');
+        return;
+      }
       if (!items.length) {
-        $list.html('<div class="text-muted">No modules match.</div>');
+        $list.html('<div class="text-muted">No modules match these groups (program / year / semester).</div>');
         return;
       }
       items.forEach(m => {
@@ -744,14 +761,20 @@ include('./includes/menu.php');
       if ($('#pickerFitRequired').is(':checked')) minCap = req;
       if (!Number.isFinite(minCap) || minCap < 0) minCap = 0;
 
+      const day = activeRow ? activeRow.find('.day-select').val() : '';
+      const start = activeRow ? activeRow.find('.start-select').val() : '';
+      const end = activeRow ? activeRow.find('.end-select').val() : '';
+      const takenOnRows = (day && start && end) ? getTakenFacilityIds(activeRow, day, start, end) : new Set();
+
       const items = facilityCache.filter(f => {
+        if (takenOnRows.has(String(f.id))) return false;
         if ((f.capacity || 0) < minCap) return false;
         if (!q) return true;
         return `${f.name || ''} ${f.site_name || ''} ${f.buildname || ''} ${f.type || ''} ${f.capacity || ''}`.toLowerCase().includes(q);
       });
 
       if (!items.length) {
-        $list.html('<div class="text-muted">No free facilities match this search/capacity filter.</div>');
+        $list.html('<div class="text-muted">No free facilities match (saved bookings + other rows on this page are excluded).</div>');
         return;
       }
 
@@ -771,6 +794,31 @@ include('./includes/menu.php');
         `);
       });
     }
+  }
+
+  function renderProgramOptions() {
+    const q = ($('#programSearch').val() || '').toLowerCase().trim();
+    const current = $('#programSelect').val();
+    const $sel = $('#programSelect').empty();
+    let shown = 0;
+    programs.forEach(p => {
+      const label = `${p.name}${p.code ? ' [' + p.code + ']' : ''}${p.school_name ? ' (' + p.school_name + ')' : ''}`;
+      const hay = `${p.name || ''} ${p.code || ''} ${p.school_name || ''}`.toLowerCase();
+      if (q && !hay.includes(q)) return;
+      shown += 1;
+      $sel.append(`<option value="${p.id}">${escapeHtml(label)}</option>`);
+    });
+    if (!shown) {
+      $sel.append('<option value="">No programs match search</option>');
+    } else {
+      $sel.prepend('<option value="">-- Select program --</option>');
+    }
+    if (current && $sel.find(`option[value="${current}"]`).length) {
+      $sel.val(current);
+    } else {
+      $sel.val('');
+    }
+    $('#programMatchCount').text(shown);
   }
 
   function loadOrganization() {
@@ -801,11 +849,7 @@ include('./includes/menu.php');
             });
           });
         });
-        const $sel = $('#programSelect').empty().append('<option value="">-- Select program --</option>');
-        programs.forEach(p => {
-          const label = `${p.name}${p.code ? ' [' + p.code + ']' : ''}${p.school_name ? ' (' + p.school_name + ')' : ''}`;
-          $sel.append(`<option value="${p.id}">${escapeHtml(label)}</option>`);
-        });
+        renderProgramOptions();
       })
       .fail(() => alert('Failed to load organization structure.'));
   }
@@ -815,6 +859,50 @@ include('./includes/menu.php');
       .done(function (res) {
         modulesCache = (res && res.success && Array.isArray(res.data)) ? res.data : [];
       });
+  }
+
+  function moduleMatchesGroups(m) {
+    if (!selectedGroups.length) return false;
+    return selectedGroups.some(g => {
+      const sameProgram = String(m.program_id) === String(g.program_id);
+      const sameYear = String(m.year) === String(g.year_of_study);
+      const sameSem = !SEM || String(m.semester) === String(SEM);
+      return sameProgram && sameYear && sameSem;
+    });
+  }
+
+  function modulesForSelectedGroups() {
+    if (!selectedGroups.length) return [];
+    return modulesCache.filter(moduleMatchesGroups);
+  }
+
+  function clearInvalidModulesOnRows() {
+    $('#bulkTableBody tr').each(function () {
+      const $tr = $(this);
+      const mid = parseInt($tr.find('.btn-pick-module').data('id'), 10) || 0;
+      if (!mid) return;
+      const m = modulesCache.find(x => String(x.id) === String(mid));
+      if (!m || !moduleMatchesGroups(m)) {
+        setModuleBtn($tr, null);
+        $tr.find('.row-status').text('Re-pick module (groups changed)').removeClass('text-success').addClass('text-muted');
+      }
+    });
+  }
+
+  function getTakenFacilityIds($exceptTr, day, start, end) {
+    const taken = new Set();
+    $('#bulkTableBody tr').each(function () {
+      if ($exceptTr && this === $exceptTr[0]) return;
+      const $tr = $(this);
+      const fid = parseInt($tr.find('.btn-pick-facility').data('id'), 10) || 0;
+      if (!fid) return;
+      const d = $tr.find('.day-select').val();
+      const s = $tr.find('.start-select').val();
+      const e = $tr.find('.end-select').val();
+      if (!d || !s || !e || d !== day) return;
+      if (timesOverlap(start, end, s, e)) taken.add(String(fid));
+    });
+    return taken;
   }
 
   function loadLecturers() {
@@ -830,6 +918,12 @@ include('./includes/menu.php');
   }
 
   // Events
+  let programSearchTimer = null;
+  $('#programSearch').on('input', function () {
+    clearTimeout(programSearchTimer);
+    programSearchTimer = setTimeout(renderProgramOptions, 120);
+  });
+
   $('#programSelect').on('change', function () {
     const id = $(this).val();
     selectedProgram = programs.find(p => String(p.id) === String(id)) || null;
@@ -857,7 +951,9 @@ include('./includes/menu.php');
       $list.append(`
         <div class="form-check">
           <input class="form-check-input group-check" type="checkbox" value="${g.id}" id="g${g.id}" ${checked}
-                 data-name="${escapeHtml(g.name)}" data-size="${g.size || 0}">
+                 data-name="${escapeHtml(g.name)}" data-size="${g.size || 0}"
+                 data-program-id="${selectedProgram?.id || ''}"
+                 data-year="${selectedIntake?.year_of_study || ''}">
           <label class="form-check-label" for="g${g.id}">${escapeHtml(g.name)} (${g.size || 0})</label>
         </div>
       `);
@@ -868,14 +964,17 @@ include('./includes/menu.php');
     const id = $(this).val();
     const name = $(this).data('name');
     const size = parseInt($(this).data('size'), 10) || 0;
+    const program_id = parseInt($(this).data('program-id'), 10) || (selectedProgram?.id ? parseInt(selectedProgram.id, 10) : 0);
+    const year_of_study = parseInt($(this).data('year'), 10) || (selectedIntake?.year_of_study ? parseInt(selectedIntake.year_of_study, 10) : 0);
     if (this.checked) {
       if (!selectedGroups.some(g => String(g.id) === String(id))) {
-        selectedGroups.push({ id: parseInt(id, 10), name, size });
+        selectedGroups.push({ id: parseInt(id, 10), name, size, program_id, year_of_study });
       }
     } else {
       selectedGroups = selectedGroups.filter(g => String(g.id) !== String(id));
     }
     renderSelectedGroups();
+    clearInvalidModulesOnRows();
   });
 
   $('#selectedGroupChips').on('click', 'button', function () {
@@ -883,6 +982,7 @@ include('./includes/menu.php');
     selectedGroups = selectedGroups.filter(g => String(g.id) !== id);
     renderSelectedGroups();
     syncGroupChecks();
+    clearInvalidModulesOnRows();
   });
 
   $('#btnAddRow').on('click', function () {
@@ -1071,16 +1171,23 @@ include('./includes/menu.php');
         $tr.addClass('row-fail');
         $tr.find('.row-status').text('Invalid time range').removeClass('text-muted').addClass('text-danger');
       } else {
-        const facCap = parseInt($tr.find('.btn-pick-facility').data('capacity'), 10) || 0;
-        if (reqCap > 0 && facCap > 0 && facCap < reqCap) {
-          issues.push({
-            row: idx,
-            soft: true,
-            message: `Facility capacity (${facCap}) is below required students (${reqCap}).`
-          });
-          $tr.find('.row-status').text(`Capacity low (${facCap}<${reqCap})`).removeClass('text-muted').addClass('text-danger');
+        const m = modulesCache.find(x => String(x.id) === String(row.module_id));
+        if (!m || !moduleMatchesGroups(m)) {
+          issues.push({ row: idx, message: 'Module does not match selected groups (program / year / semester).' });
+          $tr.addClass('row-fail');
+          $tr.find('.row-status').text('Module not for these groups').removeClass('text-muted').addClass('text-danger');
         } else {
-          $tr.find('.row-status').text('Ready');
+          const facCap = parseInt($tr.find('.btn-pick-facility').data('capacity'), 10) || 0;
+          if (reqCap > 0 && facCap > 0 && facCap < reqCap) {
+            issues.push({
+              row: idx,
+              soft: true,
+              message: `Facility capacity (${facCap}) is below required students (${reqCap}).`
+            });
+            $tr.find('.row-status').text(`Capacity low (${facCap}<${reqCap})`).removeClass('text-muted').addClass('text-danger');
+          } else {
+            $tr.find('.row-status').text('Ready');
+          }
         }
       }
       rows.push(row);
