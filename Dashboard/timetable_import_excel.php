@@ -537,62 +537,97 @@ include('./includes/menu.php');
   }
 
   function isHeaderRow(cells) {
-    const joined = cells.map(c => String(c || '').toLowerCase()).join(' | ');
-    return joined.includes('day') && (joined.includes('module code') || joined.includes('module/course') || joined.includes('module'));
+    const parts = cells.map(c => String(c || '').toLowerCase().replace(/\s+/g, ' ').trim());
+    const joined = parts.join(' | ');
+    const hasDay = parts.some(t => t === 'day' || t.startsWith('day '));
+    const hasModule = parts.some(t =>
+      t.includes('module code') || t.includes('module/course') || t === 'module' ||
+      (t.includes('module') && t.includes('name')) || t.includes('course name')
+    );
+    const hasTime = parts.some(t => t === 'time' || t.includes('time'));
+    return hasDay && hasModule && (hasTime || joined.includes('lecturer') || joined.includes('classroom'));
   }
 
   function findColMap(cells) {
     const map = {};
     cells.forEach((c, i) => {
       const t = String(c || '').toLowerCase().replace(/\s+/g, ' ').trim();
-      if (t === 'day') map.day = i;
-      else if (t === 'time') map.time = i;
-      else if (t.includes('module code')) map.module_code = i;
+      if (t === 'day' || /^day\b/.test(t)) map.day = i;
+      else if (t === 'time' || /^time\b/.test(t)) map.time = i;
+      else if (t.includes('module code') || t === 'code') map.module_code = i;
       else if (t.includes('module/course') || t.includes('course name') || (t.includes('module') && t.includes('name'))) map.module_name = i;
-      else if (t.includes('lecturer')) map.lecturers = i;
-      else if (t.includes('room capacity') || t === 'capacity') map.room_capacity = i;
-      else if (t.includes('class room') || t.includes('classroom') || t === 'room') map.classroom = i;
-      else if (t.includes('number of students') || t.includes('no of students')) map.students = i;
+      else if (/^lecturer/.test(t) && !t.includes('no of') && !t.includes('number')) map.lecturers = i;
+      else if (t.includes('room capacity') || (t.includes('capacity') && !t.includes('student'))) map.room_capacity = i;
+      else if (t.includes('class room') || t.includes('classroom') || t === 'room' || t === 'venue') map.classroom = i;
+      else if (t.includes('number of students') || t.includes('no of students') || t === 'students') map.students = i;
     });
+    // Fallback: if lecturer column not found, accept any "lecturer" header that isn't a count
+    if (map.lecturers == null) {
+      cells.forEach((c, i) => {
+        const t = String(c || '').toLowerCase().replace(/\s+/g, ' ').trim();
+        if (t.includes('lecturer') && !t.includes('no of') && !t.includes('number of lect')) map.lecturers = i;
+      });
+    }
     return map;
   }
 
   function parseSectionTitle(text) {
     const t = String(text || '').replace(/\s+/g, ' ').trim();
-    if (!/^year\s*\d+/i.test(t) && !/group\s*\d+/i.test(t)) return null;
-    if (/^day\b/i.test(t)) return null;
+    if (!t || t.length < 8) return null;
+    // Skip pure column header lines
+    if (/^day\b/i.test(t) && /module/i.test(t)) return null;
+    if (/^day\s*$/i.test(t)) return null;
+
+    const hasYear = /year\s*\d+/i.test(t);
+    const hasGroup = /group\s*\d+/i.test(t);
+    const hasProgram = /bachelor|master|diploma|honou?rs|bba|programme|program|accounting|transport|finance|management|science|education|engineering/i.test(t);
+    // Section banners look like: "Year 2 : BACHELOR … GROUP 1 & 2 = 109 EACH GROUP"
+    if (!(hasYear || (hasGroup && hasProgram) || (hasGroup && t.length > 40))) return null;
+    // Avoid treating a normal data row as a section (module codes are short)
+    if (/^[A-Z]{2,}\d{3,}/i.test(t) && t.length < 40) return null;
+
     const yearM = t.match(/year\s*(\d+)/i);
     const year = yearM ? parseInt(yearM[1], 10) : 0;
-    const afterYear = t.replace(/^year\s*\d+\s*[:\-]?\s*/i, '');
+    const afterYear = t.replace(/^year\s*\d+\s*[:\-–]?\s*/i, '');
     const program_hint = afterYear.split(/,?\s*GROUP/i)[0].trim();
     return { title: t, year, program_hint, group_hint: t };
+  }
+
+  function looksLikeDataRow(cells, colMap) {
+    if (!colMap) return false;
+    const dayIdx = colMap.day;
+    const timeIdx = colMap.time;
+    const codeIdx = colMap.module_code;
+    const day = dayIdx != null ? String(cells[dayIdx] || '') : '';
+    const time = timeIdx != null ? String(cells[timeIdx] || '') : '';
+    const code = codeIdx != null ? String(cells[codeIdx] || '') : '';
+    if (normalizeDayName(day) && /monday|tuesday|wednesday|thursday|friday|saturday|sunday/i.test(normalizeDayName(day))) return true;
+    if (/\d{1,2}:\d{2}/.test(time)) return true;
+    if (/^[A-Z]{2,}\s*\d{3,}/i.test(code.trim())) return true;
+    return false;
   }
 
   function parseSheetToSections(aoa, sheetName) {
     const sections = [];
     let current = null;
     let colMap = null;
+    let lastColMap = null;
     let lastDay = '';
+    let titlesSeen = 0;
 
     for (let r = 0; r < aoa.length; r++) {
       const row = aoa[r] || [];
       const cells = row.map(c => (c == null ? '' : String(c).replace(/\r?\n/g, ' ').trim()));
       const first = cells[0] || '';
+      // Prefer longest cell as title candidate (merged titles often land in one wide cell)
+      const longest = cells.reduce((a, b) => (String(b).length > String(a).length ? b : a), '');
       const line = cells.filter(Boolean).join(' ').trim();
       if (!line) continue;
 
-      const sec = parseSectionTitle(line) || parseSectionTitle(first);
-      if (sec && !isHeaderRow(cells)) {
-        current = { ...sec, sheet: sheetName || '', rows: [] };
-        sections.push(current);
-        colMap = null;
-        lastDay = '';
-        continue;
-      }
-
+      // Column headers — keep as lastColMap for following sections that omit a new header row
       if (isHeaderRow(cells)) {
         colMap = findColMap(cells);
-        // If no Year/Group header yet, start a sheet-level section
+        lastColMap = colMap;
         if (!current) {
           current = {
             title: (sheetName ? sheetName + ' — ' : '') + 'Untitled section',
@@ -606,10 +641,25 @@ include('./includes/menu.php');
         }
         continue;
       }
-      if (!current || !colMap) continue;
+
+      const sec = parseSectionTitle(line) || parseSectionTitle(first) || parseSectionTitle(longest);
+      // New Year/Group section — do NOT clear colMap (Excel often repeats Day/Time headers,
+      // but when it doesn't, earlier versions dropped every following row → only last section kept)
+      if (sec && !looksLikeDataRow(cells, colMap || lastColMap)) {
+        titlesSeen++;
+        current = { ...sec, sheet: sheetName || '', rows: [] };
+        sections.push(current);
+        // Reuse previous headers if this section has no header row of its own
+        colMap = lastColMap;
+        lastDay = '';
+        continue;
+      }
+
+      const activeMap = colMap || lastColMap;
+      if (!current || !activeMap) continue;
 
       const get = (key) => {
-        const idx = colMap[key];
+        const idx = activeMap[key];
         return idx == null ? '' : (cells[idx] || '');
       };
 
@@ -637,17 +687,26 @@ include('./includes/menu.php');
         students: parseInt(get('students'), 10) || null
       });
     }
-    return sections.filter(s => s.rows.length > 0);
+
+    const kept = sections.filter(s => s.rows.length > 0);
+    kept._parseMeta = { titlesSeen, sectionsWithRows: kept.length, emptySections: sections.length - kept.length };
+    return kept;
   }
 
   function parseWorkbookToSections(wb) {
     const all = [];
+    let meta = { sheets: 0, titlesSeen: 0, emptySections: 0 };
     (wb.SheetNames || []).forEach(name => {
       const sheet = wb.Sheets[name];
       if (!sheet) return;
+      meta.sheets++;
       const aoa = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '', raw: false });
-      parseSheetToSections(aoa, name).forEach(s => all.push(s));
+      const parts = parseSheetToSections(aoa, name);
+      meta.titlesSeen += parts._parseMeta?.titlesSeen || 0;
+      meta.emptySections += parts._parseMeta?.emptySections || 0;
+      parts.forEach(s => all.push(s));
     });
+    all._parseMeta = meta;
     return all;
   }
 
@@ -1482,7 +1541,13 @@ include('./includes/menu.php');
         return;
       }
       parsedSections = parsed;
-      setStatus(`Parsed ${parsed.length} section(s) from ${wb.SheetNames.length} sheet(s). Matching…`);
+      const meta = parsed._parseMeta || {};
+      const rowTotal = parsed.reduce((n, s) => n + (s.rows?.length || 0), 0);
+      setStatus(
+        `Parsed ${parsed.length} section(s), ${rowTotal} row(s) from ${meta.sheets || '?'} sheet(s)` +
+        (meta.titlesSeen ? ` (${meta.titlesSeen} Year/Group headers found)` : '') +
+        `. Matching…`
+      );
       await rematchSections(parsedSections);
       const st = schoolStats();
       setStatus(
