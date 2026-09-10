@@ -152,6 +152,11 @@
                 <i class="bi bi-table"></i><span>Bulk Teaching Plan</span>
             </a>
         </li>
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_import_excel.php">
+                <i class="bi bi-file-earmark-excel"></i><span>Import Timetable Excel</span>
+            </a>
+        </li>
 
         <!-- general timetable -->
          <li class="nav-item">
@@ -277,6 +282,11 @@ if ($role == 'dean_office') {
             </a>
         </li>
         <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_import_excel.php">
+                <i class="bi bi-file-earmark-excel"></i><span>Import Timetable Excel</span>
+            </a>
+        </li>
+        <li class="nav-item">
             <a class="nav-link collapsed" href="school-timetable.php">
                 <i class="bi bi-calendar-check"></i><span>School Timetable</span>
             </a>
@@ -323,6 +333,11 @@ if ($role == 'registrar_office') {
         <li class="nav-item">
             <a class="nav-link collapsed" href="timetable_set_bulk.php">
                 <i class="bi bi-table"></i><span>Bulk Teaching Plan</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link collapsed" href="timetable_import_excel.php">
+                <i class="bi bi-file-earmark-excel"></i><span>Import Timetable Excel</span>
             </a>
         </li>
         <li class="nav-item">
