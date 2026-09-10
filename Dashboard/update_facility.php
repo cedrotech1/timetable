@@ -107,17 +107,18 @@ try {
         throw new Exception('Failed to execute statement: ' . $stmt->error);
     }
 
-    if ($stmt->affected_rows > 0) {
+    if ($stmt->affected_rows >= 0) {
         $response = [
             'success' => true, 
-            'message' => 'Facility updated successfully',
+            'message' => $stmt->affected_rows > 0
+                ? 'Facility updated successfully'
+                : 'Facility saved (values unchanged)',
             'affected_rows' => $stmt->affected_rows
         ];
     } else {
-        // No rows affected, facility might not exist or no changes made
         $response = [
             'success' => false, 
-            'message' => 'No changes made or facility not found',
+            'message' => 'Failed to update facility',
             'affected_rows' => 0
         ];
     }

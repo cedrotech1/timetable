@@ -10,11 +10,21 @@ if (!$facility_id) {
 }
 
 // Get facility
-$stmt = $connection->prepare("SELECT f.*, c.name AS campus_name FROM facility f LEFT JOIN campus c ON f.campus_id = c.id WHERE f.id = ?");
+$stmt = $connection->prepare("
+    SELECT f.*, c.name AS campus_name, s.name AS site_name
+    FROM facility f
+    LEFT JOIN campus c ON f.campus_id = c.id
+    LEFT JOIN site s ON f.site = s.id
+    WHERE f.id = ?
+");
 $stmt->bind_param("i", $facility_id);
 $stmt->execute();
 $result = $stmt->get_result();
 $facility = $result->fetch_assoc() ?: [];
+if (!$facility) {
+    header("Location: facilities.php");
+    exit;
+}
 
 // Get facility timetables with groups and sessions
 $stmt2 = $connection->prepare("
@@ -408,10 +418,15 @@ sort($time_slots);
     <main id="main" class="main">
         <!-- Facility Header -->
         <div class="facility-header">
-            <h2 class="mb-3">
-                <i class="bi bi-building"></i> 
-                <?= htmlspecialchars($facility['name'] ?? 'Unknown Facility') ?>
-            </h2>
+            <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+                <h2 class="mb-0">
+                    <i class="bi bi-building"></i>
+                    <?= htmlspecialchars($facility['name'] ?? 'Unknown Facility') ?>
+                </h2>
+                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#editFacilityModal">
+                    <i class="bi bi-pencil-square"></i> Edit facility
+                </button>
+            </div>
             <div class="facility-info">
             <div class="info-item">
                     <i class="bi bi-tag me-2"></i>
@@ -435,11 +450,15 @@ sort($time_slots);
                 </div>
                 <div class="info-item">
                     <i class="bi bi-people me-2"></i>
-                    <strong>Capacity:</strong> <?= $facility['capacity'] ?? 'N/A' ?>
+                    <strong>Capacity / Size:</strong> <span id="displayCapacity"><?= htmlspecialchars((string)($facility['capacity'] ?? 'N/A')) ?></span>
                 </div>
                 <div class="info-item">
                     <i class="bi bi-geo-alt me-2"></i>
                     <strong>Campus:</strong> <?= htmlspecialchars($facility['campus_name'] ?? 'N/A') ?>
+                </div>
+                <div class="info-item">
+                    <i class="bi bi-geo me-2"></i>
+                    <strong>Site:</strong> <?= htmlspecialchars($facility['site_name'] ?? 'N/A') ?>
                 </div>
                 <hr>
                 <br>
@@ -454,6 +473,64 @@ sort($time_slots);
                     <strong>Semester:</strong> <?= $semester ?>
                 </div>
                 <hr>             
+            </div>
+        </div>
+
+        <!-- Edit Facility Modal -->
+        <div class="modal fade" id="editFacilityModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Facility</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <form id="editFacilityForm">
+                        <div class="modal-body">
+                            <div id="editFacilityAlert" class="alert d-none" role="alert"></div>
+                            <input type="hidden" name="id" value="<?= (int)$facility['id'] ?>">
+                            <input type="hidden" name="site_id" value="<?= (int)($facility['site'] ?? 0) ?>">
+                            <input type="hidden" name="campus_id" value="<?= (int)($facility['campus_id'] ?? 0) ?>">
+
+                            <div class="mb-3">
+                                <label class="form-label">Name</label>
+                                <input type="text" class="form-control" name="name" required
+                                       value="<?= htmlspecialchars($facility['name'] ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Name 2</label>
+                                <input type="text" class="form-control" name="name2"
+                                       value="<?= htmlspecialchars($facility['name2'] ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Type</label>
+                                <input type="text" class="form-control" name="type" required
+                                       value="<?= htmlspecialchars($facility['type'] ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Capacity / Size <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="capacity" min="1" required
+                                       value="<?= (int)($facility['capacity'] ?? 0) ?>">
+                                <div class="form-text">Number of seats / students this facility can hold.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Building name</label>
+                                <input type="text" class="form-control" name="buildname"
+                                       value="<?= htmlspecialchars($facility['buildname'] ?? '') ?>">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">Building code</label>
+                                <input type="text" class="form-control" name="build_code"
+                                       value="<?= htmlspecialchars($facility['build_code'] ?? '') ?>">
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                            <button type="submit" class="btn btn-primary" id="btnSaveFacility">
+                                <i class="bi bi-save"></i> Save changes
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -632,8 +709,66 @@ sort($time_slots);
     <script src="assets/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        // Session modal population
         document.addEventListener('DOMContentLoaded', function() {
+            const editForm = document.getElementById('editFacilityForm');
+            if (editForm) {
+                editForm.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+                    const alertEl = document.getElementById('editFacilityAlert');
+                    const btn = document.getElementById('btnSaveFacility');
+                    const formData = new FormData(editForm);
+                    const payload = {
+                        id: parseInt(formData.get('id'), 10),
+                        site_id: parseInt(formData.get('site_id'), 10),
+                        campus_id: parseInt(formData.get('campus_id'), 10) || 1,
+                        name: (formData.get('name') || '').trim(),
+                        name2: (formData.get('name2') || '').trim(),
+                        type: (formData.get('type') || '').trim(),
+                        capacity: parseInt(formData.get('capacity'), 10),
+                        buildname: (formData.get('buildname') || '').trim(),
+                        build_code: (formData.get('build_code') || '').trim()
+                    };
+
+                    if (!payload.name || !payload.type || !payload.capacity || payload.capacity < 1) {
+                        alertEl.className = 'alert alert-danger';
+                        alertEl.textContent = 'Name, type and capacity (size) are required.';
+                        alertEl.classList.remove('d-none');
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    btn.innerHTML = 'Saving...';
+                    alertEl.classList.add('d-none');
+
+                    try {
+                        const res = await fetch('update_facility.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        const data = await res.json();
+                        if (data.success || (data.message && data.message.toLowerCase().includes('no changes'))) {
+                            alertEl.className = 'alert alert-success';
+                            alertEl.textContent = data.success ? 'Facility updated successfully.' : 'Saved (no field changes detected).';
+                            alertEl.classList.remove('d-none');
+                            setTimeout(() => window.location.reload(), 700);
+                        } else {
+                            alertEl.className = 'alert alert-danger';
+                            alertEl.textContent = data.message || 'Failed to update facility.';
+                            alertEl.classList.remove('d-none');
+                        }
+                    } catch (err) {
+                        alertEl.className = 'alert alert-danger';
+                        alertEl.textContent = 'Network error while saving.';
+                        alertEl.classList.remove('d-none');
+                    } finally {
+                        btn.disabled = false;
+                        btn.innerHTML = '<i class="bi bi-save"></i> Save changes';
+                    }
+                });
+            }
+
+            // Session modal population
             const sessionModal = document.getElementById('sessionModal');
             const modalBody = document.getElementById('sessionModalBody');
             
