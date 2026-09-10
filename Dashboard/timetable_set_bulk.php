@@ -69,67 +69,307 @@ $days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
   <link href="assets/css/style.css" rel="stylesheet">
   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
   <style>
-    .page-title {
-      background-color: rgb(3,31,80) !important;
-      color: #fff !important;
-      padding: 10px !important;
-      border-radius: 5px !important;
+    :root {
+      --bulk-navy: #031f50;
+      --bulk-navy-2: #012a70;
+      --bulk-surface: #f4f6f9;
+      --bulk-line: #e2e8f0;
     }
-    .page-title h2 { font-size: 1.1rem; margin: 0; color: #fff; }
-    #bulkTable th { white-space: nowrap; font-size: 0.8rem; background: #f8f9fa; }
-    #bulkTable td { vertical-align: middle; }
-    #bulkTable .col-module, #bulkTable .col-facility { min-width: 180px; }
-    #bulkTable .col-lecturers { min-width: 220px; max-width: 280px; }
+    .page-title {
+      background-color: var(--bulk-navy) !important;
+      color: #fff !important;
+      padding: 12px 16px !important;
+      border-radius: 8px !important;
+      border: 0;
+    }
+    .page-title h2 { font-size: 1.05rem; margin: 0; color: #fff; font-weight: 600; }
+
+    .bulk-section {
+      border: 1px solid var(--bulk-line);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 1px 2px rgba(3, 31, 80, 0.04);
+    }
+    .bulk-section-header {
+      background: linear-gradient(90deg, var(--bulk-navy) 0%, #0a3a7a 100%);
+      color: #fff;
+      padding: 12px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .bulk-section-header .step-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px; height: 26px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.18);
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-right: 8px;
+    }
+    .bulk-section-body { background: #fff; padding: 16px; }
+
+    .selector-panel {
+      background: var(--bulk-surface);
+      border: 1px solid var(--bulk-line);
+      border-radius: 10px;
+      padding: 12px;
+      height: 100%;
+    }
+    .selector-panel .panel-title {
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--bulk-navy);
+      margin-bottom: 8px;
+    }
+    #programSelect {
+      font-size: 0.82rem;
+      border-radius: 8px;
+      border-color: #cbd5e1;
+    }
+    #groupsCheckList {
+      max-height: 180px;
+      overflow: auto;
+      background: #fff;
+      border: 1px solid var(--bulk-line) !important;
+      border-radius: 8px !important;
+      padding: 8px !important;
+    }
+    .group-check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      margin-bottom: 4px;
+    }
+    .group-check-item:hover { background: #eef3fb; border-color: #d6e2f5; }
+    .group-check-item .g-name { font-weight: 600; font-size: 0.88rem; color: #0f172a; }
+    .group-check-item .g-meta { font-size: 0.75rem; color: #64748b; }
+
+    .selected-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    @media (max-width: 768px) {
+      .selected-summary { grid-template-columns: 1fr; }
+    }
+    .summary-stat {
+      background: var(--bulk-surface);
+      border: 1px solid var(--bulk-line);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .summary-stat .label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; font-weight: 600; }
+    .summary-stat .value { font-size: 1.35rem; font-weight: 700; color: var(--bulk-navy); line-height: 1.2; }
+    .summary-stat .hint { font-size: 0.75rem; color: #64748b; margin-top: 2px; }
+
+    #selectedGroupsEmpty {
+      border: 1px dashed #cbd5e1;
+      border-radius: 10px;
+      padding: 18px;
+      text-align: center;
+      color: #64748b;
+      background: #fafbfc;
+    }
+    .selected-group-card {
+      border: 1px solid var(--bulk-line);
+      border-radius: 10px;
+      padding: 12px 14px;
+      background: #fff;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+    }
+    .selected-group-card .sg-title {
+      font-weight: 700;
+      color: var(--bulk-navy);
+      font-size: 0.95rem;
+    }
+    .selected-group-card .sg-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-top: 6px;
+    }
+    .meta-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 0.72rem;
+      background: #eef2ff;
+      color: #1e3a8a;
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-weight: 550;
+    }
+    .meta-pill.cap { background: #ecfdf5; color: #047857; }
+    .meta-pill.year { background: #fff7ed; color: #c2410c; }
+    .btn-remove-group {
+      border: 0;
+      background: #fee2e2;
+      color: #b91c1c;
+      width: 28px; height: 28px;
+      border-radius: 8px;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .btn-remove-group:hover { background: #fecaca; }
+
+    #bulkTable {
+      border-collapse: separate;
+      border-spacing: 0;
+      margin: 0;
+    }
+    #bulkTable thead th {
+      white-space: nowrap;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+      background: #eef2f7;
+      color: #334155;
+      border-color: var(--bulk-line);
+      padding: 10px 8px;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+    #bulkTable td {
+      vertical-align: middle;
+      border-color: var(--bulk-line);
+      padding: 8px;
+      background: #fff;
+    }
+    #bulkTable .col-module, #bulkTable .col-facility { min-width: 200px; }
+    #bulkTable .col-lecturers { min-width: 230px; max-width: 300px; }
+    #bulkTable tbody tr:hover td { background: #f8fafc; }
     .picker-btn {
       width: 100%;
       text-align: left;
       white-space: normal;
       font-size: 0.82rem;
-      min-height: 38px;
+      min-height: 52px;
+      border-radius: 8px;
+      border: 1px dashed #94a3b8;
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 8px 10px;
     }
-    .picker-btn .muted { color: #6c757d; font-size: 0.75rem; }
-    .row-status { font-size: 0.75rem; }
-    .row-ok { background-color: #f0fdf4 !important; }
-    .row-fail { background-color: #fef2f2 !important; }
-    .group-chip {
-      display: inline-flex; align-items: center; gap: 4px;
-      background: #e9ecef; border-radius: 999px; padding: 4px 10px; margin: 2px; font-size: 0.85rem;
+    .picker-btn:hover {
+      border-style: solid;
+      border-color: var(--bulk-navy-2);
+      background: #eef3fb;
     }
-    .group-chip button { border: 0; background: transparent; color: #dc3545; }
+    .picker-btn.has-value {
+      border-style: solid;
+      border-color: #cbd5e1;
+      background: #fff;
+    }
+    .picker-btn .muted { color: #64748b; font-size: 0.72rem; margin-top: 2px; }
+    .picker-btn .pick-icon { color: var(--bulk-navy-2); margin-right: 4px; }
+    .row-status {
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 4px 8px;
+      border-radius: 999px;
+      display: inline-block;
+      background: #f1f5f9;
+      color: #475569;
+    }
+    .row-status.text-success { background: #dcfce7; color: #166534 !important; }
+    .row-status.text-danger { background: #fee2e2; color: #b91c1c !important; }
+    .row-ok td { background-color: #f0fdf4 !important; }
+    .row-fail td { background-color: #fef2f2 !important; }
+
     .lect-tag {
       display: inline-flex; align-items: center; gap: 4px;
       border-radius: 999px; padding: 3px 8px; margin: 2px; font-size: 0.72rem; font-weight: 600;
     }
-    .lect-tag.leader { background: #012a70; color: #fff; }
+    .lect-tag.leader { background: var(--bulk-navy); color: #fff; }
     .lect-tag.other { background: #e8f5e9; color: #198754; border: 1px solid #a5d6a7; }
     .lect-tag .role { opacity: 0.85; font-weight: 500; font-size: 0.65rem; }
     .lect-tag button { border: 0; background: transparent; color: inherit; line-height: 1; padding: 0 0 0 2px; }
-    .lecturers-cell .btn-pick-lecturers { margin-top: 4px; }
-    .picker-list { max-height: 420px; overflow: auto; }
+    .lecturers-cell .btn-pick-lecturers {
+      margin-top: 6px;
+      border-radius: 8px;
+      font-size: 0.78rem;
+    }
+
+    .picker-modal .modal-header {
+      background: var(--bulk-navy);
+      color: #fff;
+    }
+    .picker-modal .modal-header .btn-close { filter: invert(1); }
+    .picker-modal .modal-title { font-size: 1rem; font-weight: 600; }
+    .picker-list { max-height: 420px; overflow: auto; padding-right: 4px; }
     .picker-item {
       cursor: pointer;
-      border: 1px solid #e9ecef;
-      border-radius: 8px;
-      padding: 10px 12px;
+      border: 1px solid var(--bulk-line);
+      border-radius: 10px;
+      padding: 12px 14px;
       margin-bottom: 8px;
-      transition: background .15s;
+      transition: background .15s, border-color .15s, transform .1s;
+      background: #fff;
     }
-    .picker-item:hover { background: #f1f5ff; border-color: #c5d2ff; }
+    .picker-item:hover {
+      background: #eef3fb;
+      border-color: #93c5fd;
+      transform: translateY(-1px);
+    }
     .picker-item .cap-badge {
-      background: #012a70; color: #fff; border-radius: 999px;
-      padding: 2px 8px; font-size: 0.75rem; font-weight: 600;
+      background: var(--bulk-navy); color: #fff; border-radius: 999px;
+      padding: 3px 10px; font-size: 0.75rem; font-weight: 600;
+      white-space: nowrap;
     }
-    .picker-item.too-small { opacity: 0.7; }
+    .picker-item.too-small { opacity: 0.75; }
     .picker-item.too-small .cap-badge { background: #dc3545; }
     .picker-item.ok-cap .cap-badge { background: #198754; }
+    .section-divider-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      margin: 10px 0 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid var(--bulk-line);
+    }
     .lect-row {
       display: flex; justify-content: space-between; align-items: center; gap: 8px;
-      border: 1px solid #e9ecef; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px;
+      border: 1px solid var(--bulk-line); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+      background: #fff;
     }
     .lect-row .lect-actions { flex-shrink: 0; display: flex; gap: 4px; flex-wrap: wrap; }
-    .lect-row .lect-actions .btn { font-size: 0.72rem; padding: 2px 8px; min-width: auto; }
+    .lect-row .lect-actions .btn { font-size: 0.72rem; padding: 3px 8px; min-width: auto; }
     .lect-row.selected-leader { background: #eef2ff; border-color: #c5d2ff; }
     .lect-row.selected-other { background: #f0fdf4; border-color: #bbf7d0; }
+    .table-wrap {
+      border: 1px solid var(--bulk-line);
+      border-radius: 10px;
+      overflow: auto;
+      max-height: min(70vh, 720px);
+    }
+    .hint-bar {
+      font-size: 0.8rem;
+      color: #475569;
+      background: #f8fafc;
+      border: 1px solid var(--bulk-line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      margin-top: 12px;
+    }
   </style>
 </head>
 <body>
@@ -166,49 +406,104 @@ include('./includes/menu.php');
     </div>
   </div>
 
-  <div class="card mb-3">
-    <div class="card-header fw-semibold">1. Select groups (shared for all rows)</div>
-    <div class="card-body">
-      <div class="row g-2 align-items-end">
-        <div class="col-md-4">
-          <label class="form-label small mb-1">Program</label>
-          <input type="search" id="programSearch" class="form-control form-control-sm mb-1" placeholder="Search by program, school, college, campus...">
-          <select id="programSelect" class="form-select form-select-sm" size="6" style="min-height: 140px;">
-            <option value="">-- Select program --</option>
-          </select>
-          <div class="small text-muted mt-1"><span id="programMatchCount">0</span> programs shown · search name, code, school, college, campus</div>
+  <!-- 1. Groups -->
+  <div class="bulk-section mb-3">
+    <div class="bulk-section-header">
+      <div class="d-flex align-items-center">
+        <span class="step-badge">1</span>
+        <div>
+          <div class="fw-semibold">Select groups</div>
+          <div class="small" style="opacity:.85">Shared for all plan rows below</div>
         </div>
-        <div class="col-md-3">
-          <label class="form-label small mb-1">Intake</label>
-          <select id="intakeSelect" class="form-select form-select-sm" disabled>
-            <option value="">-- Select intake --</option>
-          </select>
+      </div>
+    </div>
+    <div class="bulk-section-body">
+      <div class="row g-3">
+        <div class="col-lg-4">
+          <div class="selector-panel">
+            <div class="panel-title"><i class="bi bi-mortarboard me-1"></i> Program</div>
+            <input type="search" id="programSearch" class="form-control form-control-sm mb-2" placeholder="Search program, school, college, campus...">
+            <select id="programSelect" class="form-select form-select-sm" size="7">
+              <option value="">-- Select program --</option>
+            </select>
+            <div class="small text-muted mt-2"><span id="programMatchCount">0</span> programs shown</div>
+          </div>
         </div>
-        <div class="col-md-5">
-          <label class="form-label small mb-1">Groups</label>
-          <div id="groupsCheckList" class="border rounded p-2" style="max-height:140px;overflow:auto;">
-            <span class="text-muted small">Select a program and intake first</span>
+        <div class="col-lg-3">
+          <div class="selector-panel">
+            <div class="panel-title"><i class="bi bi-calendar3 me-1"></i> Intake</div>
+            <select id="intakeSelect" class="form-select form-select-sm" disabled>
+              <option value="">-- Select intake --</option>
+            </select>
+            <div class="small text-muted mt-2">Year of study &amp; campus</div>
+          </div>
+        </div>
+        <div class="col-lg-5">
+          <div class="selector-panel">
+            <div class="panel-title"><i class="bi bi-people me-1"></i> Available groups</div>
+            <div id="groupsCheckList">
+              <span class="text-muted small">Select a program and intake first</span>
+            </div>
           </div>
         </div>
       </div>
-      <p class="small text-muted mt-2 mb-0">Modules are limited to the selected groups’ program(s). Year/semester matches appear first; other program modules follow. Facilities already saved (approved or pending) or set on another overlapping row are treated as taken.</p>
-      <div class="mt-3">
-        <div class="small text-muted mb-1">Selected groups (<span id="selectedGroupCount">0</span>) — capacity: <strong id="requiredCapacity">0</strong></div>
-        <div id="selectedGroupChips"></div>
+
+      <hr class="my-3">
+
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+        <h6 class="mb-0 fw-semibold text-dark"><i class="bi bi-check2-square me-1 text-success"></i> Selected groups overview</h6>
+        <button type="button" id="btnClearSelectedGroups" class="btn btn-outline-danger btn-sm" disabled>
+          <i class="bi bi-x-circle"></i> Clear selected
+        </button>
+      </div>
+
+      <div class="selected-summary">
+        <div class="summary-stat">
+          <div class="label">Groups</div>
+          <div class="value" id="selectedGroupCount">0</div>
+          <div class="hint">Checked for all rows</div>
+        </div>
+        <div class="summary-stat">
+          <div class="label">Total students</div>
+          <div class="value" id="requiredCapacity">0</div>
+          <div class="hint">Required facility capacity</div>
+        </div>
+        <div class="summary-stat">
+          <div class="label">Programs</div>
+          <div class="value" id="selectedProgramCount">0</div>
+          <div class="hint" id="selectedProgramHint">None yet</div>
+        </div>
+      </div>
+
+      <div id="selectedGroupsEmpty">
+        <i class="bi bi-info-circle me-1"></i> No groups selected yet. Search a program, pick an intake, then check groups.
+      </div>
+      <div id="selectedGroupCards"></div>
+
+      <div class="hint-bar">
+        Modules are limited to selected program(s); year/semester matches appear first.
+        Facility &amp; group time conflicts are blocked; lecturer overlaps are allowed.
       </div>
     </div>
   </div>
 
-  <div class="card mb-3">
-    <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
-      <span class="fw-semibold">2. Add plan rows — Module / Facility / Lecturers open searchable modals</span>
+  <!-- 2. Plan rows -->
+  <div class="bulk-section mb-3">
+    <div class="bulk-section-header">
+      <div class="d-flex align-items-center">
+        <span class="step-badge">2</span>
+        <div>
+          <div class="fw-semibold">Add plan rows</div>
+          <div class="small" style="opacity:.85">Click Module / Facility / Lecturers to search in modals</div>
+        </div>
+      </div>
       <div class="d-flex gap-2">
-        <button type="button" id="btnAddRow" class="btn btn-sm btn-primary"><i class="bi bi-plus"></i> Add row</button>
+        <button type="button" id="btnAddRow" class="btn btn-sm btn-light"><i class="bi bi-plus-lg"></i> Add row</button>
         <button type="button" id="btnSaveAll" class="btn btn-sm btn-success"><i class="bi bi-save"></i> Save all</button>
       </div>
     </div>
-    <div class="card-body p-2">
-      <div class="table-responsive">
+    <div class="bulk-section-body">
+      <div class="table-wrap">
         <table class="table table-bordered table-sm align-middle mb-0" id="bulkTable">
           <thead>
             <tr>
@@ -220,17 +515,17 @@ include('./includes/menu.php');
               <th class="col-facility">Facility</th>
               <th class="col-lecturers">Lecturers</th>
               <th>Status</th>
-              <th>Actions</th>
+              <th style="width:90px">Actions</th>
             </tr>
           </thead>
           <tbody id="bulkTableBody"></tbody>
         </table>
       </div>
-      <p class="small text-muted mt-2 mb-0">
-        Lecturers: pick one <strong>Module Leader</strong> and any number of <strong>Lecturers</strong>.
-        <strong>Facility</strong> and <strong>group</strong> time overlaps are blocked (including approved/pending and other rows here).
-        Lecturer overlaps are allowed.
-      </p>
+      <div class="hint-bar mb-0">
+        <i class="bi bi-lightning-charge me-1"></i>
+        Use searchable modals for module, free facility, and module leader / lecturers.
+        Changing day or time clears the facility so you can re-check availability.
+      </div>
     </div>
   </div>
 
@@ -242,12 +537,12 @@ include('./includes/menu.php');
 </main>
 
 <!-- Preview before save (same idea as timetable_set.php) -->
-<div class="modal fade" id="bulkPreviewModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade picker-modal" id="bulkPreviewModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
+      <div class="modal-header">
         <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Preview bulk timetable</h5>
-        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <div class="modal-body" id="bulkPreviewContent"></div>
       <div class="modal-footer">
@@ -261,7 +556,7 @@ include('./includes/menu.php');
 </div>
 
 <!-- Shared searchable picker modal (module / facility) -->
-<div class="modal fade" id="pickerModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade picker-modal" id="pickerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
@@ -272,7 +567,10 @@ include('./includes/menu.php');
         <div class="row g-2 mb-3 align-items-end">
           <div class="col-md-6">
             <label class="form-label small mb-1">Search</label>
-            <input type="search" id="pickerSearch" class="form-control" placeholder="Type to filter...">
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search"></i></span>
+              <input type="search" id="pickerSearch" class="form-control" placeholder="Type to filter...">
+            </div>
           </div>
           <div class="col-md-3 facility-only d-none">
             <label class="form-label small mb-1">Min capacity</label>
@@ -285,15 +583,15 @@ include('./includes/menu.php');
             </div>
           </div>
         </div>
-        <div id="pickerHint" class="small text-muted mb-2"></div>
+        <div id="pickerHint" class="hint-bar mb-3 mt-0"></div>
         <div id="pickerList" class="picker-list"></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- Lecturers modal: Module Leader + Lecturers (like timetable_set.php) -->
-<div class="modal fade" id="lecturerModal" tabindex="-1" aria-hidden="true">
+<!-- Lecturers modal -->
+<div class="modal fade picker-modal" id="lecturerModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg modal-dialog-scrollable">
     <div class="modal-content">
       <div class="modal-header">
@@ -302,13 +600,16 @@ include('./includes/menu.php');
       </div>
       <div class="modal-body">
         <div class="mb-3">
-          <div class="small text-muted mb-1">Selected for this row</div>
-          <div id="lectModalTags" class="border rounded p-2 bg-light min-h-40">
+          <div class="panel-title mb-2" style="font-size:0.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:#031f50;">Selected for this row</div>
+          <div id="lectModalTags" class="border rounded p-3 bg-light">
             <span class="text-muted small">None yet — use Module Leader / Add Lecturer below</span>
           </div>
         </div>
         <label class="form-label small mb-1">Search lecturers</label>
-        <input type="search" id="lectModalSearch" class="form-control mb-2" placeholder="Name or email...">
+        <div class="input-group mb-2">
+          <span class="input-group-text"><i class="bi bi-search"></i></span>
+          <input type="search" id="lectModalSearch" class="form-control" placeholder="Name or email...">
+        </div>
         <div id="lectModalHint" class="small text-muted mb-2"></div>
         <div id="lectModalList" class="picker-list"></div>
       </div>
@@ -408,23 +709,69 @@ include('./includes/menu.php');
       });
     }
     const count = (sel.leader ? 1 : 0) + sel.others.length;
-    $tr.find('.btn-pick-lecturers').text(count ? `Edit lecturers (${count})` : 'Add lecturers...');
+    $tr.find('.btn-pick-lecturers').html(
+      count
+        ? `<i class="bi bi-people"></i> Edit lecturers (${count})`
+        : `<i class="bi bi-person-plus"></i> Add lecturers...`
+    );
   }
 
   function requiredCapacity() {
     return selectedGroups.reduce((sum, g) => sum + (parseInt(g.size, 10) || 0), 0);
   }
 
+  function resolveGroupMeta(partial) {
+    const prog = programs.find(p => String(p.id) === String(partial.program_id)) || selectedProgram;
+    const intake = (prog?.intakes || []).find(i => String(i.year_of_study) === String(partial.year_of_study))
+      || selectedIntake
+      || null;
+    return {
+      id: partial.id,
+      name: partial.name,
+      size: partial.size || 0,
+      program_id: partial.program_id || prog?.id || 0,
+      program_name: partial.program_name || prog?.name || '',
+      program_code: partial.program_code || prog?.code || '',
+      school_name: partial.school_name || prog?.school_name || '',
+      college_name: partial.college_name || prog?.college_name || '',
+      year_of_study: partial.year_of_study || intake?.year_of_study || '',
+      campus_name: partial.campus_name || intake?.campus_name || ''
+    };
+  }
+
   function renderSelectedGroups() {
     $('#selectedGroupCount').text(selectedGroups.length);
     $('#requiredCapacity').text(requiredCapacity());
-    const $chips = $('#selectedGroupChips').empty();
+    const progNames = [...new Set(selectedGroups.map(g => g.program_name).filter(Boolean))];
+    $('#selectedProgramCount').text(progNames.length);
+    $('#selectedProgramHint').text(progNames.length ? progNames.join(', ') : 'None yet');
+    $('#btnClearSelectedGroups').prop('disabled', !selectedGroups.length);
+
+    const $cards = $('#selectedGroupCards').empty();
+    if (!selectedGroups.length) {
+      $('#selectedGroupsEmpty').removeClass('d-none');
+      return;
+    }
+    $('#selectedGroupsEmpty').addClass('d-none');
+
     selectedGroups.forEach(g => {
-      $chips.append(`
-        <span class="group-chip" data-id="${g.id}">
-          ${escapeHtml(g.name)} (${g.size || 0})
-          <button type="button" title="Remove" data-id="${g.id}">&times;</button>
-        </span>
+      const meta = resolveGroupMeta(g);
+      Object.assign(g, meta);
+      $cards.append(`
+        <div class="selected-group-card" data-id="${g.id}">
+          <div>
+            <div class="sg-title">${escapeHtml(g.name)}</div>
+            <div class="sg-meta">
+              ${g.program_name ? `<span class="meta-pill"><i class="bi bi-mortarboard"></i> ${escapeHtml(g.program_name)}${g.program_code ? ' [' + escapeHtml(g.program_code) + ']' : ''}</span>` : ''}
+              ${g.school_name ? `<span class="meta-pill"><i class="bi bi-building"></i> ${escapeHtml(g.school_name)}</span>` : ''}
+              ${g.college_name ? `<span class="meta-pill"><i class="bi bi-bank"></i> ${escapeHtml(g.college_name)}</span>` : ''}
+              ${g.campus_name ? `<span class="meta-pill"><i class="bi bi-geo-alt"></i> ${escapeHtml(g.campus_name)}</span>` : ''}
+              ${g.year_of_study ? `<span class="meta-pill year"><i class="bi bi-calendar3"></i> Year ${escapeHtml(String(g.year_of_study))}</span>` : ''}
+              <span class="meta-pill cap"><i class="bi bi-people"></i> ${g.size || 0} students</span>
+            </div>
+          </div>
+          <button type="button" class="btn-remove-group" title="Remove group" data-id="${g.id}">&times;</button>
+        </div>
       `);
     });
   }
@@ -450,11 +797,14 @@ include('./includes/menu.php');
   function setModuleBtn($tr, module) {
     const $btn = $tr.find('.btn-pick-module');
     if (module && module.id) {
-      $btn.data('id', module.id);
-      $btn.html(`<strong>${escapeHtml(module.code || '')}</strong> ${escapeHtml(module.name || '')}<div class="muted">Click to change</div>`);
+      $btn.data('id', module.id).addClass('has-value');
+      $btn.html(`
+        <div><i class="bi bi-journal-text pick-icon"></i><strong>${escapeHtml(module.code || '')}</strong> ${escapeHtml(module.name || '')}</div>
+        <div class="muted">Year ${module.year ?? '—'} · Sem ${module.semester ?? '—'} · click to change</div>
+      `);
     } else {
-      $btn.data('id', '');
-      $btn.html('<span class="text-muted">Search module...</span>');
+      $btn.data('id', '').removeClass('has-value');
+      $btn.html('<span class="text-muted"><i class="bi bi-search me-1"></i>Search module...</span>');
     }
   }
 
@@ -463,15 +813,17 @@ include('./includes/menu.php');
     if (fac && fac.id) {
       $btn.data('id', fac.id);
       $btn.data('capacity', fac.capacity || 0);
+      $btn.addClass('has-value');
       $btn.html(`
-        <strong>${escapeHtml(fac.name)}</strong>
-        <span class="badge bg-primary ms-1">${fac.capacity || 0} seats</span>
-        <div class="muted">${escapeHtml(fac.site_name || '')} / ${escapeHtml(fac.buildname || '')}</div>
+        <div><i class="bi bi-building pick-icon"></i><strong>${escapeHtml(fac.name)}</strong>
+          <span class="badge bg-primary ms-1">${fac.capacity || 0} seats</span></div>
+        <div class="muted">${escapeHtml(fac.site_name || '')} / ${escapeHtml(fac.buildname || '')} · click to change</div>
       `);
     } else {
       $btn.data('id', '');
       $btn.data('capacity', '');
-      $btn.html('<span class="text-muted">Search free facility...</span>');
+      $btn.removeClass('has-value');
+      $btn.html('<span class="text-muted"><i class="bi bi-search me-1"></i>Search free facility...</span>');
     }
   }
 
@@ -483,7 +835,7 @@ include('./includes/menu.php');
         <td class="row-num"></td>
         <td class="col-module">
           <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-module" data-id="">
-            <span class="text-muted">Search module...</span>
+            <span class="text-muted"><i class="bi bi-search me-1"></i>Search module...</span>
           </button>
         </td>
         <td><select class="form-select form-select-sm day-select">${dayOptionsHtml(preset.day || '')}</select></td>
@@ -491,14 +843,16 @@ include('./includes/menu.php');
         <td><select class="form-select form-select-sm end-select">${timeOptionsHtml(preset.end, '13:00')}</select></td>
         <td class="col-facility">
           <button type="button" class="btn btn-outline-secondary picker-btn btn-pick-facility" data-id="">
-            <span class="text-muted">Search free facility...</span>
+            <span class="text-muted"><i class="bi bi-search me-1"></i>Search free facility...</span>
           </button>
         </td>
         <td class="col-lecturers lecturers-cell">
           <div class="lecturers-tags"></div>
-          <button type="button" class="btn btn-outline-secondary btn-sm w-100 btn-pick-lecturers">Add lecturers...</button>
+          <button type="button" class="btn btn-outline-primary btn-sm w-100 btn-pick-lecturers">
+            <i class="bi bi-person-plus"></i> Add lecturers...
+          </button>
         </td>
-        <td class="row-status text-muted">Ready</td>
+        <td><span class="row-status text-muted">Ready</span></td>
         <td class="text-nowrap">
           <button type="button" class="btn btn-outline-primary btn-sm btn-dup" title="Duplicate"><i class="bi bi-copy"></i></button>
           <button type="button" class="btn btn-outline-danger btn-sm btn-del" title="Delete"><i class="bi bi-trash"></i></button>
@@ -755,11 +1109,11 @@ include('./includes/menu.php');
       let shownOtherHead = false;
       items.forEach(m => {
         if (m._priority && !shownPriorityHead) {
-          $list.append(`<div class="small fw-semibold text-primary mb-2 mt-1">Recommended — Year / Semester match</div>`);
+          $list.append(`<div class="section-divider-label">Recommended — Year / Semester match</div>`);
           shownPriorityHead = true;
         }
         if (!m._priority && !shownOtherHead) {
-          $list.append(`<div class="small fw-semibold text-muted mb-2 mt-3">Other modules in this program</div>`);
+          $list.append(`<div class="section-divider-label">Other modules in this program</div>`);
           shownOtherHead = true;
         }
         const badge = m._priority
@@ -1036,13 +1390,17 @@ include('./includes/menu.php');
     selectedIntake.groups.forEach(g => {
       const checked = selectedGroups.some(x => String(x.id) === String(g.id)) ? 'checked' : '';
       $list.append(`
-        <div class="form-check">
-          <input class="form-check-input group-check" type="checkbox" value="${g.id}" id="g${g.id}" ${checked}
+        <label class="group-check-item" for="g${g.id}">
+          <input class="form-check-input group-check mt-1" type="checkbox" value="${g.id}" id="g${g.id}" ${checked}
                  data-name="${escapeHtml(g.name)}" data-size="${g.size || 0}"
                  data-program-id="${selectedProgram?.id || ''}"
-                 data-year="${selectedIntake?.year_of_study || ''}">
-          <label class="form-check-label" for="g${g.id}">${escapeHtml(g.name)} (${g.size || 0})</label>
-        </div>
+                 data-year="${selectedIntake?.year_of_study || ''}"
+                 data-campus="${escapeHtml(selectedIntake?.campus_name || '')}">
+          <span>
+            <div class="g-name">${escapeHtml(g.name)}</div>
+            <div class="g-meta">${g.size || 0} students · Year ${selectedIntake?.year_of_study || '?'} · ${escapeHtml(selectedIntake?.campus_name || '')}</div>
+          </span>
+        </label>
       `);
     });
   });
@@ -1053,9 +1411,21 @@ include('./includes/menu.php');
     const size = parseInt($(this).data('size'), 10) || 0;
     const program_id = parseInt($(this).data('program-id'), 10) || (selectedProgram?.id ? parseInt(selectedProgram.id, 10) : 0);
     const year_of_study = parseInt($(this).data('year'), 10) || (selectedIntake?.year_of_study ? parseInt(selectedIntake.year_of_study, 10) : 0);
+    const campus_name = $(this).data('campus') || selectedIntake?.campus_name || '';
     if (this.checked) {
       if (!selectedGroups.some(g => String(g.id) === String(id))) {
-        selectedGroups.push({ id: parseInt(id, 10), name, size, program_id, year_of_study });
+        selectedGroups.push(resolveGroupMeta({
+          id: parseInt(id, 10),
+          name,
+          size,
+          program_id,
+          year_of_study,
+          campus_name,
+          program_name: selectedProgram?.name || '',
+          program_code: selectedProgram?.code || '',
+          school_name: selectedProgram?.school_name || '',
+          college_name: selectedProgram?.college_name || ''
+        }));
       }
     } else {
       selectedGroups = selectedGroups.filter(g => String(g.id) !== String(id));
@@ -1064,9 +1434,18 @@ include('./includes/menu.php');
     clearInvalidModulesOnRows();
   });
 
-  $('#selectedGroupChips').on('click', 'button', function () {
+  $('#selectedGroupCards').on('click', '.btn-remove-group', function () {
     const id = String($(this).data('id'));
     selectedGroups = selectedGroups.filter(g => String(g.id) !== id);
+    renderSelectedGroups();
+    syncGroupChecks();
+    clearInvalidModulesOnRows();
+  });
+
+  $('#btnClearSelectedGroups').on('click', function () {
+    if (!selectedGroups.length) return;
+    if (!confirm('Clear all selected groups?')) return;
+    selectedGroups = [];
     renderSelectedGroups();
     syncGroupChecks();
     clearInvalidModulesOnRows();
