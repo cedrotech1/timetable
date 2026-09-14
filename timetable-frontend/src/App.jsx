@@ -9,6 +9,7 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <AppRouter />
+          {/* all */}
         </NotificationProvider>
       </AuthProvider>
     </ApiHealthProvider>
