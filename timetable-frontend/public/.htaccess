@@ -5,6 +5,11 @@
   RewriteEngine On
   RewriteBase /timetable/
 
+  # Keep Bearer token for PHP proxy (Apache often strips Authorization)
+  CGIPassAuth On
+  RewriteCond %{HTTP:Authorization} .
+  RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
   # Proxy API calls to Node (api-proxy.php → http://127.0.0.1:9000)
   RewriteRule ^api(?:/|$)(.*)$ api-proxy.php [QSA,L]
 

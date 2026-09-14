@@ -15,8 +15,8 @@ $path = parse_url($requestUri, PHP_URL_PATH) ?: '/';
 $query = parse_url($requestUri, PHP_URL_QUERY);
 
 // /timetable/api/v1/... → /api/v1/...
-if (preg_match('#/api(/.*)?$#', $path, $m)) {
-    $apiPath = isset($m[1]) && $m[1] !== '' ? '/api' . $m[1] : '/api';
+if (preg_match('#/api(/.*)$#', $path, $m) || preg_match('#/api$#', $path)) {
+    $apiPath = isset($m[1]) ? '/api' . $m[1] : '/api';
 } else {
     http_response_code(400);
     header('Content-Type: application/json');
@@ -31,20 +31,72 @@ if ($query) {
 
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $headers = [];
+$seen = [];
+
+/**
+ * Apache/PHP-CGI often strips Authorization from $_SERVER['HTTP_*'].
+ * Recover it from every common place so JWT login stays logged in.
+ */
+function proxyFindAuthorization(): ?string
+{
+    $candidates = [
+        $_SERVER['HTTP_AUTHORIZATION'] ?? null,
+        $_SERVER['REDIRECT_HTTP_AUTHORIZATION'] ?? null,
+        $_SERVER['Authorization'] ?? null,
+    ];
+    foreach ($candidates as $value) {
+        if (is_string($value) && $value !== '') {
+            return $value;
+        }
+    }
+
+    if (function_exists('apache_request_headers')) {
+        $ah = apache_request_headers();
+        if (is_array($ah)) {
+            foreach ($ah as $k => $v) {
+                if (strcasecmp((string) $k, 'Authorization') === 0 && is_string($v) && $v !== '') {
+                    return $v;
+                }
+            }
+        }
+    }
+
+    if (function_exists('getallheaders')) {
+        $gh = getallheaders();
+        if (is_array($gh)) {
+            foreach ($gh as $k => $v) {
+                if (strcasecmp((string) $k, 'Authorization') === 0 && is_string($v) && $v !== '') {
+                    return $v;
+                }
+            }
+        }
+    }
+
+    return null;
+}
 
 foreach ($_SERVER as $key => $value) {
     if (strpos($key, 'HTTP_') !== 0) {
         continue;
     }
     $name = str_replace(' ', '-', ucwords(strtolower(str_replace('_', ' ', substr($key, 5)))));
-    if (in_array(strtolower($name), ['host', 'connection', 'content-length'], true)) {
+    $lower = strtolower($name);
+    if (in_array($lower, ['host', 'connection', 'content-length'], true)) {
         continue;
     }
     $headers[] = $name . ': ' . $value;
+    $seen[$lower] = true;
 }
 
-if (!empty($_SERVER['CONTENT_TYPE'])) {
+if (!empty($_SERVER['CONTENT_TYPE']) && empty($seen['content-type'])) {
     $headers[] = 'Content-Type: ' . $_SERVER['CONTENT_TYPE'];
+    $seen['content-type'] = true;
+}
+
+$authorization = proxyFindAuthorization();
+if ($authorization && empty($seen['authorization'])) {
+    $headers[] = 'Authorization: ' . $authorization;
+    $seen['authorization'] = true;
 }
 
 $body = null;

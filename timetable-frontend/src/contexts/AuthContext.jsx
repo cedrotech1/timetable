@@ -48,10 +48,25 @@ export const AuthProvider = ({ children }) => {
           setUser(response.data);
           localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(response.data));
         } else {
-          clearSession();
+          // Keep local session if /me shape is unexpected but token exists
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            clearSession();
+          }
         }
-      } catch {
-        clearSession();
+      } catch (error) {
+        const status = error?.response?.status;
+        if (status === 401 || status === 403) {
+          clearSession();
+        } else {
+          // Network / proxy blip — keep cached user so login does not flash-logout
+          try {
+            setUser(JSON.parse(storedUser));
+          } catch {
+            clearSession();
+          }
+        }
       } finally {
         setLoading(false);
       }

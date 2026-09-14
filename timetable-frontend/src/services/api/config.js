@@ -105,11 +105,15 @@ apiClient.interceptors.response.use(
     }
 
     if (error.response?.status === 401) {
-      localStorage.removeItem(TOKEN_STORAGE_KEY);
-      localStorage.removeItem(USER_STORAGE_KEY);
-      const path = window.location.pathname || '';
-      if (!path.includes('/login')) {
-        window.location.href = publicHref(loginPath());
+      const reqUrl = String(error.config?.url || '');
+      // Never wipe session because of login/public auth failures
+      if (!reqUrl.includes('/auth/login')) {
+        localStorage.removeItem(TOKEN_STORAGE_KEY);
+        localStorage.removeItem(USER_STORAGE_KEY);
+        const path = window.location.pathname || '';
+        if (!path.includes('/login')) {
+          window.location.href = publicHref(loginPath());
+        }
       }
     }
     return Promise.reject(error);
