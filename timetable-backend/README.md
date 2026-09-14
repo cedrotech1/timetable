@@ -19,12 +19,12 @@ Node/Express + Sequelize (PostgreSQL) API migrated from the PHP `timetable-v3` s
 ```bash
 npm install
 # Configure .env (see .env.example) — create DB e.g. ur_timetable
-npm run migrate
-npm run seed
+npm run db:setup
 npm run start:dev
 ```
 
-Default admin after seed: `administrator@ur.ac.rw` / `Admin@123`
+Default login after seed import: `administrator@ur.ac.rw` / `23122312`  
+(override with `SEED_USER_PASSWORD` in `.env`)
 
 ## Seed data
 
