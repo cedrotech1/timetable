@@ -27,7 +27,9 @@ if errorlevel 8 exit /b 1
 echo.
 echo Done.
 echo   Open:  http://localhost/timetable/
-echo   API:   start backend on port 9000 first
+echo   DB:    run setup-database.bat once ^(PostgreSQL must be running^)
+echo   API:   run start-backend.bat and keep it open ^(port 9000^)
+echo   Or:    setup-and-start-backend.bat does DB + API together
 echo   PHP:   other folders in htdocs are unchanged
 echo.
 pause
