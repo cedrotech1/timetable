@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "build:htdocs": "vite build --mode production",
+    "build:htdocs": "vite build --mode htdocs",
     "lint": "eslint .",
     "preview": "vite preview",
-    "preview:htdocs": "vite preview --host 127.0.0.1 --port 4173 --strictPort"
+    "preview:htdocs": "vite preview --mode htdocs --host 127.0.0.1 --port 4173 --strictPort"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.4",

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY, loginPath } from '../../utils/appPaths.js';
+import { TOKEN_STORAGE_KEY, USER_STORAGE_KEY, loginPath, publicHref } from '../../utils/appPaths.js';
 import { isApiUnreachableError, reportApiDown, reportApiUp } from './apiHealth.js';
 
 function isLocalHostname(hostname) {
@@ -109,7 +109,7 @@ apiClient.interceptors.response.use(
       localStorage.removeItem(USER_STORAGE_KEY);
       const path = window.location.pathname || '';
       if (!path.includes('/login')) {
-        window.location.href = loginPath();
+        window.location.href = publicHref(loginPath());
       }
     }
     return Promise.reject(error);

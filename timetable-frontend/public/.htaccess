@@ -1,0 +1,20 @@
+# Serve React SPA under http://localhost/timetable/
+# (does not affect other PHP apps in htdocs)
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /timetable/
+
+  # Proxy API calls to Node (api-proxy.php → http://127.0.0.1:9000)
+  RewriteRule ^api(?:/|$)(.*)$ api-proxy.php [QSA,L]
+
+  # Real files/folders (assets, index.html, etc.)
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # SPA fallback
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+DirectoryIndex index.html

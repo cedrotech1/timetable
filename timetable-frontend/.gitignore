@@ -12,12 +12,7 @@ dist
 dist-ssr
 dist-uat
 
-# Environment files (secrets) — keep *.example templates in git only
-.env
-.env.*
-!.env.example
-!.env.*.example
-!.env.template
+# .env files are tracked intentionally (shared local/XAMPP config)
 
 # Editor directories and files
 .vscode/*
