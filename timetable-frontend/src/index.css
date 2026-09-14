@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f3f5f8;
+  color: #111827;
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes facility-blink {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(0, 98, 139, 0.55);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(0, 98, 139, 0.15);
+  }
+}
+
+.facility-blink {
+  animation: facility-blink 0.85s ease-in-out 5;
+  outline: 2px solid #00628b;
+  outline-offset: 2px;
+}

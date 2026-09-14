@@ -1,0 +1,1557 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>UR Helpdesk — Support</title>
+    <link rel="icon" type="image/png" href="/icon-logo.png" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+      :root {
+        --ur-navy: #1e3c72;
+        --ur-blue: #2563eb;
+        --ur-blue-dark: #1d4ed8;
+        --bg: #f3f4f6;
+        --card: #ffffff;
+        --text: #1f2937;
+        --muted: #6b7280;
+        --border: #e5e7eb;
+        --info-bg: #eff6ff;
+        --info-border: #bfdbfe;
+        --warn-bg: #fff7ed;
+        --warn-border: #fed7aa;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+        line-height: 1.5;
+      }
+
+      .topbar {
+        background: var(--card);
+        border-bottom: 1px solid var(--border);
+        padding: 0.75rem 1.5rem;
+      }
+
+      .topbar-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 700;
+        color: var(--ur-navy);
+        font-size: 0.95rem;
+        text-decoration: none;
+      }
+
+      .brand:hover {
+        color: var(--ur-navy);
+      }
+
+      .brand-logo {
+        width: 44px;
+        height: 44px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+
+      .brand-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+      }
+
+      .brand-title {
+        font-size: 0.95rem;
+        font-weight: 700;
+      }
+
+      .brand-subtitle {
+        font-size: 0.75rem;
+        font-weight: 500;
+        color: var(--muted);
+      }
+
+      .page {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 1.5rem;
+      }
+
+      .page-head {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .page-head-logo {
+        width: 56px;
+        height: 56px;
+        object-fit: contain;
+        flex-shrink: 0;
+      }
+
+      .page-head-text {
+        min-width: 0;
+      }
+
+      .page-title {
+        margin: 0 0 0.25rem;
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: var(--text);
+      }
+
+      .page-subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.95rem;
+      }
+
+      .page-subtitle a {
+        color: var(--ur-blue);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .page-subtitle a:hover {
+        text-decoration: underline;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+      }
+
+      @media (max-width: 900px) {
+        .layout {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+      }
+
+      .card-head {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 1rem;
+        color: var(--text);
+      }
+
+      .card-body {
+        padding: 1.25rem;
+      }
+
+      .contact-item {
+        display: flex;
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+      }
+
+      .contact-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .contact-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        background: #eff6ff;
+        color: var(--ur-blue);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+      }
+
+      .contact-label {
+        font-size: 0.75rem;
+        color: var(--muted);
+        margin: 0 0 0.15rem;
+      }
+
+      .contact-value {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text);
+      }
+
+      a.contact-link {
+        display: inline-block;
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--ur-blue);
+        text-decoration: none;
+      }
+
+      a.contact-link:hover {
+        text-decoration: underline;
+      }
+
+      .ur-routing-preview {
+        background: #f3f4f6;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 0.625rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        margin-bottom: 0.5rem;
+        line-height: 1.5;
+      }
+
+      .ur-routing-preview strong {
+        color: var(--text);
+        font-weight: 600;
+      }
+
+      .notice a {
+        color: #1d4ed8;
+        font-weight: 600;
+      }
+
+      .faq-item {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        overflow: hidden;
+      }
+
+      .faq-item:last-child {
+        margin-bottom: 0;
+      }
+
+      .faq-q {
+        width: 100%;
+        text-align: left;
+        background: #fff;
+        border: none;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 600;
+        color: var(--text);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+      }
+
+      .faq-q:hover {
+        background: #f9fafb;
+      }
+
+      .faq-a {
+        display: none;
+        padding: 0 1rem 0.75rem;
+        font-size: 0.8125rem;
+        color: var(--muted);
+        margin: 0;
+        line-height: 1.55;
+      }
+
+      .faq-a a {
+        color: var(--ur-blue);
+        font-weight: 600;
+        text-decoration: none;
+      }
+
+      .faq-a a:hover {
+        text-decoration: underline;
+      }
+
+      .faq-item.open .faq-a {
+        display: block;
+      }
+
+      .faq-item.open .faq-chevron {
+        transform: rotate(90deg);
+      }
+
+      .faq-chevron {
+        transition: transform 0.15s;
+        color: var(--muted);
+      }
+
+      .form-card-head {
+        padding: 1.25rem 1.5rem 0;
+      }
+
+      .form-card-head h2 {
+        margin: 0 0 0.25rem;
+        font-size: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text);
+      }
+
+      .form-card-head p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 0.875rem;
+      }
+
+      .form-card-body {
+        padding: 1rem 1.5rem 1.5rem;
+      }
+
+      /* Zammad inline form — sections stack vertically; each section has its own grid */
+      #zammad-feedback-form .zammad-form {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+
+      .ur-form-section {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        background: #fafbfc;
+      }
+
+      .ur-form-section-head {
+        margin: 0 0 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid var(--border);
+        font-weight: 700;
+        font-size: 0.9375rem;
+        color: var(--ur-navy);
+      }
+
+      .ur-form-section-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.25rem;
+      }
+
+      @media (max-width: 640px) {
+        .ur-form-section-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      .ur-form-section-grid .ur-field-full,
+      .ur-form-section-grid .ur-field-full,
+      .ur-form-section-grid .ur-dynamic-panel,
+      .ur-form-section-grid .zammad-form-group:has(textarea),
+      .ur-form-section-grid .zammad-form-group:has(input[type='file']),
+      .ur-form-section-grid .ur-routing-preview {
+        grid-column: 1 / -1;
+      }
+
+      #zammad-feedback-form .zammad-form > .btn {
+        grid-column: auto;
+        margin-top: 0;
+      }
+
+      #zammad-feedback-form .zammad-form-group {
+        margin-bottom: 0;
+      }
+
+      #zammad-feedback-form .zammad-form-group label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text);
+      }
+
+      #zammad-feedback-form .zammad-form-group label .required,
+      #zammad-feedback-form .ur-attachment-row label .required {
+        color: #dc2626;
+        font-weight: 700;
+      }
+
+      #zammad-feedback-form .zammad-form-control {
+        width: 100%;
+        padding: 0.625rem 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 0.875rem;
+        font-family: inherit;
+        background: #fff;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      #zammad-feedback-form .zammad-form-control:focus {
+        border-color: var(--ur-blue);
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      }
+
+      #zammad-feedback-form .zammad-form-group--has-error .zammad-form-control {
+        border-color: #dc2626;
+      }
+
+      /* Legacy full-width helpers (sections use inner grid) */
+      #zammad-feedback-form .zammad-form-thankyou,
+      #zammad-feedback-form .js-noConfig {
+        grid-column: 1 / -1;
+      }
+
+      #zammad-feedback-form select.zammad-form-control {
+        appearance: auto;
+        cursor: pointer;
+      }
+
+      .ur-hidden {
+        display: none !important;
+      }
+
+      .ur-dynamic-panel {
+        grid-column: 1 / -1;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem 1.25rem;
+      }
+
+      @media (max-width: 640px) {
+        .ur-dynamic-panel {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      #zammad-feedback-form textarea.zammad-form-control {
+        min-height: 140px;
+        resize: vertical;
+      }
+
+      #zammad-feedback-form .btn {
+        background: var(--ur-navy);
+        color: #fff;
+        border: none;
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9375rem;
+        font-weight: 600;
+        border-radius: 6px;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 0.25rem;
+      }
+
+      #zammad-feedback-form .btn:hover {
+        background: #163057;
+      }
+
+      #zammad-feedback-form .btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      #zammad-feedback-form .zammad-form-thankyou {
+        text-align: center;
+        padding: 2rem 1rem;
+        font-size: 1rem;
+        color: var(--ur-navy);
+        font-weight: 600;
+      }
+
+      #zammad-feedback-form .js-noConfig {
+        color: #dc2626;
+        text-align: center;
+        padding: 1rem;
+        font-size: 0.875rem;
+      }
+
+      .ur-attachment-hint {
+        margin: 0.5rem 0 0;
+        font-size: 0.8125rem;
+        color: var(--muted);
+      }
+
+      .ur-attachments-wrap {
+        grid-column: 1 / -1;
+      }
+
+      .ur-attachment-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+
+      .ur-attachment-row label {
+        display: block;
+        margin-bottom: 0.35rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--text);
+      }
+
+      .ur-add-attachment-btn {
+        margin-top: 0.5rem;
+        background: #fff;
+        border: 1px dashed var(--border);
+        color: var(--ur-blue);
+        padding: 0.5rem 0.875rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        font-weight: 600;
+      }
+
+      .ur-add-attachment-btn:hover {
+        background: #eff6ff;
+        border-color: var(--ur-blue);
+      }
+
+      .ur-add-attachment-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .ur-remove-attachment {
+        align-self: flex-start;
+        margin-top: 0.25rem;
+        background: none;
+        border: none;
+        color: #dc2626;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+      }
+
+      .ur-remove-attachment:hover {
+        text-decoration: underline;
+      }
+
+      .ur-form-validation-summary {
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: #991b1b;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
+        margin-bottom: 0.25rem;
+      }
+
+      .ur-form-validation-summary.ur-hidden {
+        display: none !important;
+      }
+
+      .notice {
+        border-radius: 8px;
+        padding: 0.875rem 1rem;
+        font-size: 0.8125rem;
+        margin-top: 1rem;
+        line-height: 1.45;
+      }
+
+      .notice-info {
+        background: var(--info-bg);
+        border: 1px solid var(--info-border);
+        color: #1e40af;
+      }
+
+      .notice-warn {
+        background: var(--warn-bg);
+        border: 1px solid var(--warn-border);
+        color: #9a3412;
+        margin-top: 0.75rem;
+      }
+
+      .notice strong {
+        font-weight: 700;
+      }
+
+      .sidebar-stack {
+        display: flex;
+        flex-direction: column;
+        gap: 1.25rem;
+      }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a class="brand" href="https://ur.ac.rw/" target="_blank" rel="noopener noreferrer">
+          <img class="brand-logo" src="/ur-logo.png" alt="University of Rwanda" />
+          <span class="brand-text">
+            <span class="brand-title">University of Rwanda</span>
+            <span class="brand-subtitle">Helpdesk &amp; Support</span>
+          </span>
+        </a>
+      </div>
+    </header>
+
+    <main class="page">
+      <div class="page-head">
+        <img class="page-head-logo" src="/ur-logo.png" alt="University of Rwanda" />
+        <div class="page-head-text">
+          <h1 class="page-title">Support</h1>
+          <p class="page-subtitle">
+            Fill in the support request form below, send an email directly to
+            <a href="mailto:helpdesk@ur.ac.rw">helpdesk@ur.ac.rw</a>, or
+            <a href="https://eticket.ur.ac.rw/#login" target="_blank" rel="noopener noreferrer">log in to the helpdesk</a>.
+          </p>
+        </div>
+      </div>
+
+      <div class="layout">
+        <aside class="sidebar-stack">
+          <div class="card">
+            <div class="card-head">Contact Information</div>
+            <div class="card-body">
+              <div class="contact-item">
+                <div class="contact-icon" aria-hidden="true">✉</div>
+                <div>
+                  <p class="contact-label">Email</p>
+                  <a class="contact-link" href="mailto:helpdesk@ur.ac.rw">helpdesk@ur.ac.rw</a>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="contact-icon" aria-hidden="true">☎</div>
+                <div>
+                  <p class="contact-label">Phone</p>
+                  <p class="contact-value">+250788304394</p>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="contact-icon" aria-hidden="true">⌂</div>
+                <div>
+                  <p class="contact-label">Address</p>
+                  <p class="contact-value">
+                    UR Headquarters
+                  </p>
+                </div>
+              </div>
+              <div class="contact-item">
+                <div class="contact-icon" aria-hidden="true">◷</div>
+                <div>
+                  <p class="contact-label">Working Hours</p>
+                  <p class="contact-value">Monday – Friday, 8:00 AM – 5:00 PM (CAT)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-head">Frequently Asked Questions</div>
+            <div class="card-body">
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  What is the UR e-ticket helpdesk?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  The e-ticket system is University of Rwanda&rsquo;s online helpdesk. Submit a support request about
+                  <strong>Hostels</strong>, <strong>Finance</strong>, <strong>Assets</strong>, or
+                  <strong>Other</strong> topics. Each submission becomes a ticket that staff track and reply to until it
+                  is resolved.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  How is the support form organised?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  The form has four sections:<br />
+                  <strong>1. Identification &amp; contact</strong> — name, email, phone, requestor type, and extra
+                  details (registration number, campus, college) depending on who you are.<br />
+                  <strong>2. Request details</strong> — request category, subject, and a summary preview of what will be
+                  sent.<br />
+                  <strong>3. Your message</strong> — describe your issue in your own words.<br />
+                  <strong>4. Attachments</strong> — optional files (you can add more than one).<br />
+                  Fields marked with a red <strong>*</strong> are required — the form will not submit until they are
+                  filled in.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  Who can submit and what must I fill in?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  Choose your <strong>Requestor category</strong>:<br />
+                  <strong>Student</strong> — registration number, campus, and college are all required.<br />
+                  <strong>Staff</strong> — campus and college are required.<br />
+                  <strong>Alumni</strong> — registration number, campus, and college are optional.<br />
+                  <strong>External Stakeholder / Partner</strong> — no registration number, campus, or college fields.<br />
+                  Campus and college are selected from UR dropdown lists (Busogo, Gikondo, Huye, Nyagatare,
+                  Nyarugenge, Remera, Rukara, Rwamagana, and UR colleges).
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  How do request category and subject work?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  Pick a <strong>Request category</strong> first, then a <strong>Subject</strong>:<br />
+                  <strong>Hostels</strong> — cleaning, found material, repair and maintenance, toilet paper.<br />
+                  <strong>Finance</strong> — accommodation fees, tuition fees, retake fees.<br />
+                  <strong>Assets</strong> — water, electricity, repair.<br />
+                  <strong>Other</strong> — type your own subject (no dropdown).<br />
+                  Category and subject are sent with your ticket automatically; you only write the detailed message in
+                  the message box.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  What are the different ways to send a request?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  <strong>1. Web form</strong> — use the form on this page (recommended).<br />
+                  <strong>2. Email</strong> — write to
+                  <a href="mailto:helpdesk@ur.ac.rw">helpdesk@ur.ac.rw</a>.<br />
+                  <strong>3. Helpdesk login</strong> — sign in at
+                  <a href="https://eticket.ur.ac.rw/#login" target="_blank" rel="noopener noreferrer">eticket.ur.ac.rw</a>.<br />
+                  <strong>4. Phone</strong> — call +250788304394 during working hours for urgent issues.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  How do I follow up and get replies?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  <strong>Email is the main way to follow up.</strong> Use the same email you entered on the form.<br />
+                  After submit, you should receive a <strong>confirmation email</strong> with your ticket reference.<br />
+                  When staff reply, you get an email notification — reply to that email to continue the same ticket.<br />
+                  You can also sign in at
+                  <a href="https://eticket.ur.ac.rw/#login" target="_blank" rel="noopener noreferrer">eticket.ur.ac.rw</a>
+                  to view tickets online.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  Can I attach files?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  Yes. Attachments are optional. Start with one file, then click
+                  <strong>+ Add another file</strong> if you need to upload more (up to five files). Use PDF, images,
+                  or documents that help explain your request.
+                </p>
+              </div>
+              <div class="faq-item">
+                <button type="button" class="faq-q" aria-expanded="false">
+                  How long until I get a response?
+                  <span class="faq-chevron">›</span>
+                </button>
+                <p class="faq-a">
+                  We aim to respond within <strong>24 hours</strong> on working days (Monday–Friday, 8:00 AM–5:00 PM CAT).
+                  Complex cases may take longer. For urgent matters, call during working hours or mention
+                  &ldquo;urgent&rdquo; in your subject.
+                </p>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <section class="card">
+          <div class="form-card-head">
+            <h2><span aria-hidden="true">✈</span> Send Support Request</h2>
+            <p>Use a valid email — you will receive a confirmation and reply notifications in your inbox.</p>
+          </div>
+          <div class="form-card-body">
+            <div id="zammad-feedback-form"></div>
+
+         
+            <div class="notice notice-warn">
+              <strong>If you have any inquiries, fill in the form above or email us directly at</strong>
+              <a href="mailto:helpdesk@ur.ac.rw">helpdesk@ur.ac.rw</a>.
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <script
+      id="zammad_form_script"
+      src="https://eticket.ur.ac.rw/assets/form/form.js"
+    ></script>
+
+    <script>
+      (function () {
+        /** Zammad form.js only supports tag: input | textarea — all other fields are custom + merged into body on submit. */
+
+        var REQUESTOR_OPTIONS = [
+          { value: '', label: 'Select requestor type' },
+          { value: 'Student', label: 'Student' },
+          { value: 'Staff', label: 'Staff' },
+          { value: 'Alumni', label: 'Alumni' },
+          { value: 'External', label: 'External Stakeholder / Partner' },
+        ];
+
+        var CAMPUS_OPTIONS = [
+          { value: '', label: 'Select campus' },
+          { value: 'Busogo', label: 'Busogo' },
+          { value: 'Gikondo', label: 'Gikondo' },
+          { value: 'Huye', label: 'Huye' },
+          { value: 'Nyagatare', label: 'Nyagatare' },
+          { value: 'Nyarugenge', label: 'Nyarugenge' },
+          { value: 'Remera', label: 'Remera' },
+          { value: 'Rukara', label: 'Rukara' },
+          { value: 'Rwamagana', label: 'Rwamagana' },
+        ];
+
+        var COLLEGE_OPTIONS = [
+          { value: '', label: 'Select college' },
+          { value: 'CASS', label: 'CASS — College of Arts and Social Sciences' },
+          { value: 'CBE', label: 'CBE — College of Business and Economics' },
+          { value: 'CST', label: 'CST — College of Science and Technology' },
+          { value: 'CMHS', label: 'CMHS — College of Medicine and Health Sciences' },
+          { value: 'CE', label: 'CE — College of Education' },
+          { value: 'CAFF', label: 'CAFF — College of Agriculture, Forestry and Food Science' },
+          { value: 'CVAS', label: 'CVAS — College of Veterinary Medicine and Animal Sciences' },
+        ];
+
+        /** Add more request categories here when new helpdesk areas go live. */
+        var REQUEST_CATEGORY_OPTIONS = [
+          { value: '', label: 'Select request category' },
+          { value: 'Hostels', label: 'Hostels' },
+          { value: 'Finance', label: 'Finance' },
+          { value: 'Assets', label: 'Assets' },
+          { value: 'Other', label: 'Other (specify)' },
+        ];
+// yes
+        var SUBJECTS_BY_CATEGORY = {
+          Hostels: [
+            'Cleaning',
+            'Found material',
+            'Repair and maintenance',
+            'Toilet paper',
+          ],
+          Finance: ['Accommodation fees', 'Tuition fees', 'Retake fees'],
+          Assets: ['Water', 'Electricity', 'Repair'],
+        };
+
+        var MAX_ATTACHMENTS = 5;
+
+        function formRoot() {
+          return $('#zammad-feedback-form .zammad-form');
+        }
+
+        function bodyField() {
+          return formRoot().find('[name=body]');
+        }
+
+        function fieldVal(id) {
+          return String($('#' + id).val() || '').trim();
+        }
+
+        function setRequiredLabel($label, text, required) {
+          $label.empty().append(document.createTextNode(text));
+          if (required) {
+            $label.append($('<span class="required"> *</span>'));
+          }
+        }
+
+        function buildInputGroup(label, inputId, type, placeholder, required) {
+          var $group = $('<div class="form-group zammad-form-group ur-custom-field"></div>');
+          var $label = $('<label></label>').attr('for', inputId);
+          setRequiredLabel($label, label, required);
+
+          var $input = $('<input>')
+            .attr({ id: inputId, type: type || 'text', placeholder: placeholder || '' })
+            .addClass('form-control zammad-form-control');
+          if (required) $input.prop('required', true);
+
+          $group.append($label).append($input);
+          return $group;
+        }
+
+        function buildSelectGroup(label, selectId, options, required) {
+          var $group = $('<div class="form-group zammad-form-group ur-custom-field"></div>');
+          var $label = $('<label></label>').attr('for', selectId);
+          setRequiredLabel($label, label, required);
+
+          var $select = $('<select></select>')
+            .attr('id', selectId)
+            .addClass('form-control zammad-form-control');
+          if (required) $select.prop('required', true);
+
+          options.forEach(function (opt) {
+            $select.append($('<option>', { value: opt.value, text: opt.label }));
+          });
+
+          $group.append($label).append($select);
+          return $group;
+        }
+
+        function updateDynamicFields() {
+          var requestor = fieldVal('ur-form-requestor');
+          var $panel = $('#ur-dynamic-fields');
+          var $regWrap = $('#ur-form-reg-wrap');
+          var $campusWrap = $('#ur-form-campus-wrap');
+          var $collegeWrap = $('#ur-form-college-wrap');
+          var $reg = $('#ur-form-regnumber');
+          var $campus = $('#ur-form-campus');
+          var $college = $('#ur-form-college');
+          var $regLabel = $('label[for="ur-form-regnumber"]');
+          var $campusLabel = $('label[for="ur-form-campus"]');
+          var $collegeLabel = $('label[for="ur-form-college"]');
+
+          $reg.prop('required', false);
+          $campus.prop('required', false);
+          $college.prop('required', false);
+
+          if (!requestor || requestor === 'External') {
+            $panel.addClass('ur-hidden');
+            $regWrap.addClass('ur-hidden');
+            $reg.val('');
+            $campus.val('');
+            $college.val('');
+            updateRoutingPreview();
+            return;
+          }
+
+          $panel.removeClass('ur-hidden');
+          $campusWrap.removeClass('ur-hidden');
+          $collegeWrap.removeClass('ur-hidden');
+
+          if (requestor === 'Student') {
+            $regWrap.removeClass('ur-hidden');
+            $reg.prop('required', true);
+            $campus.prop('required', true);
+            $college.prop('required', true);
+            setRequiredLabel($regLabel, 'Registration number', true);
+            setRequiredLabel($campusLabel, 'Campus', true);
+            setRequiredLabel($collegeLabel, 'College', true);
+          } else if (requestor === 'Staff') {
+            $regWrap.addClass('ur-hidden');
+            $reg.val('');
+            $campus.prop('required', true);
+            $college.prop('required', true);
+            setRequiredLabel($campusLabel, 'Campus', true);
+            setRequiredLabel($collegeLabel, 'College', true);
+          } else if (requestor === 'Alumni') {
+            $regWrap.removeClass('ur-hidden');
+            setRequiredLabel($regLabel, 'Registration number (optional)', false);
+            setRequiredLabel($campusLabel, 'Campus (optional)', false);
+            setRequiredLabel($collegeLabel, 'College (optional)', false);
+          }
+
+          updateRoutingPreview();
+        }
+
+        function requestorDisplayLabel() {
+          var v = fieldVal('ur-form-requestor');
+          if (v === 'External') return 'External Stakeholder / Partner';
+          return v;
+        }
+
+        function buildSection(title, sectionId) {
+          return $('<div class="ur-form-section"></div>')
+            .attr('id', sectionId)
+            .append($('<h3 class="ur-form-section-head"></h3>').text(title))
+            .append($('<div class="ur-form-section-grid"></div>'));
+        }
+
+        function fillSubjectOptions(category) {
+          var $select = $('#ur-form-subject-select');
+          if (!$select.length) return;
+
+          var options = SUBJECTS_BY_CATEGORY[category] || [];
+          $select.empty();
+          $select.append(
+            $('<option>', {
+              value: '',
+              text: options.length ? 'Select a subject' : 'Select category first',
+            })
+          );
+          options.forEach(function (label) {
+            $select.append($('<option>', { value: label, text: label }));
+          });
+        }
+
+        /** Dropdown for Hostels/Finance/Assets; free text when category is Other. */
+        function updateSubjectField() {
+          var category = fieldVal('ur-form-request-category');
+          var isOther = category === 'Other';
+          var $selectWrap = $('#ur-form-subject-select-wrap');
+          var $textWrap = $('#ur-form-subject-text-wrap');
+          var $select = $('#ur-form-subject-select');
+          var $text = $('#ur-form-subject-text');
+
+          if (isOther) {
+            $selectWrap.addClass('ur-hidden');
+            $select.prop('required', false).val('');
+            $textWrap.removeClass('ur-hidden');
+            $text.prop('required', true);
+          } else {
+            $textWrap.addClass('ur-hidden');
+            $text.prop('required', false).val('');
+            $selectWrap.removeClass('ur-hidden');
+            $select.prop('required', !!category);
+            fillSubjectOptions(category);
+          }
+
+          updateRoutingPreview();
+        }
+
+        function resolvedSubject() {
+          if (fieldVal('ur-form-request-category') === 'Other') {
+            return fieldVal('ur-form-subject-text');
+          }
+          return fieldVal('ur-form-subject-select');
+        }
+
+        function resolvedRequestCategory() {
+          return fieldVal('ur-form-request-category');
+        }
+
+        function updateRoutingPreview() {
+          var $preview = $('#ur-form-routing-preview');
+          if (!$preview.length) return;
+
+          var rows = [];
+          var requestor = fieldVal('ur-form-requestor');
+          var phone = fieldVal('ur-form-phone');
+          var category = resolvedRequestCategory();
+          var subject = resolvedSubject();
+
+          if (requestor) rows.push(['Requestor', requestorDisplayLabel()]);
+          if (phone) rows.push(['Phone', phone]);
+          if (
+            (requestor === 'Student' || requestor === 'Alumni') &&
+            fieldVal('ur-form-regnumber')
+          ) {
+            rows.push(['Registration number', fieldVal('ur-form-regnumber')]);
+          }
+          if (requestor && requestor !== 'External' && fieldVal('ur-form-campus')) {
+            rows.push(['Campus', $('#ur-form-campus option:selected').text() || fieldVal('ur-form-campus')]);
+          }
+          if (requestor && requestor !== 'External' && fieldVal('ur-form-college')) {
+            rows.push(['College', $('#ur-form-college option:selected').text() || fieldVal('ur-form-college')]);
+          }
+          if (category) rows.push(['Request category', category]);
+          if (subject) rows.push(['Subject', subject]);
+
+          if (rows.length) {
+            $preview
+              .html(
+                rows
+                  .map(function (r) {
+                    return '<div><strong>' + r[0] + ':</strong> ' + r[1] + '</div>';
+                  })
+                  .join('')
+              )
+              .show();
+            if (category && subject) {
+              $('#ur-form-title').val(category + ' — ' + subject);
+            }
+          } else {
+            $preview.hide().empty();
+            $('#ur-form-title').val('');
+          }
+        }
+
+        function buildDescriptionHeader() {
+          var lines = ['--- Identification ---'];
+          var requestor = fieldVal('ur-form-requestor');
+          var phone = fieldVal('ur-form-phone');
+
+          if (requestor) lines.push('Requestor: ' + requestorDisplayLabel());
+          if (phone) lines.push('Phone: ' + phone);
+          if (
+            (requestor === 'Student' || requestor === 'Alumni') &&
+            fieldVal('ur-form-regnumber')
+          ) {
+            lines.push('Registration number: ' + fieldVal('ur-form-regnumber'));
+          }
+          if (requestor && requestor !== 'External' && fieldVal('ur-form-campus')) {
+            lines.push(
+              'Campus: ' + ($('#ur-form-campus option:selected').text() || fieldVal('ur-form-campus'))
+            );
+          }
+          if (requestor && requestor !== 'External' && fieldVal('ur-form-college')) {
+            lines.push(
+              'College: ' + ($('#ur-form-college option:selected').text() || fieldVal('ur-form-college'))
+            );
+          }
+
+          lines.push('');
+          lines.push('--- Request details ---');
+          var category = resolvedRequestCategory();
+          var subject = resolvedSubject();
+          if (category) lines.push('Request category: ' + category);
+          if (subject) lines.push('Subject: ' + subject);
+          lines.push('');
+          lines.push('--- Message ---');
+          return lines.join('\n');
+        }
+
+        function applyBodyForSubmit() {
+          var $body = bodyField();
+          if (!$body.length) return;
+          var userMsg = String($body.val() || '').trim();
+          $body.val(buildDescriptionHeader() + '\n' + userMsg);
+          var category = resolvedRequestCategory();
+          var subject = resolvedSubject();
+          if (category && subject) {
+            $('#ur-form-title').val(category + ' — ' + subject);
+          }
+        }
+
+        function markFieldError(id, isValid) {
+          var $el = $('#' + id);
+          if (!$el.length) return !!isValid;
+          var $group = $el.closest('.zammad-form-group, .ur-attachment-row');
+          $group.toggleClass('zammad-form-group--has-error', !isValid);
+          return !!isValid;
+        }
+
+        function markGroupError($group, hasError) {
+          if ($group && $group.length) {
+            $group.toggleClass('zammad-form-group--has-error', !!hasError);
+          }
+          return !hasError;
+        }
+
+        function showValidationSummary(show) {
+          var $summary = $('#ur-form-validation-summary');
+          if (!$summary.length) return;
+          $summary.toggleClass('ur-hidden', !show);
+        }
+
+        function clearValidationErrors() {
+          formRoot().find('.zammad-form-group--has-error').removeClass('zammad-form-group--has-error');
+          showValidationSummary(false);
+        }
+
+        function validateFieldByName(name, required) {
+          var $el = formRoot().find('[name="' + name + '"]');
+          if (!$el.length) return true;
+          var val = String($el.val() || '').trim();
+          var ok = true;
+          if (required && !val) ok = false;
+          if (name === 'email' && val && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val)) ok = false;
+          markGroupError($el.closest('.zammad-form-group'), !ok);
+          return ok;
+        }
+
+        function validateAllFields() {
+          clearValidationErrors();
+          var ok = true;
+
+          ok = validateFieldByName('name', true) && ok;
+          ok = validateFieldByName('email', true) && ok;
+          ok = validateFieldByName('body', true) && ok;
+
+          ok = markFieldError('ur-form-phone', !!fieldVal('ur-form-phone')) && ok;
+          ok = markFieldError('ur-form-requestor', !!fieldVal('ur-form-requestor')) && ok;
+          ok = markFieldError('ur-form-request-category', !!fieldVal('ur-form-request-category')) && ok;
+
+          var requestCategory = fieldVal('ur-form-request-category');
+          if (requestCategory === 'Other') {
+            ok = markFieldError('ur-form-subject-text', !!fieldVal('ur-form-subject-text')) && ok;
+          } else if (requestCategory) {
+            ok = markFieldError('ur-form-subject-select', !!fieldVal('ur-form-subject-select')) && ok;
+          } else {
+            ok = markFieldError('ur-form-subject-select', false) && ok;
+          }
+
+          var requestor = fieldVal('ur-form-requestor');
+          if (requestor === 'Student') {
+            ok = markFieldError('ur-form-regnumber', !!fieldVal('ur-form-regnumber')) && ok;
+            ok = markFieldError('ur-form-campus', !!fieldVal('ur-form-campus')) && ok;
+            ok = markFieldError('ur-form-college', !!fieldVal('ur-form-college')) && ok;
+          }
+          if (requestor === 'Staff') {
+            ok = markFieldError('ur-form-campus', !!fieldVal('ur-form-campus')) && ok;
+            ok = markFieldError('ur-form-college', !!fieldVal('ur-form-college')) && ok;
+          }
+
+          if (!ok) {
+            showValidationSummary(true);
+            var $first = formRoot().find('.zammad-form-group--has-error').first();
+            if ($first.length) {
+              $first[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }
+          return ok;
+        }
+
+        function addAttachmentRow($list) {
+          var index = $list.find('.ur-attachment-row').length + 1;
+          var $row = $('<div class="ur-attachment-row"></div>');
+          var $label = $('<label></label>').text(
+            index === 1 ? 'File (optional)' : 'Additional file (optional)'
+          );
+          var $input = $('<input>', { type: 'file', name: 'file[]' }).addClass(
+            'form-control zammad-form-control ur-attachment-input'
+          );
+          $row.append($label).append($input);
+          if (index > 1) {
+            $row.append(
+              $('<button>', { type: 'button', class: 'ur-remove-attachment', text: 'Remove' })
+            );
+          }
+          $list.append($row);
+          updateAddAttachmentButton();
+        }
+
+        function updateAddAttachmentButton() {
+          var count = $('#ur-attachment-list .ur-attachment-row').length;
+          var $btn = $('#ur-add-attachment');
+          $btn.prop('disabled', count >= MAX_ATTACHMENTS);
+          $btn.toggleClass('ur-hidden', count >= MAX_ATTACHMENTS);
+        }
+
+        function setupAttachments() {
+          if ($('#ur-attachments-wrap').length) return;
+
+          var $wrap = $('<div id="ur-attachments-wrap" class="ur-attachments-wrap"></div>');
+          var $list = $('<div id="ur-attachment-list" class="ur-attachment-list"></div>');
+          $wrap.append($list);
+          $wrap.append(
+            $('<button>', {
+              type: 'button',
+              id: 'ur-add-attachment',
+              class: 'ur-add-attachment-btn',
+              text: '+ Add another file',
+            })
+          );
+          $wrap.append(
+            $('<p class="ur-attachment-hint">Optional — add PDF, image, or document if it helps explain your request.</p>')
+          );
+          addAttachmentRow($list);
+          formRoot().append($wrap);
+        }
+
+        function validateCustomFields() {
+          return validateAllFields();
+        }
+
+        function injectCustomFields() {
+          var $form = formRoot();
+          if (!$form.length || $form.find('#ur-form-phone').length) return false;
+
+          var $emailGroup = $form.find('[name=email]').closest('.zammad-form-group');
+          var $bodyGroup = bodyField().closest('.zammad-form-group');
+          if (!$emailGroup.length || !$bodyGroup.length) return false;
+
+          $emailGroup.after(
+            buildInputGroup('Phone Number', 'ur-form-phone', 'tel', '+250 7XX XXX XXX', true)
+          );
+
+          var $requestor = buildSelectGroup(
+            'Requestor category',
+            'ur-form-requestor',
+            REQUESTOR_OPTIONS,
+            true
+          );
+          $requestor.addClass('ur-field-full');
+
+          var $dynamic = $('<div id="ur-dynamic-fields" class="ur-dynamic-panel ur-hidden"></div>');
+          var $regWrap = buildInputGroup(
+            'Registration number',
+            'ur-form-regnumber',
+            'text',
+            'e.g. 222004024',
+            false
+          );
+          $regWrap.attr('id', 'ur-form-reg-wrap').addClass('ur-hidden');
+          $dynamic.append($regWrap);
+
+          var $campusWrap = buildSelectGroup('Campus', 'ur-form-campus', CAMPUS_OPTIONS, false);
+          $campusWrap.attr('id', 'ur-form-campus-wrap');
+          $dynamic.append($campusWrap);
+
+          var $collegeWrap = buildSelectGroup('College', 'ur-form-college', COLLEGE_OPTIONS, false);
+          $collegeWrap.attr('id', 'ur-form-college-wrap');
+          $dynamic.append($collegeWrap);
+
+          var $requestCategory = buildSelectGroup(
+            'Request category',
+            'ur-form-request-category',
+            REQUEST_CATEGORY_OPTIONS,
+            true
+          );
+
+          var $subjectWrap = $(
+            '<div id="ur-form-subject-wrap" class="form-group zammad-form-group ur-custom-field"></div>'
+          );
+          var $subjectLabel = $('<label for="ur-form-subject-select"></label>');
+          setRequiredLabel($subjectLabel, 'Subject', true);
+          $subjectWrap.append($subjectLabel);
+          var $selectWrap = $('<div id="ur-form-subject-select-wrap"></div>');
+          $selectWrap.append(
+            $('<select>', { id: 'ur-form-subject-select' })
+              .addClass('form-control zammad-form-control')
+              .prop('required', false)
+              .append($('<option>', { value: '', text: 'Select category first' }))
+          );
+          var $textWrap = $('<div id="ur-form-subject-text-wrap" class="ur-hidden"></div>');
+          $textWrap.append(
+            $('<input>', {
+              id: 'ur-form-subject-text',
+              type: 'text',
+              placeholder: 'Specify your subject',
+            }).addClass('form-control zammad-form-control')
+          );
+          $subjectWrap.append($selectWrap).append($textWrap);
+
+          $bodyGroup.before($subjectWrap);
+          $bodyGroup.before($requestCategory);
+          $bodyGroup.before($dynamic);
+          $bodyGroup.before($requestor);
+
+          var $preview = $('<div>', {
+            id: 'ur-form-routing-preview',
+            class: 'ur-routing-preview',
+            'aria-live': 'polite',
+          }).hide();
+          $bodyGroup.before($preview);
+
+          if (!$form.find('#ur-form-title').length) {
+            $form.prepend(
+              $('<input>', { type: 'hidden', name: 'title', id: 'ur-form-title', value: '' })
+            );
+          }
+
+          setupAttachments();
+          reorganizeFormLayout();
+          return true;
+        }
+
+        function reorganizeFormLayout() {
+          var $form = formRoot();
+          if (!$form.length || $form.data('urLayoutDone')) return;
+
+          var $title = $('#ur-form-title');
+          var $summary = $('#ur-form-validation-summary');
+          var $name = $form.find('[name=name]').closest('.zammad-form-group');
+          var $email = $form.find('[name=email]').closest('.zammad-form-group');
+          var $phone = $('#ur-form-phone').closest('.zammad-form-group');
+          var $requestor = $('#ur-form-requestor').closest('.zammad-form-group');
+          var $dynamic = $('#ur-dynamic-fields');
+          var $requestCat = $('#ur-form-request-category').closest('.zammad-form-group');
+          var $subject = $('#ur-form-subject-wrap');
+          var $preview = $('#ur-form-routing-preview');
+          var $body = bodyField().closest('.zammad-form-group');
+          var $attachments = $('#ur-attachments-wrap');
+          var $btn = $form.find('button[type=submit]');
+
+          if (!$summary.length) {
+            $summary = $('<div id="ur-form-validation-summary" class="ur-form-validation-summary ur-hidden" role="alert">Please complete all required fields marked with * before sending.</div>');
+          }
+
+          $form.empty();
+          if ($title.length) $form.append($title);
+          $form.append($summary);
+
+          var $identSection = buildSection('Identification & contact', 'ur-section-ident');
+          $identSection.find('.ur-form-section-grid').append($name, $email, $phone, $requestor, $dynamic);
+
+          var $requestSection = buildSection('Request details', 'ur-section-request');
+          $requestSection.find('.ur-form-section-grid').append($requestCat, $subject, $preview);
+
+          var $messageSection = buildSection('Your message', 'ur-section-message');
+          $messageSection.find('.ur-form-section-grid').append($body);
+
+          var $attachSection = buildSection('Attachments', 'ur-section-attachments');
+          $attachSection.find('.ur-form-section-grid').append($attachments);
+
+          $form.append($identSection, $requestSection, $messageSection, $attachSection, $btn);
+          $form.data('urLayoutDone', true);
+        }
+
+        function wireFormControls() {
+          $(document)
+            .off('change.urFeedback', '#ur-form-requestor, #ur-form-request-category, #ur-form-subject-select')
+            .on('change.urFeedback', '#ur-form-requestor, #ur-form-request-category, #ur-form-subject-select', function () {
+              $(this).closest('.zammad-form-group').removeClass('zammad-form-group--has-error');
+              showValidationSummary(false);
+            });
+
+          $(document)
+            .off('change.urFeedback', '#ur-form-requestor')
+            .on('change.urFeedback', '#ur-form-requestor', updateDynamicFields);
+
+          $(document)
+            .off('change.urFeedback', '#ur-form-request-category')
+            .on('change.urFeedback', '#ur-form-request-category', updateSubjectField);
+
+          $(document)
+            .off('change.urFeedback', '#ur-form-subject-select')
+            .on('change.urFeedback', '#ur-form-subject-select', updateRoutingPreview);
+
+          $(document)
+            .off(
+              'input.urFeedback change.urFeedback',
+              '#ur-form-phone, #ur-form-regnumber, #ur-form-campus, #ur-form-college, #ur-form-subject-text, #zammad-feedback-form [name=name], #zammad-feedback-form [name=email], #zammad-feedback-form [name=body]'
+            )
+            .on(
+              'input.urFeedback change.urFeedback',
+              '#ur-form-phone, #ur-form-regnumber, #ur-form-campus, #ur-form-college, #ur-form-subject-text, #zammad-feedback-form [name=name], #zammad-feedback-form [name=email], #zammad-feedback-form [name=body]',
+              function () {
+                $(this).closest('.zammad-form-group').removeClass('zammad-form-group--has-error');
+                showValidationSummary(false);
+                updateRoutingPreview();
+              }
+            );
+
+          $(document)
+            .off('click.urFeedback', '#ur-add-attachment')
+            .on('click.urFeedback', '#ur-add-attachment', function () {
+              addAttachmentRow($('#ur-attachment-list'));
+            });
+
+          $(document)
+            .off('click.urFeedback', '.ur-remove-attachment')
+            .on('click.urFeedback', '.ur-remove-attachment', function () {
+              $(this).closest('.ur-attachment-row').remove();
+              updateAddAttachmentButton();
+            });
+
+          var $form = formRoot();
+          if ($form.length && !$form.data('urSubmitHook')) {
+            $form.data('urSubmitHook', true);
+            $form[0].addEventListener(
+              'submit',
+              function (e) {
+                if (!validateAllFields()) {
+                  e.preventDefault();
+                  e.stopImmediatePropagation();
+                  return;
+                }
+                applyBodyForSubmit();
+              },
+              true
+            );
+          }
+        }
+
+        function waitForZammadForm() {
+          var attempts = 0;
+          var timer = window.setInterval(function () {
+            attempts += 1;
+            if (injectCustomFields()) {
+              window.clearInterval(timer);
+              wireFormControls();
+              updateDynamicFields();
+              updateSubjectField();
+              return;
+            }
+            if (attempts > 80) window.clearInterval(timer);
+          }, 100);
+        }
+
+        // FAQ accordion
+        document.querySelectorAll('.faq-q').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var item = btn.closest('.faq-item');
+            var open = item.classList.contains('open');
+            document.querySelectorAll('.faq-item').forEach(function (el) {
+              el.classList.remove('open');
+              el.querySelector('.faq-q').setAttribute('aria-expanded', 'false');
+            });
+            if (!open) {
+              item.classList.add('open');
+              btn.setAttribute('aria-expanded', 'true');
+            }
+          });
+        });
+
+        $(function () {
+          // Count public visitor IP (same as student/staff login pages)
+          (function trackVisit() {
+            try {
+              var host = window.location.hostname;
+              var local = host === 'localhost' || host === '127.0.0.1';
+              var base = local
+                ? 'http://localhost:9000/api/v1'
+                : window.location.origin +
+                  (window.location.pathname.indexOf('/uat/') === 0 ? '/uat/api/v1' : '/api/v1');
+              var day =
+                new Date().getFullYear() +
+                '-' +
+                String(new Date().getMonth() + 1).padStart(2, '0') +
+                '-' +
+                String(new Date().getDate()).padStart(2, '0');
+              var key = 'wars_public_visit_day';
+              var stamp = day + '|/feedback.html';
+              if (sessionStorage.getItem(key) === stamp) return;
+              sessionStorage.setItem(key, stamp);
+              fetch(base + '/public/visit', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ page: '/feedback.html' }),
+                keepalive: true,
+              }).catch(function () {});
+            } catch (e) {}
+          })();
+
+          $('#zammad-feedback-form').ZammadForm({
+            messageTitle: 'Support Request',
+            messageSubmit: 'Send Support Request',
+            messageThankYou:
+              "Thank you for your inquiry! We'll contact you as soon as possible.",
+            messageNoConfig: 'Unable to load form. Please try again later.',
+            showTitle: false,
+            lang: 'en',
+            modal: false,
+            attachmentSupport: false,
+            attributes: [
+              {
+                display: 'Full Name',
+                name: 'name',
+                tag: 'input',
+                type: 'text',
+                required: true,
+                placeholder: 'Enter your full name',
+                defaultValue: '',
+                id: 'zammad-form-name',
+              },
+              {
+                display: 'Email Address',
+                name: 'email',
+                tag: 'input',
+                type: 'email',
+                required: true,
+                placeholder: 'Enter your email address',
+                defaultValue: '',
+                id: 'zammad-form-email',
+              },
+              {
+                display: 'Message',
+                name: 'body',
+                tag: 'textarea',
+                required: true,
+                placeholder: 'Please describe your issue or question in detail…',
+                defaultValue: '',
+                rows: 7,
+                id: 'zammad-form-body',
+              },
+            ],
+          });
+
+          waitForZammadForm();
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>WARS Account Activation</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        color: #333;
+        background-color: #f4f4f4;
+        padding: 20px;
+        margin: 0;
+      }
+      .email-container {
+        max-width: 600px;
+        margin: 0 auto;
+        background-color: #fff;
+        border: 1px solid #007bff;
+        padding: 30px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #007bff;
+      }
+      .header h1 {
+        color: #007bff;
+        margin: 0;
+        font-size: 28px;
+      }
+      .welcome-text {
+        font-size: 18px;
+        color: #555;
+        margin-bottom: 25px;
+      }
+      .credentials {
+        background-color: #f8f9fa;
+        padding: 20px;
+        border-radius: 5px;
+        border-left: 4px solid #007bff;
+        margin: 20px 0;
+      }
+      .credentials p {
+        margin: 10px 0;
+        font-size: 16px;
+      }
+      .credentials strong {
+        color: #007bff;
+        display: inline-block;
+        width: 100px;
+      }
+      .footer {
+        margin-top: 30px;
+        text-align: center;
+        color: #666;
+        font-size: 14px;
+        border-top: 1px solid #eee;
+        padding-top: 20px;
+      }
+      .system-name {
+        font-weight: bold;
+        color: #007bff;
+        font-size: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="email-container">
+      <div class="header">
+        <h1>Welcome to SWARS</h1>
+        <p class="system-name">Students' Welfare Activities Reporting System</p>
+      </div>
+      
+      <p class="welcome-text">Hello <strong><%= firstname %></strong>,</p>
+      <p class="welcome-text">Your account is ready for the <strong>Students' Welfare Activities Reporting System</strong></p>
+      
+      <div class="credentials">
+        <h3>Your Login Credentials:</h3>
+        <p>
+          <strong>Username:</strong> <%= email %>
+        </p>
+        <p>
+          <strong>Password:</strong> <%= password %>
+        </p>
+      </div>
+      
+      <p>Please keep your credentials secure and do not share them with anyone.</p>
+      <p>You can now log in to the system and start using all available features.</p>
+      
+      <div class="footer">
+        <p>WARS - Students' Welfare Activities Reporting System</p>
+        <p>This is an automated message, please do not reply to this email.</p>
+      </div>
+    </div>
+  </body>
+</html>
