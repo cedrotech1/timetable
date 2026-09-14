@@ -1,9 +1,9 @@
 /**
- * Import core timetable data from PHP dump timetable-v3.sql into Postgres.
+ * Import core timetable data from bundled SQL dump into Postgres.
  *
  * Usage:
  *   node scripts/import-timetable-sql.js
- *   node scripts/import-timetable-sql.js --sql "../timetable-php/timetable-v3.sql"
+ *   node scripts/import-timetable-sql.js --sql "./data/ur-timetable-seed.sql"
  */
 const fs = require("fs");
 const path = require("path");
@@ -12,13 +12,7 @@ const dotenv = require("dotenv");
 
 dotenv.config({ path: path.join(__dirname, "..", ".env") });
 
-const DEFAULT_SQL = path.join(
-  __dirname,
-  "..",
-  "..",
-  "timetable-php",
-  "timetable-v3.sql"
-);
+const DEFAULT_SQL = path.join(__dirname, "..", "data", "ur-timetable-seed.sql");
 
 function argValue(flag, fallback) {
   const idx = process.argv.indexOf(flag);

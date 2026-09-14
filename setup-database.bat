@@ -1,12 +1,21 @@
 @echo off
-REM Create Postgres DB + run migrations + seed initial data
+REM Create Postgres DB + migrate + import bundled seed SQL (full campuses/schools/users/...)
 REM Requires: PostgreSQL running, Node.js installed
-REM Reads DB settings from timetable-backend\.env
+REM Seed file: timetable-backend\data\ur-timetable-seed.sql
+REM Does NOT use external timetable-v3.sql / timetable-php paths.
 
 setlocal EnableExtensions
 cd /d "%~dp0timetable-backend"
 if errorlevel 1 (
   echo ERROR: timetable-backend folder not found next to this bat.
+  pause
+  exit /b 1
+)
+
+set "SEED_SQL=%cd%\data\ur-timetable-seed.sql"
+if not exist "%SEED_SQL%" (
+  echo ERROR: Missing seed file:
+  echo   %SEED_SQL%
   pause
   exit /b 1
 )
@@ -39,30 +48,17 @@ if errorlevel 1 (
 )
 
 echo.
-echo === 4/4  Seed data ===
-REM Prefer full PHP dump if present; otherwise bootstrap sample data
-set "PHP_SQL=%~dp0timetable-php\timetable-v3.sql"
-if exist "%PHP_SQL%" (
-  echo Importing from %PHP_SQL%
-  call node scripts\import-timetable-sql.js --sql "%PHP_SQL%"
-  if errorlevel 1 (
-    echo WARNING: PHP import failed — trying bootstrap seed...
-    call npm run seed
-  )
-) else (
-  echo No timetable-php\timetable-v3.sql found — using bootstrap seed.
-  echo ^(Place the PHP SQL dump there later for full UR data, then re-run seed:php^)
-  call npm run seed
-  if errorlevel 1 (
-    echo ERROR: seed failed.
-    pause
-    exit /b 1
-  )
+echo === 4/4  Import seed data from data\ur-timetable-seed.sql ===
+call node scripts\import-timetable-sql.js --sql "%SEED_SQL%"
+if errorlevel 1 (
+  echo ERROR: seed import failed.
+  pause
+  exit /b 1
 )
 
 echo.
-echo Database ready.
-echo   Login: administrator@ur.ac.rw / Admin@123
+echo Database ready ^(full seed imported^).
+echo   Login password for imported users: see SEED_USER_PASSWORD in .env ^(default 23122312^)
 echo   Next:  run start-backend.bat
 echo.
 if /i not "%~1"=="nopause" pause

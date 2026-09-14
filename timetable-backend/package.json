@@ -20,10 +20,10 @@
     "seed": "cross-env NODE_ENV=development npx sequelize-cli db:seed:all",
     "seed:uat": "cross-env NODE_ENV=uat npx sequelize-cli db:seed:all",
     "seed:prod": "cross-env NODE_ENV=production npx sequelize-cli db:seed:all",
-    "seed:php": "node scripts/import-timetable-sql.js",
+    "seed:data": "node scripts/import-timetable-sql.js",
     "passwords:set": "node scripts/set-all-passwords.js",
-    "db:setup": "npm run db:ensure && npm run migrate && npm run seed",
-    "db:reset": "npm run migrate:undo && npm run migrate && npm run seed:php"
+    "db:setup": "npm run db:ensure && npm run migrate && npm run seed:data",
+    "db:reset": "npm run migrate:undo && npm run migrate && npm run seed:data"
   },
   "author": "",
   "license": "ISC",

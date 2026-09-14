@@ -26,18 +26,18 @@ npm run start:dev
 
 Default admin after seed: `administrator@ur.ac.rw` / `Admin@123`
 
-## Seed from PHP `timetable-v3.sql`
+## Seed data
+
+Bundled dump: `data/ur-timetable-seed.sql` (imported into Postgres).
 
 ```bash
-npm run seed:php
+npm run seed:data
 ```
 
-Imports campuses, colleges, schools, programs, modules, facilities, and users from `../timetable-php/timetable-v3.sql` (passwords kept as PHP bcrypt hashes).
-
-Optional path override:
+Or full setup:
 
 ```bash
-node scripts/import-timetable-sql.js --sql "C:\path\to\timetable-v3.sql"
+npm run db:setup
 ```
 
 ## API (`/api/v1`)
