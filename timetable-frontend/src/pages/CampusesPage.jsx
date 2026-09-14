@@ -14,5 +14,6 @@ export default function CampusesPage() {
       buildFormFields={() => [{ name: 'name', label: 'Campus name', required: true }]}
       toPayload={(form) => ({ name: form.name })}
     />
+    // campus
   );
 }
