@@ -11,6 +11,15 @@ function parseAllowedOrigins() {
     .filter(Boolean);
 }
 
+function allowAllCors() {
+  const raw = (process.env.CORS_ORIGINS || '').trim();
+  return (
+    process.env.CORS_ALLOW_ALL === '1' ||
+    raw === '*' ||
+    raw.toLowerCase() === 'all'
+  );
+}
+
 function normalizeHost(host) {
   if (!host) return '';
   return host.split(':')[0].toLowerCase();
@@ -25,6 +34,7 @@ function getRequestHost(req) {
 }
 
 function originMatchesAllowed(origin, allowed) {
+  if (allowed === '*' || allowed.toLowerCase() === 'all') return true;
   if (origin === allowed || origin.startsWith(`${allowed}/`)) {
     return true;
   }
@@ -67,6 +77,7 @@ function isSameHostOrigin(origin, req) {
 
 function isOriginAllowed(origin, req) {
   if (!origin) return true;
+  if (allowAllCors()) return true;
 
   const allowedOrigins = parseAllowedOrigins();
   if (allowedOrigins.some((allowed) => originMatchesAllowed(origin, allowed))) {
