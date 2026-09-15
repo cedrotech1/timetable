@@ -7,6 +7,7 @@ import { ensureUploadDirs } from "./utils/uploadPaths.js";
 
 validateEnv();
 ensureUploadDirs();
+// te
 
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || "127.0.0.1";
