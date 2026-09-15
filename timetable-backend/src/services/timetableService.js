@@ -140,7 +140,8 @@ export async function findConflicts({
             facilityCapacity: plan.facility?.capacity ?? null,
             groupsLabel,
             source: "saved",
-            simpleReason: `Room already used by ${plan.module?.code || "another class"} (${groupsLabel || "saved plan"})`,
+            kind: "facility",
+            simpleReason: `ROOM conflict: room already used by ${plan.module?.code || "another class"} (${groupsLabel || "saved plan"})`,
           });
         }
 
@@ -158,7 +159,8 @@ export async function findConflicts({
             facilityName: plan.facility?.name || null,
             groupsLabel,
             source: "saved",
-            simpleReason: `Group already has a class at this time`,
+            kind: "group",
+            simpleReason: `GROUP conflict: this group already has a saved class at this time`,
           });
         }
       }
@@ -190,7 +192,7 @@ export async function findConflicts({
             facilityName: booked.facilityName || null,
             groupsLabel,
             source: "batch",
-            simpleReason: `Same room already used by another Excel row in this import`,
+            simpleReason: `ROOM conflict: same room already taken by another Excel row in this import`,
           });
         }
         for (const gid of shared) {
@@ -207,7 +209,8 @@ export async function findConflicts({
             facilityName: booked.facilityName || null,
             groupsLabel,
             source: "batch",
-            simpleReason: `Group already used by another Excel row in this import`,
+            kind: "group",
+            simpleReason: `GROUP conflict: this group already appears at this time on another Excel row (often a duplicate with a different room — remove or merge that row)`,
           });
         }
       }
@@ -217,7 +220,29 @@ export async function findConflicts({
   const hasConflict =
     conflicts.facility.length > 0 || Object.keys(conflicts.groups).length > 0;
 
-  return { hasConflict, conflicts };
+  return { hasConflict, conflicts, conflictKinds: getConflictKinds(conflicts) };
+}
+
+export function getConflictKinds(conflicts) {
+  if (!conflicts) return [];
+  const kinds = [];
+  if ((conflicts.facility || []).length > 0) kinds.push("facility");
+  if (Object.keys(conflicts.groups || {}).length > 0) kinds.push("group");
+  return kinds;
+}
+
+export function conflictErrorMessage(kinds) {
+  const set = new Set(kinds || []);
+  if (set.has("facility") && set.has("group")) {
+    return "ROOM conflict and GROUP time conflict — see details below.";
+  }
+  if (set.has("facility")) {
+    return "ROOM / facility conflict — this room is already used at that time.";
+  }
+  if (set.has("group")) {
+    return "GROUP time conflict — these student group(s) already have a class at this time (often a duplicate Excel row with another room).";
+  }
+  return "Conflicts detected (facility or groups).";
 }
 
 export async function getActiveSettings() {
@@ -297,7 +322,7 @@ export async function createTeachingPlan(dto, { user, transaction: outerTx = nul
     throw err;
   }
 
-  const { hasConflict, conflicts } = await findConflicts({
+  const { hasConflict, conflicts, conflictKinds } = await findConflicts({
     facilityId,
     moduleId,
     academicYearId,
@@ -308,9 +333,10 @@ export async function createTeachingPlan(dto, { user, transaction: outerTx = nul
   });
 
   if (hasConflict && !ignoreConflicts) {
-    const err = new Error("Conflicts detected (facility or groups).");
+    const err = new Error(conflictErrorMessage(conflictKinds));
     err.code = "CONFLICT";
     err.conflicts = conflicts;
+    err.conflictKinds = conflictKinds;
     throw err;
   }
 
@@ -440,7 +466,7 @@ export async function updateTeachingPlan(id, dto, { user } = {}) {
     throw err;
   }
 
-  const { hasConflict, conflicts } = await findConflicts({
+  const { hasConflict, conflicts, conflictKinds } = await findConflicts({
     facilityId,
     moduleId,
     academicYearId,
@@ -451,9 +477,10 @@ export async function updateTeachingPlan(id, dto, { user } = {}) {
   });
 
   if (hasConflict && !ignoreConflicts) {
-    const err = new Error("Conflicts detected (facility or groups).");
+    const err = new Error(conflictErrorMessage(conflictKinds));
     err.code = "CONFLICT";
     err.conflicts = conflicts;
+    err.conflictKinds = conflictKinds;
     throw err;
   }
 
@@ -598,6 +625,7 @@ export async function createTeachingPlansBulk({ academicYearId, semester, groupI
         code: error.code || "ERROR",
         message: error.message,
         conflicts: error.conflicts || null,
+        conflictKinds: error.conflictKinds || getConflictKinds(error.conflicts),
         attempt: {
           day: sessions[0]?.day || row.day,
           start: sessions[0]?.startTime || row.start,

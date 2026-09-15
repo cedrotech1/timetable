@@ -213,6 +213,7 @@ export const createTimetableController = async (req, res) => {
         status: "conflict",
         message: error.message,
         conflicts: error.conflicts,
+        conflictKinds: error.conflictKinds || null,
       });
     }
     if (error.code === "VALIDATION" || error.code === "NOT_FOUND" || error.code === "INVALID_SESSION") {
@@ -241,6 +242,7 @@ export const updateTimetableController = async (req, res) => {
         status: "conflict",
         message: error.message,
         conflicts: error.conflicts,
+        conflictKinds: error.conflictKinds || null,
       });
     }
     if (error.code === "VALIDATION" || error.code === "NOT_FOUND" || error.code === "INVALID_SESSION") {

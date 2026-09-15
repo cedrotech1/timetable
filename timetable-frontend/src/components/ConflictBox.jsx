@@ -1,10 +1,27 @@
 import { useState } from 'react';
-import { AlertTriangle, Eye, Loader2 } from 'lucide-react';
+import { AlertTriangle, Eye, Loader2, Users, Building2 } from 'lucide-react';
 import { timetableService } from '../services/api';
 
 function fmtConflictTime(t) {
   const s = String(t || '').slice(0, 5);
   return s || '—';
+}
+
+export function getConflictKindsFromPayload(conflicts, explicitKinds) {
+  if (Array.isArray(explicitKinds) && explicitKinds.length) return explicitKinds;
+  if (!conflicts) return [];
+  const kinds = [];
+  if ((conflicts.facility || []).length) kinds.push('facility');
+  if (Object.keys(conflicts.groups || {}).length) kinds.push('group');
+  return kinds;
+}
+
+export function conflictKindsLabel(kinds) {
+  const set = new Set(kinds || []);
+  if (set.has('facility') && set.has('group')) return 'ROOM + GROUP conflict';
+  if (set.has('facility')) return 'ROOM conflict';
+  if (set.has('group')) return 'GROUP conflict';
+  return 'Conflict';
 }
 
 export function summarizeConflictEntry(r) {
@@ -49,13 +66,32 @@ function ViewConflictButton({ entry, onView, loadingId }) {
   );
 }
 
+function KindBadge({ kind }) {
+  if (kind === 'facility') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-orange-100 text-orange-900 border border-orange-200">
+        <Building2 size={10} /> Room conflict
+      </span>
+    );
+  }
+  if (kind === 'group') {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide bg-violet-100 text-violet-900 border border-violet-200">
+        <Users size={10} /> Group conflict
+      </span>
+    );
+  }
+  return null;
+}
+
 /**
  * Conflict list with View on each saved teaching-plan conflict.
  * onViewPlan(timetableId, entry) — parent opens edit modal like General timetable.
  */
 export default function ConflictBox({
   conflicts,
-  title = 'Cannot save — facility or group conflict',
+  title = null,
+  conflictKinds = null,
   onViewPlan,
   loadingId = null,
 }) {
@@ -65,19 +101,33 @@ export default function ConflictBox({
   const groupEntries = Object.entries(groups);
   if (!facility.length && !groupEntries.length) return null;
 
+  const kinds = getConflictKindsFromPayload(conflicts, conflictKinds);
+  const heading = title || conflictKindsLabel(kinds);
+
   return (
     <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-950">
-      <div className="flex items-center gap-2 font-semibold mb-2">
+      <div className="flex flex-wrap items-center gap-2 font-semibold mb-2">
         <AlertTriangle size={16} className="text-red-600 shrink-0" />
-        <span>{title}</span>
+        <span>{heading}</span>
+        <span className="flex flex-wrap gap-1">
+          {kinds.includes('facility') ? <KindBadge kind="facility" /> : null}
+          {kinds.includes('group') ? <KindBadge kind="group" /> : null}
+        </span>
       </div>
-      <p className="m-0 mb-2 text-[11px] text-red-800/80">
-        Click <strong>View</strong> to open that teaching plan (same as a General timetable row).
+      <p className="m-0 mb-2 text-[11px] text-red-800/80 leading-snug">
+        <strong>Room conflict</strong> = same facility already used at that time.{' '}
+        <strong>Group conflict</strong> = student group already has a class then (often a duplicate Excel
+        row with another room). Click <strong>View</strong> to open a saved plan.
       </p>
 
       {facility.length > 0 && (
         <div className="mb-3">
-          <p className="m-0 mb-1.5 font-semibold text-xs">Facility / room ({facility.length})</p>
+          <div className="flex items-center gap-2 mb-1.5">
+            <KindBadge kind="facility" />
+            <p className="m-0 font-semibold text-xs text-orange-950">
+              This room is busy ({facility.length})
+            </p>
+          </div>
           <ul className="m-0 p-0 list-none space-y-1.5">
             {facility.slice(0, 12).map((r, i) => {
               const s = summarizeConflictEntry(r);
@@ -85,7 +135,7 @@ export default function ConflictBox({
               return (
                 <li
                   key={`f-${id || i}-${s.when}`}
-                  className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-red-100 bg-white/70 px-2.5 py-2"
+                  className="flex flex-wrap items-start justify-between gap-2 rounded-lg border border-orange-100 bg-white/80 px-2.5 py-2"
                 >
                   <div className="min-w-0 flex-1 text-xs leading-snug">
                     <strong>{s.when}</strong>: {s.mod}
@@ -98,7 +148,7 @@ export default function ConflictBox({
                     {s.grps ? <> ({s.grps})</> : null}
                     {id ? <span className="text-red-700/60"> · Plan #{id}</span> : null}
                     <span className="text-red-700/70"> — {s.where}</span>
-                    {s.reason ? <div className="text-red-800/80 mt-0.5">{s.reason}</div> : null}
+                    {s.reason ? <div className="text-orange-900/90 mt-0.5 font-medium">{s.reason}</div> : null}
                   </div>
                   <ViewConflictButton entry={r} onView={onViewPlan} loadingId={loadingId} />
                 </li>
@@ -113,12 +163,15 @@ export default function ConflictBox({
 
       {groupEntries.length > 0 && (
         <div>
-          <p className="m-0 mb-1.5 font-semibold text-xs">
-            Group time overlaps ({groupEntries.length} group(s))
-          </p>
+          <div className="flex items-center gap-2 mb-1.5">
+            <KindBadge kind="group" />
+            <p className="m-0 font-semibold text-xs text-violet-950">
+              These group(s) are already busy ({groupEntries.length})
+            </p>
+          </div>
           <ul className="m-0 p-0 list-none space-y-2">
             {groupEntries.slice(0, 8).map(([gid, rows]) => (
-              <li key={gid} className="rounded-lg border border-red-100 bg-white/70 px-2.5 py-2">
+              <li key={gid} className="rounded-lg border border-violet-100 bg-white/80 px-2.5 py-2">
                 <strong className="text-xs">
                   {rows[0]?.groupName || rows[0]?.group_name || `Group #${gid}`}
                 </strong>
@@ -136,6 +189,9 @@ export default function ConflictBox({
                           {s.fac ? ` · ${s.fac}` : ''}
                           {id ? <span className="text-red-700/60"> · Plan #{id}</span> : null}
                           <span className="text-red-700/70"> — {s.where}</span>
+                          {s.reason ? (
+                            <div className="text-violet-900/90 mt-0.5 font-medium">{s.reason}</div>
+                          ) : null}
                         </div>
                         <ViewConflictButton entry={r} onView={onViewPlan} loadingId={loadingId} />
                       </li>
@@ -157,6 +213,7 @@ export default function ConflictBox({
 export function ConflictBoxWithPlanViewer({
   conflicts,
   title,
+  conflictKinds = null,
   meta = null,
   canDelete = true,
   showError,
@@ -187,12 +244,26 @@ export function ConflictBoxWithPlanViewer({
   };
 
   if (!EditModal) {
-    return <ConflictBox conflicts={conflicts} title={title} onViewPlan={handleView} loadingId={loadingId} />;
+    return (
+      <ConflictBox
+        conflicts={conflicts}
+        title={title}
+        conflictKinds={conflictKinds}
+        onViewPlan={handleView}
+        loadingId={loadingId}
+      />
+    );
   }
 
   return (
     <>
-      <ConflictBox conflicts={conflicts} title={title} onViewPlan={handleView} loadingId={loadingId} />
+      <ConflictBox
+        conflicts={conflicts}
+        title={title}
+        conflictKinds={conflictKinds}
+        onViewPlan={handleView}
+        loadingId={loadingId}
+      />
       <EditModal
         open={Boolean(viewPlan)}
         plan={viewPlan}

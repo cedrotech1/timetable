@@ -32,7 +32,7 @@ import { appPath, publicAssetUrl } from '../utils/appPaths';
 import { parseTimetableWorkbook } from '../utils/excelTimetableParser';
 import SearchablePicker, { PickerButton } from '../components/SearchablePicker';
 import { pendingConflictsStore } from '../utils/pendingConflictsStore';
-import { ConflictBoxWithPlanViewer } from '../components/ConflictBox';
+import { ConflictBoxWithPlanViewer, conflictKindsLabel, getConflictKindsFromPayload } from '../components/ConflictBox';
 import EditTeachingPlanModal from '../components/EditTeachingPlanModal';
 import {
   capitalizePersonName,
@@ -96,20 +96,21 @@ function UploadResultPanel({ uploadResult, onJumpRow, conflictViewerProps }) {
             const a = r.attempt || {};
             const when = `${a.day || ''} ${fmtConflictTime(a.start)}–${fmtConflictTime(a.end)}`.trim();
             const mod = [a.moduleCode, a.moduleName].filter(Boolean).join(' — ') || '—';
+            const kinds = getConflictKindsFromPayload(r.conflicts, r.conflictKinds);
+            const kindLabel = r.code === 'CONFLICT' ? conflictKindsLabel(kinds) : r.code || 'error';
             return (
               <div key={r.index} className="rounded-lg border border-red-200 bg-red-50/60 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2 mb-2">
                   <div>
                     <p className="m-0 font-semibold text-red-900">
-                      Row #{r.index + 1}
-                      {r.code === 'CONFLICT' ? ' — conflict' : ` — ${r.code || 'error'}`}
+                      Row #{r.index + 1} — {kindLabel}
                     </p>
                     <p className="m-0 mt-1 text-xs text-gray-700">
                       <strong>{when || '—'}</strong> · {mod}
                       {a.facilityName ? ` · Room: ${a.facilityName}` : ''}
                       {a.groupsLabel ? ` · Groups: ${a.groupsLabel}` : ''}
                     </p>
-                    {r.message && <p className="m-0 mt-1 text-xs text-red-800">{r.message}</p>}
+                    {r.message && <p className="m-0 mt-1 text-xs text-red-800 font-medium">{r.message}</p>}
                   </div>
                   {typeof onJumpRow === 'function' && (
                     <button
@@ -121,7 +122,13 @@ function UploadResultPanel({ uploadResult, onJumpRow, conflictViewerProps }) {
                     </button>
                   )}
                 </div>
-                <ConflictBoxWithPlanViewer conflicts={r.conflicts} title="Why it failed" EditModal={EditTeachingPlanModal} {...(conflictViewerProps || {})} />
+                <ConflictBoxWithPlanViewer
+                  conflicts={r.conflicts}
+                  conflictKinds={kinds}
+                  title="Why it failed"
+                  EditModal={EditTeachingPlanModal}
+                  {...(conflictViewerProps || {})}
+                />
               </div>
             );
           })}
@@ -1533,7 +1540,7 @@ export default function SetTimetablePage() {
                 </select>
                 <p className="m-0 mt-2 text-[11px] text-slate-500 leading-snug">
                   {facilityMode === 'auto'
-                    ? 'Rooms filled by student count with no facility conflicts.'
+                    ? 'Uses all free campus rooms (smallest that fits). Avoids room clashes. Flags GROUP conflicts when the same group appears twice at the same time in Excel.'
                     : 'Excel room names are matched to system facilities — fix unmatched before save.'}
                 </p>
               </div>
@@ -2071,14 +2078,27 @@ export default function SetTimetablePage() {
                                   <td className="px-2 py-1">
                                     {(r.groups || []).map((g) => g.name).join(', ') || '—'}
                                     {hasConflict && Object.keys(r.saveConflict.groups || {}).length > 0 && (
-                                      <div className="text-red-700 mt-1 font-medium">Group time clash</div>
+                                      <div className="text-violet-800 mt-1 font-semibold text-[10px] uppercase tracking-wide">
+                                        Group conflict
+                                      </div>
+                                    )}
+                                    {hasConflict && (r.saveConflict.facility || []).length > 0 && (
+                                      <div className="text-orange-800 mt-1 font-semibold text-[10px] uppercase tracking-wide">
+                                        Room conflict
+                                      </div>
                                     )}
                                     {(r.warnings || []).length > 0 && !hasConflict && (
                                       <div className="text-amber-700 mt-1">{r.warnings[0]}</div>
                                     )}
                                     {hasConflict && (
                                       <div className="mt-2">
-                                        <ConflictBoxWithPlanViewer conflicts={r.saveConflict} title="Conflict details" EditModal={EditTeachingPlanModal} {...conflictViewerProps} />
+                                        <ConflictBoxWithPlanViewer
+                                          conflicts={r.saveConflict}
+                                          conflictKinds={getConflictKindsFromPayload(r.saveConflict)}
+                                          title="Conflict details"
+                                          EditModal={EditTeachingPlanModal}
+                                          {...conflictViewerProps}
+                                        />
                                       </div>
                                     )}
                                   </td>

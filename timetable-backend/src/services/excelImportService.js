@@ -632,8 +632,12 @@ function rowRequiredStudents(sec, row) {
 }
 
 /**
- * Auto-assign free rooms by student count. Same room + overlapping time is never shared
- * across rows — combined classes should be one plan with multiple groups.
+ * Auto-assign free rooms across the whole import:
+ * - Considers all campus facilities + already-saved timetable bookings
+ * - Avoids ROOM clashes within this Excel batch
+ * - Detects GROUP time duplicates (same group twice at same slot) before save
+ * - Reuses a room when same module + overlapping groups share the slot (combined class)
+ * - Picks smallest room that fits student count (resource optimization)
  */
 export async function autoAssignImportFacilities({
   sections,
@@ -649,19 +653,32 @@ export async function autoAssignImportFacilities({
     rows: (sec.rows || []).map((r) => ({ ...r })),
   }));
 
-  const booked = []; // in-batch bookings
+  /** @type {{ facilityId:number, day:string, start:string, end:string, moduleId:number, groupIds:number[], section:number, rowIndex:number, facilityName?:string }[]} */
+  const booked = [];
+
+  const pushBooked = (row, si, ri, facility) => {
+    const day = String(row.day || "").trim();
+    const start = normSlotTime(row.start);
+    const end = normSlotTime(row.end);
+    const groupIds = (row.groups || []).map((g) => Number(g.id)).filter(Boolean);
+    booked.push({
+      facilityId: Number(facility.id),
+      facilityName: facility.name || null,
+      day,
+      start,
+      end,
+      moduleId: Number(row.module?.id) || 0,
+      groupIds,
+      section: si,
+      rowIndex: ri,
+    });
+  };
+
   // Seed locked / user-picked facilities
   out.forEach((sec, si) => {
-    (sec.rows || []).forEach((row) => {
+    (sec.rows || []).forEach((row, ri) => {
       if (row.facilityUserPicked && row.facility?.id && row.day && row.start && row.end) {
-        booked.push({
-          facilityId: row.facility.id,
-          day: row.day,
-          start: normSlotTime(row.start),
-          end: normSlotTime(row.end),
-          moduleId: row.module?.id || 0,
-          section: si,
-        });
+        pushBooked(row, si, ri, row.facility);
       }
     });
   });
@@ -680,13 +697,16 @@ export async function autoAssignImportFacilities({
       });
     });
   });
-  jobs.sort((a, b) => b.need - a.need);
+  // Largest classes first → claim suitable rooms early (better packing)
+  jobs.sort((a, b) => b.need - a.need || a.si - b.si || a.ri - b.ri);
 
   let assigned = 0;
   let failed = 0;
+  let reused = 0;
+  let groupBlocked = 0;
 
   for (const job of jobs) {
-    const { si, row, need } = job;
+    const { si, ri, row, need } = job;
     const day = String(row.day || "").trim();
     const start = normSlotTime(row.start);
     const end = normSlotTime(row.end);
@@ -695,14 +715,109 @@ export async function autoAssignImportFacilities({
     row.end = end.slice(0, 5);
 
     if (!day || !start || !end || start >= end) {
-      row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom/i.test(w))];
+      row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|GROUP|ROOM/i.test(w))];
       row.warnings.push("Missing/invalid day/time — cannot auto-assign facility");
       row.status = "error";
       failed += 1;
       continue;
     }
 
-    const modId = row.module?.id;
+    const modId = Number(row.module?.id) || 0;
+    const groupIds = (row.groups || []).map((g) => Number(g.id)).filter(Boolean);
+    const groupNames = (row.groups || []).map((g) => g.name).filter(Boolean).join(", ") || "group(s)";
+
+    // GROUP slot already taken in this import?
+    const groupHit = booked.find(
+      (b) =>
+        String(b.day) === day &&
+        timesOverlapStr(b.start, b.end, start, end) &&
+        groupIds.some((gid) => (b.groupIds || []).includes(gid))
+    );
+
+    if (groupHit) {
+      const sameModule = modId && Number(groupHit.moduleId) === modId;
+      const hitGroups = new Set((groupHit.groupIds || []).map(Number));
+      const rowGroups = new Set(groupIds);
+      const sameGroupSet =
+        hitGroups.size > 0 &&
+        rowGroups.size > 0 &&
+        hitGroups.size === rowGroups.size &&
+        [...rowGroups].every((g) => hitGroups.has(g));
+
+      // Exact duplicate groups at this slot → always a GROUP CONFLICT (not a room issue)
+      if (sameGroupSet) {
+        row.facility = null;
+        row.warnings = [
+          ...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|GROUP|ROOM/i.test(w)),
+        ];
+        row.warnings.push(
+          `GROUP CONFLICT (duplicate Excel row): ${groupNames} already have a row at ${day} ${row.start}–${row.end}` +
+            (groupHit.facilityName ? ` in “${groupHit.facilityName}”` : "") +
+            `. Delete this duplicate (or change time/group). Auto-assign will not pick another room.`
+        );
+        row.status = "error";
+        row.conflictKind = "group";
+        groupBlocked += 1;
+        failed += 1;
+        continue;
+      }
+
+      // Different groups, same module → share one room (combined class)
+      if (sameModule && groupHit.facilityId) {
+        const fac = {
+          id: groupHit.facilityId,
+          name: groupHit.facilityName || `Facility #${groupHit.facilityId}`,
+          capacity: null,
+          buildName: null,
+          campus: null,
+        };
+        try {
+          const freeProbe = await getAvailableFacilities({
+            academicYearId: ay,
+            semester: sem,
+            sessions: [{ day, start: row.start, end: row.end }],
+            minCapacity: 0,
+          });
+          const live = freeProbe.find((f) => Number(f.id) === Number(groupHit.facilityId));
+          row.facility = live
+            ? {
+                id: live.id,
+                name: live.name,
+                capacity: live.capacity,
+                buildName: live.buildName,
+                campus: live.campus?.name,
+              }
+            : fac;
+        } catch {
+          row.facility = fac;
+        }
+        row.facilityUserPicked = false;
+        row.warnings = [
+          ...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|GROUP|ROOM|Shared/i.test(w)),
+        ];
+        row.warnings.push(
+          `ROOM shared (combined class): same module at ${day} ${row.start}–${row.end} — reused “${row.facility.name}”. Prefer one plan with all groups.`
+        );
+        row.status = "warning";
+        pushBooked(row, si, ri, row.facility);
+        reused += 1;
+        assigned += 1;
+        continue;
+      }
+
+      row.facility = null;
+      row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|GROUP|ROOM/i.test(w))];
+      row.warnings.push(
+        `GROUP CONFLICT: ${groupNames} already busy at ${day} ${row.start}–${row.end} in this import` +
+          (groupHit.facilityName ? ` (room “${groupHit.facilityName}”)` : "") +
+          `. Change the time/group or remove the other row.`
+      );
+      row.status = "error";
+      row.conflictKind = "group";
+      groupBlocked += 1;
+      failed += 1;
+      continue;
+    }
 
     let free = [];
     try {
@@ -722,9 +837,9 @@ export async function autoAssignImportFacilities({
       if (filtered.length) free = filtered;
     }
 
+    // Exclude rooms already claimed in this import at overlapping times
     free = free
       .filter((f) => {
-        // exclude in-batch overlaps (strict: any same room + overlap blocks)
         return !booked.some(
           (b) =>
             Number(b.facilityId) === Number(f.id) &&
@@ -732,16 +847,17 @@ export async function autoAssignImportFacilities({
             timesOverlapStr(b.start, b.end, start, end)
         );
       })
-      .sort((a, b) => (Number(a.capacity) || 0) - (Number(b.capacity) || 0));
+      .sort((a, b) => (Number(a.capacity) || 99999) - (Number(b.capacity) || 99999));
 
     const pick = free[0];
     if (!pick) {
       row.facility = null;
-      row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|Shared room/i.test(w))];
+      row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|Shared room|GROUP|ROOM/i.test(w))];
       row.warnings.push(
-        `No free facility for ${need} students at ${day} ${row.start}–${row.end} (Excel room ignored)`
+        `ROOM CONFLICT / no free facility: need ≥${need} seats at ${day} ${row.start}–${row.end} (checked all available campus rooms against saved timetable + this import)`
       );
       row.status = row.status === "error" ? "error" : "warning";
+      row.conflictKind = "facility";
       failed += 1;
       continue;
     }
@@ -754,23 +870,23 @@ export async function autoAssignImportFacilities({
       campus: pick.campus?.name,
     };
     row.facilityUserPicked = false;
-    row.warnings = [...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|weak match|not matched|Shared room/i.test(w))];
-    row.warnings.push(`Auto free facility (≥${need} seats)`);
+    row.warnings = [
+      ...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|weak match|not matched|Shared room|GROUP|ROOM/i.test(w)),
+    ];
+    row.warnings.push(
+      `Auto room: “${pick.name}”` +
+        (pick.capacity != null ? ` (${pick.capacity} seats)` : "") +
+        (pick.buildName ? ` · ${pick.buildName}` : "") +
+        ` ≥${need} students`
+    );
     if (row.status === "error" && row.module?.id && (row.groups || []).length) row.status = "warning";
-    booked.push({
-      facilityId: pick.id,
-      day,
-      start,
-      end,
-      moduleId: modId || 0,
-      section: si,
-    });
+    pushBooked(row, si, ri, row.facility);
     assigned += 1;
   }
 
   return {
     sections: out,
-    stats: { assigned, failed, shared: 0, jobs: jobs.length },
+    stats: { assigned, failed, reused, groupBlocked, shared: reused, jobs: jobs.length },
   };
 }
 
