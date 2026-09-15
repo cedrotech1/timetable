@@ -35,20 +35,22 @@ REM --- 1) PostgreSQL hint ---
 echo [1/4] Database: make sure PostgreSQL service is running
 echo.
 
-REM --- 2) XAMPP Apache (frontend in htdocs) ---
-echo [2/4] Starting XAMPP Apache ^(frontend^)...
-if exist "%XAMPP_DIR%\xampp_start.exe" (
-  start "" "%XAMPP_DIR%\xampp_start.exe"
-  echo      XAMPP start launched from %XAMPP_DIR%
-) else if exist "%XAMPP_DIR%\apache_start.bat" (
-  start "XAMPP Apache" cmd /k "cd /d "%XAMPP_DIR%" && call apache_start.bat"
-  echo      Apache start bat launched
-) else if exist "%XAMPP_DIR%\apache\bin\httpd.exe" (
-  start "XAMPP Apache" "%XAMPP_DIR%\apache\bin\httpd.exe"
-  echo      httpd.exe launched
+REM --- 2) Apache only if down — NEVER xampp_start.exe (protects other PHP apps)
+echo [2/4] Checking Apache ^(timetable only; leave MySQL/other apps alone^)...
+netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
+if errorlevel 1 (
+  if exist "%XAMPP_DIR%\apache_start.bat" (
+    start "" cmd /c "cd /d "%XAMPP_DIR%" && call apache_start.bat"
+    echo      Started Apache only via apache_start.bat
+  ) else if exist "%XAMPP_DIR%\apache\bin\httpd.exe" (
+    start "XAMPP Apache" "%XAMPP_DIR%\apache\bin\httpd.exe"
+    echo      Started httpd.exe
+  ) else (
+    echo      WARNING: Apache not running and not found — start Apache ONLY in XAMPP.
+    set "USE_VITE=1"
+  )
 ) else (
-  echo      WARNING: XAMPP not found — will start Vite frontend instead.
-  set "USE_VITE=1"
+  echo      Apache already running — not restarted
 )
 
 if not exist "%HTDOCS_TIMETABLE%\index.html" (

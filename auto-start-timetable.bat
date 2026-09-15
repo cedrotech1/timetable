@@ -33,22 +33,20 @@ if not exist "%XAMPP_DIR%\xampp_start.exe" if exist "E:\xampp\xampp_start.exe" (
   set "HTDOCS_TIMETABLE=E:\xampp\htdocs\timetable"
 )
 
-REM --- Apache / frontend ---
+REM --- Apache ONLY if port 80 is down — never xampp_start.exe ---
 netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
 if errorlevel 1 (
-  echo Starting XAMPP Apache...>> "%LOG%"
-  if exist "%XAMPP_DIR%\xampp_start.exe" (
-    start "" "%XAMPP_DIR%\xampp_start.exe"
-  ) else if exist "%XAMPP_DIR%\apache_start.bat" (
+  echo Apache down — starting Apache only...>> "%LOG%"
+  if exist "%XAMPP_DIR%\apache_start.bat" (
     start "" /min cmd /c "cd /d "%XAMPP_DIR%" && call apache_start.bat"
   ) else if exist "%XAMPP_DIR%\apache\bin\httpd.exe" (
     start "" /min "%XAMPP_DIR%\apache\bin\httpd.exe"
   ) else (
-    echo XAMPP not found — starting Vite frontend>> "%LOG%"
+    echo Apache not found — Vite fallback>> "%LOG%"
     set "USE_VITE=1"
   )
 ) else (
-  echo Port 80 already listening — skip Apache>> "%LOG%"
+  echo Port 80 already listening — leave Apache/PHP alone>> "%LOG%"
 )
 
 if not exist "%HTDOCS_TIMETABLE%\index.html" (

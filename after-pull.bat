@@ -97,20 +97,21 @@ timeout /t 2 /nobreak >nul
 
 start "UR Timetable Backend :9000" cmd /k "cd /d "%ROOT%timetable-backend" && npm run start:dev"
 
-REM --- 5) Apache ---11
+REM --- 5) Apache — DO NOT call xampp_start.exe (that restarts whole stack / other PHP apps)
 echo.
-echo [5/5] Ensuring XAMPP Apache is running...
+echo [5/5] Checking Apache ^(leave other XAMPP services alone^)...
 netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
 if errorlevel 1 (
-  if exist "%XAMPP_DIR%\xampp_start.exe" (
-    start "" "%XAMPP_DIR%\xampp_start.exe"
-  ) else if exist "%XAMPP_DIR%\apache_start.bat" (
+  echo       Apache is NOT on port 80.
+  if exist "%XAMPP_DIR%\apache_start.bat" (
+    echo       Starting Apache ONLY ^(not MySQL / full XAMPP^)...
     start "" cmd /c "cd /d "%XAMPP_DIR%" && call apache_start.bat"
   ) else (
-    echo       WARNING: XAMPP not found — start Apache manually
+    echo       WARNING: start Apache manually in XAMPP Control Panel ^(Apache only^).
+    echo       Do NOT use "Start all" if other staff PHP sites are already fine.
   )
 ) else (
-  echo       Apache already listening on port 80
+  echo       Apache already running — left untouched ^(other PHP apps safe^)
 )
 
 timeout /t 4 /nobreak >nul
