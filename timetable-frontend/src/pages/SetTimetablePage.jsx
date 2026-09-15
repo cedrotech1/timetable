@@ -64,11 +64,49 @@ function fmtConflictTime(t) {
   return String(t || '').slice(0, 5);
 }
 
+function toMinutes(t) {
+  const s = String(t || '').slice(0, 5);
+  const [h, m] = s.split(':').map(Number);
+  if (!Number.isFinite(h)) return 0;
+  return h * 60 + (Number.isFinite(m) ? m : 0);
+}
+
+function sessionsOverlap(a, b) {
+  if (!a?.day || !b?.day || String(a.day).toLowerCase() !== String(b.day).toLowerCase()) return false;
+  const a0 = toMinutes(a.start || a.startTime);
+  const a1 = toMinutes(a.end || a.endTime);
+  const b0 = toMinutes(b.start || b.startTime);
+  const b1 = toMinutes(b.end || b.endTime);
+  return a0 < b1 && b0 < a1;
+}
+
+function rowStudentNeed(row) {
+  return (row?.groups || []).reduce((sum, g) => sum + (Number(g.size) || 0), 0);
+}
+
+function quietRowWarnings(warnings = []) {
+  return (warnings || []).filter(
+    (w) => !/Auto room:|auto-assign|free facility|No free|weak match|Shared room/i.test(String(w || ''))
+  );
+}
+
+function sanitizeMatchedSections(sections = []) {
+  return (sections || []).map((sec) => ({
+    ...sec,
+    rows: (sec.rows || []).map((row) => ({
+      ...row,
+      warnings: quietRowWarnings(row.warnings),
+    })),
+  }));
+}
+
 function UploadResultPanel({ uploadResult, onJumpRow, conflictViewerProps }) {
   if (!uploadResult) return null;
   const results = uploadResult.results || [];
   const failed = results.filter((r) => !r.success);
   const ok = results.filter((r) => r.success);
+  const savedCount = uploadResult.saved ?? ok.length;
+  const failedCount = uploadResult.failed ?? failed.length;
 
   return (
     <section className="bg-white rounded-xl border border-red-100 p-4 text-sm space-y-3 shadow-sm">
@@ -76,19 +114,26 @@ function UploadResultPanel({ uploadResult, onJumpRow, conflictViewerProps }) {
         <div>
           <p className="m-0 font-semibold text-gray-900">Last result</p>
           <p className="m-0 mt-1 text-gray-600">
-            Saved: {uploadResult.saved ?? 0} · Failed: {uploadResult.failed ?? failed.length}
-            {uploadResult.dryRun ? ' (dry run — nothing written)' : ''}
-            {ok.length ? ` · OK: ${ok.length}` : ''}
+            {uploadResult.dryRun
+              ? `Checked OK: ${ok.length} teaching plan(s) · Failed: ${failedCount} (dry run — nothing written)`
+              : `Teaching plans saved: ${savedCount} · Failed: ${failedCount}`}
           </p>
+          {failedCount > 0 && (
+            <p className="m-0 mt-1 text-[11px] text-amber-800">
+              These numbers are teaching plans (module + room + groups + time), not “facilities saved”.
+              Failed rows usually have a GROUP conflict (same group already booked) or a ROOM conflict
+              (room already taken). Fix those rows, then re-check / save.
+            </p>
+          )}
         </div>
-        {failed.length > 0 && (
+        {failedCount > 0 && (
           <span className="inline-flex items-center gap-1 text-red-700 text-xs font-semibold">
             <AlertTriangle size={14} /> Fix conflicts below, then re-check / save
           </span>
         )}
       </div>
 
-      {failed.length === 0 ? (
+      {failedCount === 0 ? (
         <p className="m-0 text-emerald-700 text-sm">No facility/group conflicts on checked rows.</p>
       ) : (
         <div className="max-h-[28rem] overflow-y-auto space-y-3">
@@ -152,6 +197,8 @@ export default function SetTimetablePage() {
   const [programs, setPrograms] = useState([]);
   const [campuses, setCampuses] = useState([]);
   const [availableFacilities, setAvailableFacilities] = useState([]);
+  const [uploadFacilityChoices, setUploadFacilityChoices] = useState([]);
+  const [uploadFacilityLoading, setUploadFacilityLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [conflicts, setConflicts] = useState(null);
@@ -325,17 +372,85 @@ export default function SetTimetablePage() {
     );
   };
 
-  const refreshAvailableFacilities = async (sessionList) => {
-    if (!academicYearId || !semester || !sessionList?.length) return;
+  const refreshAvailableFacilities = async (sessionList, { minCapacity = 0 } = {}) => {
+    if (!academicYearId || !semester || !sessionList?.length) {
+      setAvailableFacilities([]);
+      return [];
+    }
     try {
       const res = await timetableService.availableFacilities({
         academicYearId,
         semester,
         sessions: sessionList,
+        minCapacity: minCapacity || 0,
       });
-      setAvailableFacilities(res?.data || []);
+      const list = res?.data || [];
+      setAvailableFacilities(list);
+      return list;
     } catch {
       setAvailableFacilities([]);
+      return [];
+    }
+  };
+
+  /** Facilities already claimed by other Excel rows at the same day/time (this import). */
+  const facilitiesTakenInUpload = (sectionIndex, rowIndex) => {
+    const taken = new Set();
+    const target = matchedSections[sectionIndex]?.rows?.find((x) => x.rowIndex === rowIndex);
+    if (!target) return taken;
+    matchedSections.forEach((sec, si) => {
+      (sec.rows || []).forEach((row) => {
+        if (si === sectionIndex && row.rowIndex === rowIndex) return;
+        if (row.mergedAway || row.status === 'skipped') return;
+        if (!row.facility?.id) return;
+        if (sessionsOverlap(target, row)) taken.add(Number(row.facility.id));
+      });
+    });
+    return taken;
+  };
+
+  const openUploadFacilityPicker = async (sectionIndex, rowIndex) => {
+    const row = matchedSections[sectionIndex]?.rows?.find((x) => x.rowIndex === rowIndex);
+    setPicker({ type: 'upload-facility', sectionIndex, rowIndex });
+    setUploadFacilityChoices([]);
+    if (!row?.day || !row?.start || !row?.end) return;
+    setUploadFacilityLoading(true);
+    try {
+      const need = rowStudentNeed(row);
+      const res = await timetableService.availableFacilities({
+        academicYearId,
+        semester,
+        sessions: [{ day: row.day, start: row.start, end: row.end }],
+        minCapacity: need || 0,
+      });
+      const taken = facilitiesTakenInUpload(sectionIndex, rowIndex);
+      const currentId = row.facility?.id ? Number(row.facility.id) : null;
+      let list = (res?.data || []).filter((f) => {
+        const id = Number(f.id);
+        if (currentId && id === currentId) return true;
+        return !taken.has(id);
+      });
+      // Keep current selection visible even if API no longer lists it
+      if (currentId && !list.some((f) => Number(f.id) === currentId) && row.facility) {
+        const fromAll = facilities.find((f) => Number(f.id) === currentId);
+        list = [
+          {
+            id: row.facility.id,
+            name: row.facility.name,
+            capacity: row.facility.capacity,
+            buildName: row.facility.buildName,
+            buildCode: row.facility.buildCode,
+            campus: row.facility.campus,
+            ...(fromAll || {}),
+          },
+          ...list,
+        ];
+      }
+      setUploadFacilityChoices(list);
+    } catch {
+      setUploadFacilityChoices([]);
+    } finally {
+      setUploadFacilityLoading(false);
     }
   };
 
@@ -497,7 +612,7 @@ export default function SetTimetablePage() {
         semester,
         facilityMode,
       });
-      let matched = matchRes?.data?.sections || [];
+      let matched = sanitizeMatchedSections(matchRes?.data?.sections || []);
       setMatchedSections(matched);
 
       const needCreate = matched.filter(
@@ -536,7 +651,7 @@ export default function SetTimetablePage() {
           semester,
           facilityMode,
         });
-        matched = rematchRes?.data?.sections || [];
+        matched = sanitizeMatchedSections(rematchRes?.data?.sections || []);
         autoAssign = rematchRes?.data?.autoAssign || autoAssign;
         setMatchedSections(matched);
         await loadMeta();
@@ -580,7 +695,7 @@ export default function SetTimetablePage() {
         semester,
         facilityMode,
       });
-      setMatchedSections(matchRes?.data?.sections || []);
+      setMatchedSections(sanitizeMatchedSections(matchRes?.data?.sections || []));
       if (facilityMode === 'auto' && matchRes?.data?.autoAssign) {
         showSuccess(
           `Rematched + auto facilities: ${matchRes.data.autoAssign.assigned} assigned`
@@ -605,7 +720,7 @@ export default function SetTimetablePage() {
         semester,
         campusId: uploadCampusId ? Number(uploadCampusId) : null,
       });
-      setMatchedSections(res?.data?.sections || []);
+      setMatchedSections(sanitizeMatchedSections(res?.data?.sections || []));
       showSuccess(res?.message || 'Facilities auto-assigned');
     } catch (error) {
       showError(error.response?.data?.message || 'Auto-assign failed');
@@ -628,8 +743,8 @@ export default function SetTimetablePage() {
             if (patch.facility !== undefined) {
               next.facilityUserPicked = Boolean(patch.facility);
               next.saveConflict = null;
-              next.warnings = (next.warnings || []).filter(
-                (w) => !/facility|classroom|auto-assign|No free/i.test(w)
+              next.warnings = quietRowWarnings(
+                (next.warnings || []).filter((w) => !/facility|classroom|No free|ROOM/i.test(w))
               );
             }
             if (patch.lecturers !== undefined) {
@@ -698,11 +813,13 @@ export default function SetTimetablePage() {
     rematchSections(next);
   };
 
-  const saveUpload = async ({ dryRun = false } = {}) => {
+  const saveUpload = async ({ dryRun = false, sectionIndex = null } = {}) => {
     setConflicts(null);
     const rows = [];
     const rowMeta = []; // map bulk index → section/row for UI
+    const sectionFilter = sectionIndex == null ? null : Number(sectionIndex);
     for (let si = 0; si < matchedSections.length; si += 1) {
+      if (sectionFilter != null && si !== sectionFilter) continue;
       const sec = matchedSections[si];
       for (let ri = 0; ri < (sec.rows || []).length; ri += 1) {
         const row = sec.rows[ri];
@@ -733,7 +850,11 @@ export default function SetTimetablePage() {
       }
     }
     if (!rows.length) {
-      showError('No fully matched rows to save (need module + facility + groups)');
+      showError(
+        sectionFilter != null
+          ? 'This section has no fully matched rows to save (need module + facility + groups)'
+          : 'No fully matched rows to save (need module + facility + groups)'
+      );
       return;
     }
     try {
@@ -751,10 +872,13 @@ export default function SetTimetablePage() {
       // Stamp save_conflict onto matched rows (PHP applyConflictCheckResults)
       if (data?.results?.length) {
         setMatchedSections((prev) => {
-          const next = prev.map((sec) => ({
-            ...sec,
-            rows: (sec.rows || []).map((row) => ({ ...row, saveConflict: null })),
-          }));
+          const next = prev.map((sec, si) => {
+            if (sectionFilter != null && si !== sectionFilter) return sec;
+            return {
+              ...sec,
+              rows: (sec.rows || []).map((row) => ({ ...row, saveConflict: null })),
+            };
+          });
           data.results.forEach((r) => {
             const meta = rowMeta[r.index];
             if (!meta) return;
@@ -765,7 +889,9 @@ export default function SetTimetablePage() {
               row.status = 'error';
             } else if (r.success) {
               row.saveConflict = null;
-              if (row.status === 'error') row.status = (row.warnings || []).length ? 'warning' : 'ok';
+              const quiet = quietRowWarnings(row.warnings);
+              row.warnings = quiet;
+              if (row.status === 'error') row.status = quiet.length ? 'warning' : 'ok';
             }
           });
           return next;
@@ -781,18 +907,22 @@ export default function SetTimetablePage() {
 
       if (result?.success) {
         const failed = data?.failed || 0;
+        const scope =
+          sectionFilter != null
+            ? `this section (${matchedSections[sectionFilter]?.title || `§${sectionFilter + 1}`})`
+            : 'all sections';
         if (failed > 0) {
           showWarning(
             dryRun
-              ? `Dry run: ${failed} conflict(s) of ${data?.results?.length || 0} rows — details below`
-              : `Saved ${data?.saved || 0}; ${failed} failed with conflicts — details below`
+              ? `Dry run (${scope}): ${failed} teaching plan(s) failed of ${data?.results?.length || 0}`
+              : `Teaching plans saved: ${data?.saved || 0} · Failed: ${failed} (${scope}) — not facilities`
           );
           pushPendingFromResults(data.results, dryRun ? 'upload-check' : 'upload', rows);
         } else {
           showSuccess(
             dryRun
-              ? `Dry run OK: ${data?.results?.length || 0} rows, no facility/group conflicts`
-              : `Upload saved: ${data?.saved || 0} plans`
+              ? `Dry run OK (${scope}): ${data?.results?.length || 0} teaching plan(s), no conflicts`
+              : `Saved ${data?.saved || 0} teaching plan(s) (${scope})`
           );
         }
       }
@@ -1219,11 +1349,12 @@ export default function SetTimetablePage() {
               <PickerButton
                 label="Facility (free for selected sessions)"
                 kind="facility"
-                placeholder="Search room, building, campus…"
+                placeholder="Search free room, building, campus…"
                 valueLabel={
                   (() => {
-                    const list = availableFacilities.length ? availableFacilities : facilities;
-                    const f = list.find((x) => String(x.id) === String(facilityId));
+                    const f =
+                      availableFacilities.find((x) => String(x.id) === String(facilityId)) ||
+                      facilities.find((x) => String(x.id) === String(facilityId));
                     return f ? facilityCompactLabel(f) : null;
                   })()
                 }
@@ -1232,7 +1363,7 @@ export default function SetTimetablePage() {
               <p className="m-0 mt-1 text-[11px] text-gray-400">
                 {availableFacilities.length
                   ? `${availableFacilities.length} free facilities for these sessions`
-                  : 'Showing all facilities (availability filter empty)'}
+                  : 'No free facilities for this day/time — all rooms are taken or below capacity'}
               </p>
             </div>
             <button
@@ -1753,6 +1884,22 @@ export default function SetTimetablePage() {
                 >
                   {saving ? 'Working…' : 'Save all matched rows'}
                 </button>
+                <button
+                  type="button"
+                  disabled={saving || Boolean(uploadBusy) || activeSectionIdx == null}
+                  onClick={() => saveUpload({ dryRun: true, sectionIndex: activeSectionIdx })}
+                  className="px-4 py-2 rounded-lg border text-sm"
+                >
+                  Check this section
+                </button>
+                <button
+                  type="button"
+                  disabled={saving || Boolean(uploadBusy) || activeSectionIdx == null}
+                  onClick={() => saveUpload({ dryRun: false, sectionIndex: activeSectionIdx })}
+                  className="px-4 py-2 rounded-lg border border-[#00628b] text-[#00628b] text-sm font-semibold disabled:opacity-50"
+                >
+                  Save this section
+                </button>
               </div>
 
               {uploadResult && mode === 'upload' && (
@@ -1818,7 +1965,27 @@ export default function SetTimetablePage() {
                     return (
                       <>
                         <div className="w-full rounded-xl border border-slate-200 bg-[#f8fafc] p-4 space-y-3">
-                          <p className="m-0 text-sm font-semibold text-[#031f50]">{sec.title}</p>
+                          <div className="flex flex-wrap items-start justify-between gap-2">
+                            <p className="m-0 text-sm font-semibold text-[#031f50]">{sec.title}</p>
+                            <div className="flex flex-wrap gap-2">
+                              <button
+                                type="button"
+                                disabled={saving || Boolean(uploadBusy)}
+                                onClick={() => saveUpload({ dryRun: true, sectionIndex: activeSectionIdx })}
+                                className="px-3 py-1.5 rounded-lg border bg-white text-xs font-medium disabled:opacity-50"
+                              >
+                                Check this section
+                              </button>
+                              <button
+                                type="button"
+                                disabled={saving || Boolean(uploadBusy)}
+                                onClick={() => saveUpload({ dryRun: false, sectionIndex: activeSectionIdx })}
+                                className="px-3 py-1.5 rounded-lg bg-[#00628b] text-white text-xs font-semibold disabled:opacity-50"
+                              >
+                                Save this section
+                              </button>
+                            </div>
+                          </div>
                           {(sec.title || parsedSections[activeSectionIdx]?.program_hint) && (
                             <p className="m-0 text-[11px] text-slate-500">
                               From Excel:{' '}
@@ -2005,18 +2172,12 @@ export default function SetTimetablePage() {
                                           ? 'border-red-400 bg-red-50/40'
                                           : 'border-gray-200'
                                       }`}
-                                      onClick={() =>
-                                        setPicker({
-                                          type: 'upload-facility',
-                                          sectionIndex: activeSectionIdx,
-                                          rowIndex: r.rowIndex,
-                                        })
-                                      }
+                                      onClick={() => openUploadFacilityPicker(activeSectionIdx, r.rowIndex)}
                                     >
                                       <span className="block text-[10px] uppercase text-gray-400">Facility</span>
                                       <span className="font-medium text-gray-900 line-clamp-2">
-                                        {r.facility?.name
-                                          ? `${r.facility.name}${r.facility.capacity ? ` (${r.facility.capacity})` : ''}`
+                                        {r.facility
+                                          ? facilityCompactLabel(r.facility)
                                           : 'Search & pick facility…'}
                                       </span>
                                     </button>
@@ -2114,8 +2275,8 @@ export default function SetTimetablePage() {
                                         Room conflict
                                       </div>
                                     )}
-                                    {(r.warnings || []).length > 0 && !hasConflict && !isMerged && (
-                                      <div className="text-amber-700 mt-1">{r.warnings[0]}</div>
+                                    {(quietRowWarnings(r.warnings) || []).length > 0 && !hasConflict && !isMerged && (
+                                      <div className="text-amber-700 mt-1">{quietRowWarnings(r.warnings)[0]}</div>
                                     )}
                                     {hasConflict && (
                                       <div className="mt-2">
@@ -2292,10 +2453,11 @@ export default function SetTimetablePage() {
         open={picker?.type === 'facility'}
         onClose={() => setPicker(null)}
         kind="facility"
-        title="Choose facility"
-        subtitle="Room, building, campus, type & capacity"
+        title="Choose free facility"
+        subtitle="Only rooms free for the selected day/time (not already booked)"
         placeholder="Search room, building, site, campus…"
-        items={availableFacilities.length ? availableFacilities : facilities}
+        emptyText="No free rooms for this day/time — all matching facilities are taken or below capacity"
+        items={availableFacilities}
         value={facilityId}
         getLabel={facilityPickerLabel}
         getMeta={facilityPickerMeta}
@@ -2422,12 +2584,25 @@ export default function SetTimetablePage() {
       />
       <SearchablePicker
         open={picker?.type === 'upload-facility'}
-        onClose={() => setPicker(null)}
+        onClose={() => {
+          setPicker(null);
+          setUploadFacilityChoices([]);
+          setUploadFacilityLoading(false);
+        }}
         kind="facility"
-        title="Choose facility"
-        subtitle="Room, building, campus, type & capacity"
+        title={uploadFacilityLoading ? 'Loading free facilities…' : 'Choose free facility'}
+        subtitle={
+          uploadFacilityLoading
+            ? 'Checking timetable + this Excel for the row’s day/time…'
+            : 'Only available rooms for this day/time · name (seats) · building'
+        }
         placeholder="Search room, building, site, campus…"
-        items={facilities}
+        emptyText={
+          uploadFacilityLoading
+            ? 'Loading…'
+            : 'No free rooms for this day/time — every facility is taken (saved timetable or another Excel row), or none fit the group size'
+        }
+        items={uploadFacilityLoading ? [] : uploadFacilityChoices}
         value={(() => {
           if (picker?.sectionIndex == null || picker?.rowIndex == null) return null;
           const row = matchedSections[picker.sectionIndex]?.rows?.find((x) => x.rowIndex === picker.rowIndex);
@@ -2450,8 +2625,11 @@ export default function SetTimetablePage() {
               site: f.site,
               buildName: f.buildName,
               buildCode: f.buildCode,
-              campus: f.campus?.name,
+              campus: f.campus?.name || (typeof f.campus === 'string' ? f.campus : null),
             },
+            warnings: quietRowWarnings(
+              matchedSections[si]?.rows?.find((x) => x.rowIndex === ri)?.warnings
+            ),
           });
         }}
       />

@@ -870,15 +870,12 @@ export async function autoAssignImportFacilities({
       campus: pick.campus?.name,
     };
     row.facilityUserPicked = false;
+    // Keep warnings quiet — room name is already on the Facility cell
     row.warnings = [
-      ...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|weak match|not matched|Shared room|GROUP|ROOM/i.test(w)),
+      ...(row.warnings || []).filter(
+        (w) => !/auto-assign|free facility|classroom|No free|weak match|not matched|Shared room|GROUP|ROOM|Auto room/i.test(w)
+      ),
     ];
-    row.warnings.push(
-      `Auto room: “${pick.name}”` +
-        (pick.capacity != null ? ` (${pick.capacity} seats)` : "") +
-        (pick.buildName ? ` · ${pick.buildName}` : "") +
-        ` ≥${need} students`
-    );
     if (row.status === "error" && row.module?.id && (row.groups || []).length) row.status = "warning";
     pushBooked(row, si, ri, row.facility);
     assigned += 1;

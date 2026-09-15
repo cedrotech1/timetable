@@ -38,39 +38,37 @@ export function lecturerPickerMeta(user) {
   return bits.join(' · ');
 }
 
-/** Primary line in facility picker / button */
+/** Primary line in facility picker / button — name (cap) · building */
 export function facilityPickerLabel(f) {
   if (!f) return '';
   const name = f.name || 'Facility';
-  const alt = f.name2 && String(f.name2).trim() && String(f.name2) !== String(f.name) ? String(f.name2).trim() : '';
-  return alt ? `${name} (${alt})` : name;
+  const cap = f.capacity != null && f.capacity !== '' ? ` (${f.capacity})` : '';
+  const building = f.buildName ? ` · ${f.buildName}` : '';
+  return `${name}${cap}${building}`;
 }
 
-/** Secondary line: building, campus, type, capacity, site, code */
+/** Secondary line: building code, campus, type, site */
 export function facilityPickerMeta(f) {
   if (!f) return '';
-  const building = [f.buildName, f.buildCode].filter(Boolean).join(' / ');
   return [
-    building ? `Building: ${building}` : null,
+    f.buildCode ? `Code: ${f.buildCode}` : null,
     f.site ? `Site: ${f.site}` : null,
-    f.campus?.name || f.campus || null,
+    f.campus?.name || (typeof f.campus === 'string' ? f.campus : null) || null,
     f.type || null,
-    f.capacity != null && f.capacity !== '' ? `Cap ${f.capacity}` : null,
+    f.name2 && String(f.name2) !== String(f.name) ? f.name2 : null,
   ]
     .filter(Boolean)
     .join(' · ');
 }
 
-/** Compact label for picker buttons / table cells */
+/** Compact label for picker buttons / table cells: AUDI (252) · Building */
 export function facilityCompactLabel(f) {
   if (!f) return '';
-  const parts = [
-    f.name,
-    f.buildName ? `· ${f.buildName}` : null,
-    f.capacity != null ? `(${f.capacity})` : null,
-    f.campus?.name || f.campus || null,
-  ].filter(Boolean);
-  return parts.join(' ');
+  const name = f.name || 'Facility';
+  const cap = f.capacity != null && f.capacity !== '' ? ` (${f.capacity})` : '';
+  const building = f.buildName ? ` · ${f.buildName}` : '';
+  const campus = f.campus?.name || (typeof f.campus === 'string' ? f.campus : null);
+  return `${name}${cap}${building}${campus ? ` · ${campus}` : ''}`;
 }
 
 export function facilitySearchHaystack(f) {
