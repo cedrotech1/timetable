@@ -707,6 +707,7 @@ export default function SetTimetablePage() {
       for (let ri = 0; ri < (sec.rows || []).length; ri += 1) {
         const row = sec.rows[ri];
         if (!row.module?.id || !row.facility?.id || !(row.groups || []).length) continue;
+        if (row.status === 'skipped' || row.mergedAway) continue;
         // Include previous conflict rows so re-check / save works after facility fix
         const groupNames = row.groups.map((g) => g.name).filter(Boolean);
         const groupNameById = {};
@@ -1928,15 +1929,31 @@ export default function SetTimetablePage() {
                                   r.saveConflict &&
                                   ((r.saveConflict.facility || []).length > 0 ||
                                     Object.keys(r.saveConflict.groups || {}).length > 0);
+                                const isMerged = r.status === 'skipped' || r.mergedAway;
+                                const isCombined = Boolean(r.combinedClass) && (r.groups || []).length > 1;
                                 return (
                                 <tr
                                   key={r.rowIndex}
-                                  className={`border-t align-top ${hasConflict ? 'bg-red-50' : ''}`}
+                                  className={`border-t align-top ${
+                                    hasConflict
+                                      ? 'bg-red-50'
+                                      : isMerged
+                                        ? 'bg-slate-50 opacity-70'
+                                        : isCombined
+                                          ? 'bg-emerald-50/40'
+                                          : ''
+                                  }`}
                                 >
                                   <td className="px-2 py-1">
-                                    {hasConflict ? (
+                                    {isMerged ? (
+                                      <span className="text-[10px] font-semibold text-slate-500 uppercase">Merged</span>
+                                    ) : hasConflict ? (
                                       <span className="inline-flex items-center gap-1 text-red-700 font-semibold">
                                         <AlertTriangle size={14} /> conflict
+                                      </span>
+                                    ) : isCombined ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-800 font-semibold text-[10px]">
+                                        <CheckCircle2 size={14} /> Combined
                                       </span>
                                     ) : r.status === 'ok' ? (
                                       <CheckCircle2 size={14} className="text-green-600" />
@@ -2077,6 +2094,16 @@ export default function SetTimetablePage() {
                                   </td>
                                   <td className="px-2 py-1">
                                     {(r.groups || []).map((g) => g.name).join(', ') || '—'}
+                                    {isCombined && (
+                                      <div className="text-emerald-800 mt-1 font-semibold text-[10px]">
+                                        Combined class · {(r.groups || []).length} groups · one room
+                                      </div>
+                                    )}
+                                    {isMerged && (
+                                      <div className="text-slate-500 mt-1 text-[10px]">
+                                        {(r.warnings && r.warnings[0]) || 'Merged into another row'}
+                                      </div>
+                                    )}
                                     {hasConflict && Object.keys(r.saveConflict.groups || {}).length > 0 && (
                                       <div className="text-violet-800 mt-1 font-semibold text-[10px] uppercase tracking-wide">
                                         Group conflict
@@ -2087,7 +2114,7 @@ export default function SetTimetablePage() {
                                         Room conflict
                                       </div>
                                     )}
-                                    {(r.warnings || []).length > 0 && !hasConflict && (
+                                    {(r.warnings || []).length > 0 && !hasConflict && !isMerged && (
                                       <div className="text-amber-700 mt-1">{r.warnings[0]}</div>
                                     )}
                                     {hasConflict && (

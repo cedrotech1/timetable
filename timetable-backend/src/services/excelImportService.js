@@ -596,7 +596,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
     });
   }
 
-  return { sections: outSections };
+  return { sections: mergeCombinedClassRows(outSections) };
 }
 
 function normSlotTime(t) {
@@ -884,10 +884,118 @@ export async function autoAssignImportFacilities({
     assigned += 1;
   }
 
+  mergeCombinedClassRows(out);
+
   return {
     sections: out,
     stats: { assigned, failed, reused, groupBlocked, shared: reused, jobs: jobs.length },
   };
+}
+
+/**
+ * Year 2/3 (etc.) groups can share one module in one room → ONE timetable row.
+ * Merge Excel rows with the same module + day + start + end into a single combined class.
+ */
+export function mergeCombinedClassRows(sections) {
+  const out = sections || [];
+  const buckets = new Map();
+
+  out.forEach((sec, si) => {
+    (sec.rows || []).forEach((row, ri) => {
+      if (!row || row.status === "skipped" || row.mergedAway) return;
+      if (!row.module?.id || !row.day || !row.start || !row.end) return;
+      if (!(row.groups || []).length) return;
+      const key = [
+        Number(row.module.id),
+        String(row.day).trim().toLowerCase(),
+        normSlotTime(row.start).slice(0, 5),
+        normSlotTime(row.end).slice(0, 5),
+      ].join("|");
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push({ si, ri, row });
+    });
+  });
+
+  for (const items of buckets.values()) {
+    if (items.length < 2) continue;
+
+    items.sort((a, b) => {
+      const af = a.row.facility?.id ? 0 : 1;
+      const bf = b.row.facility?.id ? 0 : 1;
+      return af - bf || a.si - b.si || a.ri - b.ri;
+    });
+
+    const primary = items[0];
+    const allGroups = [];
+    const seenG = new Set();
+    for (const it of items) {
+      for (const g of it.row.groups || []) {
+        const id = Number(g?.id);
+        if (!id || seenG.has(id)) continue;
+        seenG.add(id);
+        allGroups.push(g);
+      }
+    }
+
+    // Merge lecturers (keep primary leader; union others)
+    let leader = primary.row.lecturers?.leader || null;
+    const others = [];
+    const seenL = new Set();
+    if (leader?.id) seenL.add(Number(leader.id));
+    for (const it of items) {
+      const L = it.row.lecturers?.leader;
+      if (!leader && L?.id) {
+        leader = L;
+        seenL.add(Number(L.id));
+      }
+      for (const o of it.row.lecturers?.others || []) {
+        const id = Number(o?.id);
+        if (!id || seenL.has(id)) continue;
+        seenL.add(id);
+        others.push(o);
+      }
+    }
+
+    // Prefer largest-capacity facility among candidates if several were assigned
+    let bestFac = primary.row.facility || null;
+    for (const it of items) {
+      const f = it.row.facility;
+      if (!f?.id) continue;
+      if (!bestFac?.id || Number(f.capacity || 0) > Number(bestFac.capacity || 0)) bestFac = f;
+    }
+
+    const names = allGroups.map((g) => g.name).filter(Boolean).join(", ");
+    primary.row.groups = allGroups;
+    primary.row.facility = bestFac;
+    primary.row.lecturers = { leader, others };
+    primary.row.combinedClass = true;
+    primary.row.warnings = [
+      ...(primary.row.warnings || []).filter((w) => !/Combined class|Merged into/i.test(w)),
+      `Combined class (OK): ${names || `${allGroups.length} groups`} share one module, one room, one timetable row.`,
+    ];
+    if (primary.row.status === "error" && bestFac?.id && allGroups.length) {
+      primary.row.status = "ok";
+    } else if (primary.row.status === "skipped") {
+      primary.row.status = bestFac?.id ? "ok" : "warning";
+    }
+
+    for (let i = 1; i < items.length; i += 1) {
+      const it = items[i];
+      it.row.mergedAway = true;
+      it.row.mergedInto = {
+        sectionIndex: primary.si,
+        rowIndex: primary.row.rowIndex != null ? primary.row.rowIndex : primary.ri,
+      };
+      it.row.status = "skipped";
+      it.row.facility = null;
+      it.row.combinedClass = false;
+      it.row.warnings = [
+        `Merged into combined class (${names}) — not a separate timetable row.`,
+      ];
+    }
+  }
+
+  return out;
 }
 
 /**
@@ -1062,6 +1170,8 @@ export async function getFacilityCalendar({
         otherLecturers,
         groups,
         groupsLabel: groups.map((g) => g.name).filter(Boolean).join(", "),
+        groupCount: groups.length,
+        combinedClass: groups.length > 1,
       };
       byFacility[fid].sessions.push(entry);
       if (byFacility[fid].byDay[sess.day]) byFacility[fid].byDay[sess.day].push(entry);

@@ -29,6 +29,8 @@ function clamp(n, min, max) {
 function SlotDetailModal({ slot, facility, onClose }) {
   if (!slot) return null;
   const groups = slot.groups || [];
+  const combined = Boolean(slot.combinedClass) || groups.length > 1;
+  const totalStudents = groups.reduce((s, g) => s + (Number(g.size) || 0), 0);
 
   return (
     <ModalShell
@@ -41,6 +43,13 @@ function SlotDetailModal({ slot, facility, onClose }) {
       bodyClassName="px-4 sm:px-5 py-4"
       footer={<ModalPrimaryButton onClick={onClose}>Close</ModalPrimaryButton>}
     >
+        {combined && (
+          <div className="mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-900">
+            <strong>Combined class (OK)</strong> — {groups.length} groups share this module in one
+            facility / one timetable row
+            {totalStudents > 0 ? ` · ~${totalStudents} students` : ''}.
+          </div>
+        )}
         <dl className="space-y-3 text-sm">
           <div>
             <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Module</dt>
@@ -81,7 +90,9 @@ function SlotDetailModal({ slot, facility, onClose }) {
           </div>
 
           <div>
-            <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Groups</dt>
+            <dt className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+              Groups {combined ? `(${groups.length} together)` : ''}
+            </dt>
             <dd className="m-0 mt-0.5 space-y-2">
               {groups.length === 0 ? (
                 <span className="text-slate-500">—</span>
@@ -278,10 +289,15 @@ function FacilityWeekGrid({ block, onSlotClick, highlightDay = '' }) {
                         left: `calc(${leftPct}% + 2px)`,
                         width: `calc(${widthPct}% - 4px)`,
                       }}
-                      title={`${fmt(s.startTime)}–${fmt(s.endTime)}`}
+                      title={`${fmt(s.startTime)}–${fmt(s.endTime)}${(s.groups || []).length > 1 ? ` · Combined ${(s.groups || []).length} groups` : ''}`}
                     >
                       <div className="font-semibold opacity-95">
                         {fmt(s.startTime)}–{fmt(s.endTime)}
+                        {(s.groups || []).length > 1 ? (
+                          <span className="ml-1 inline-block rounded bg-emerald-400/90 text-[#012a70] px-1 text-[9px] font-bold">
+                            {s.groups.length} groups
+                          </span>
+                        ) : null}
                       </div>
                       <div className="font-semibold line-clamp-2">
                         {s.moduleCode ? `${s.moduleCode} ` : ''}
