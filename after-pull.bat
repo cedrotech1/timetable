@@ -97,7 +97,7 @@ timeout /t 2 /nobreak >nul
 
 start "UR Timetable Backend :9000" cmd /k "cd /d "%ROOT%timetable-backend" && npm run start:dev"
 
-REM --- 5) Apache ---
+REM --- 5) Apache ---1
 echo.
 echo [5/5] Ensuring XAMPP Apache is running...
 netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
