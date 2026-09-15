@@ -10,6 +10,11 @@
   RewriteCond %{HTTP:Authorization} .
   RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
+  # Also honor HTTPS / reverse-proxy headers when behind domain SSL
+  RewriteCond %{HTTP:X-Forwarded-Proto} =https [OR]
+  RewriteCond %{HTTPS} =on
+  RewriteRule ^ - [E=HTTPS:on]
+
   # Proxy API calls to Node (api-proxy.php → http://127.0.0.1:9000)
   RewriteRule ^api(?:/|$)(.*)$ api-proxy.php [QSA,L]
 
