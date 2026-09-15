@@ -97,7 +97,7 @@ timeout /t 2 /nobreak >nul
 
 start "UR Timetable Backend :9000" cmd /k "cd /d "%ROOT%timetable-backend" && npm run start:dev"
 
-REM --- 5) Apache — DO NOT call xampp_start.exe (that restarts whole stack / other PHP apps)
+REM --- 5) Apache 1— DO NOT call xampp_start.exe (that restarts whole stack / other PHP apps)
 echo.
 echo [5/5] Checking Apache ^(leave other XAMPP services alone^)...
 netstat -ano | findstr ":80 " | findstr "LISTENING" >nul 2>&1
