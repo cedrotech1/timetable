@@ -34,6 +34,15 @@ import SearchablePicker, { PickerButton } from '../components/SearchablePicker';
 import { pendingConflictsStore } from '../utils/pendingConflictsStore';
 import { ConflictBoxWithPlanViewer } from '../components/ConflictBox';
 import EditTeachingPlanModal from '../components/EditTeachingPlanModal';
+import {
+  capitalizePersonName,
+  facilityCompactLabel,
+  facilityPickerLabel,
+  facilityPickerMeta,
+  facilitySearchHaystack,
+  lecturerPickerLabel,
+  lecturerPickerMeta,
+} from '../utils/formatDisplay';
 
 const MODES = [
   { id: 'single', label: 'Single entry', icon: CalendarDays, blurb: 'One teaching plan at a time' },
@@ -1176,7 +1185,9 @@ export default function SetTimetablePage() {
               valueLabel={
                 (() => {
                   const u = lecturers.find((x) => String(x.id) === String(leaderId));
-                  return u ? `${u.names}${u.urEmail ? ` · ${u.urEmail}` : ''}` : null;
+                  return u
+                    ? `${lecturerPickerLabel(u)}${u.urEmail ? ` · ${u.urEmail}` : ''}`
+                    : null;
                 })()
               }
               onClick={() => setPicker({ type: 'leader' })}
@@ -1190,7 +1201,7 @@ export default function SetTimetablePage() {
                 otherLecturerIds.length
                   ? lecturers
                       .filter((u) => otherLecturerIds.map(String).includes(String(u.id)))
-                      .map((u) => u.names)
+                      .map((u) => lecturerPickerLabel(u))
                       .join(', ')
                   : null
               }
@@ -1200,14 +1211,12 @@ export default function SetTimetablePage() {
               <PickerButton
                 label="Facility (free for selected sessions)"
                 kind="facility"
-                placeholder="Search facility…"
+                placeholder="Search room, building, campus…"
                 valueLabel={
                   (() => {
                     const list = availableFacilities.length ? availableFacilities : facilities;
                     const f = list.find((x) => String(x.id) === String(facilityId));
-                    return f
-                      ? `${f.name}${f.capacity ? ` (${f.capacity})` : ''}${f.campus?.name ? ` — ${f.campus.name}` : ''}`
-                      : null;
+                    return f ? facilityCompactLabel(f) : null;
                   })()
                 }
                 onClick={() => setPicker({ type: 'facility' })}
@@ -1335,8 +1344,10 @@ export default function SetTimetablePage() {
                       >
                         <span className="block text-[10px] uppercase text-gray-400">Facility</span>
                         <span className="font-medium text-gray-900 line-clamp-2">
-                          {facilities.find((f) => String(f.id) === String(row.facilityId))?.name ||
-                            'Search facility…'}
+                          {(() => {
+                            const f = facilities.find((x) => String(x.id) === String(row.facilityId));
+                            return f ? facilityCompactLabel(f) : 'Search facility…';
+                          })()}
                         </span>
                       </button>
                     </td>
@@ -1348,8 +1359,10 @@ export default function SetTimetablePage() {
                       >
                         <span className="block text-[10px] uppercase text-gray-400">Leader</span>
                         <span className="font-medium text-gray-900 line-clamp-2">
-                          {lecturers.find((u) => String(u.id) === String(row.leaderLecturerId))?.names ||
-                            'Search leader…'}
+                          {(() => {
+                            const u = lecturers.find((x) => String(x.id) === String(row.leaderLecturerId));
+                            return u ? lecturerPickerLabel(u) : 'Search leader…';
+                          })()}
                         </span>
                       </button>
                       {row.leaderLecturerId ? (
@@ -1379,7 +1392,7 @@ export default function SetTimetablePage() {
                                 .filter((u) =>
                                   (row.otherLecturerIds || []).map(String).includes(String(u.id))
                                 )
-                                .map((u) => u.names)
+                                .map((u) => lecturerPickerLabel(u))
                                 .join(', ')
                             : 'Search & multi-select…'}
                         </span>
@@ -2203,8 +2216,8 @@ export default function SetTimetablePage() {
         placeholder="Search name or email…"
         items={[{ id: '', names: '— None —' }, ...lecturers]}
         value={leaderId || ''}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(u) => {
           setLeaderId(u.id ? String(u.id) : '');
           if (u.id) {
@@ -2223,8 +2236,8 @@ export default function SetTimetablePage() {
         items={lecturers.filter((u) => String(u.id) !== String(leaderId))}
         value={otherLecturerIds}
         multiple
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(list) => setOtherLecturerIds(list.map((u) => u.id))}
         confirmLabel="Apply lecturers"
       />
@@ -2233,14 +2246,13 @@ export default function SetTimetablePage() {
         onClose={() => setPicker(null)}
         kind="facility"
         title="Choose facility"
-        subtitle="Prefer rooms free for your selected sessions"
-        placeholder="Search room name or campus…"
+        subtitle="Room, building, campus, type & capacity"
+        placeholder="Search room, building, site, campus…"
         items={availableFacilities.length ? availableFacilities : facilities}
         value={facilityId}
-        getLabel={(f) => f.name}
-        getMeta={(f) =>
-          [f.capacity != null ? `Cap ${f.capacity}` : null, f.campus?.name, f.type].filter(Boolean).join(' · ')
-        }
+        getLabel={facilityPickerLabel}
+        getMeta={facilityPickerMeta}
+        filterItem={(f, q) => facilitySearchHaystack(f).includes(q)}
         onSelect={(f) => setFacilityId(String(f.id))}
       />
       <SearchablePicker
@@ -2264,13 +2276,13 @@ export default function SetTimetablePage() {
         onClose={() => setPicker(null)}
         kind="facility"
         title="Choose facility"
-        placeholder="Search room name…"
+        subtitle="Room, building, campus, type & capacity"
+        placeholder="Search room, building, site, campus…"
         items={facilities}
         value={picker?.rowIndex != null ? bulkRows[picker.rowIndex]?.facilityId : null}
-        getLabel={(f) => f.name}
-        getMeta={(f) =>
-          [f.capacity != null ? `Cap ${f.capacity}` : null, f.campus?.name].filter(Boolean).join(' · ')
-        }
+        getLabel={facilityPickerLabel}
+        getMeta={facilityPickerMeta}
+        filterItem={(f, q) => facilitySearchHaystack(f).includes(q)}
         onSelect={(f) => {
           const idx = picker?.rowIndex;
           if (idx == null) return;
@@ -2286,8 +2298,8 @@ export default function SetTimetablePage() {
         placeholder="Search name or email…"
         items={[{ id: '', names: '— None —' }, ...lecturers]}
         value={picker?.rowIndex != null ? bulkRows[picker.rowIndex]?.leaderLecturerId || '' : ''}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(u) => {
           const idx = picker?.rowIndex;
           if (idx == null) return;
@@ -2321,8 +2333,8 @@ export default function SetTimetablePage() {
         })}
         value={picker?.rowIndex != null ? bulkRows[picker.rowIndex]?.otherLecturerIds || [] : []}
         multiple
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(list) => {
           const idx = picker?.rowIndex;
           if (idx == null) return;
@@ -2366,17 +2378,17 @@ export default function SetTimetablePage() {
         onClose={() => setPicker(null)}
         kind="facility"
         title="Choose facility"
-        placeholder="Search room name…"
+        subtitle="Room, building, campus, type & capacity"
+        placeholder="Search room, building, site, campus…"
         items={facilities}
         value={(() => {
           if (picker?.sectionIndex == null || picker?.rowIndex == null) return null;
           const row = matchedSections[picker.sectionIndex]?.rows?.find((x) => x.rowIndex === picker.rowIndex);
           return row?.facility?.id || null;
         })()}
-        getLabel={(f) => f.name}
-        getMeta={(f) =>
-          [f.capacity != null ? `Cap ${f.capacity}` : null, f.campus?.name].filter(Boolean).join(' · ')
-        }
+        getLabel={facilityPickerLabel}
+        getMeta={facilityPickerMeta}
+        filterItem={(f, q) => facilitySearchHaystack(f).includes(q)}
         onSelect={(f) => {
           const si = picker?.sectionIndex;
           const ri = picker?.rowIndex;
@@ -2385,8 +2397,12 @@ export default function SetTimetablePage() {
             facility: {
               id: f.id,
               name: f.name,
+              name2: f.name2,
               capacity: f.capacity,
+              type: f.type,
+              site: f.site,
               buildName: f.buildName,
+              buildCode: f.buildCode,
               campus: f.campus?.name,
             },
           });
@@ -2407,8 +2423,8 @@ export default function SetTimetablePage() {
           );
           return row?.lecturers?.leader?.id || '';
         })()}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(u) => {
           const si = picker?.sectionIndex;
           const ri = picker?.rowIndex;
@@ -2422,7 +2438,12 @@ export default function SetTimetablePage() {
           }
           patchMatchedRow(si, ri, {
             lecturers: {
-              leader: { id: u.id, names: u.names, urEmail: u.urEmail, email: u.email },
+              leader: {
+                id: u.id,
+                names: capitalizePersonName(u.names),
+                urEmail: u.urEmail,
+                email: u.email,
+              },
               others: (row?.lecturers?.others || []).filter((o) => Number(o.id) !== Number(u.id)),
             },
             missedLecturers: (row?.missedLecturers || []).filter(
@@ -2448,8 +2469,8 @@ export default function SetTimetablePage() {
           );
           return (row?.lecturers?.others || []).map((o) => o.id);
         })()}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(list) => {
           const si = picker?.sectionIndex;
           const ri = picker?.rowIndex;
@@ -2458,7 +2479,12 @@ export default function SetTimetablePage() {
           const leader = row?.lecturers?.leader || null;
           const others = list
             .filter((u) => !leader || Number(u.id) !== Number(leader.id))
-            .map((u) => ({ id: u.id, names: u.names, urEmail: u.urEmail, email: u.email }));
+            .map((u) => ({
+              id: u.id,
+              names: capitalizePersonName(u.names),
+              urEmail: u.urEmail,
+              email: u.email,
+            }));
           patchMatchedRow(si, ri, {
             lecturers: { leader, others },
           });
@@ -2477,15 +2503,20 @@ export default function SetTimetablePage() {
           .replace(/\([^)]*\)/g, ' ')
           .replace(/\b(prof\.?|dr\.?|mr\.?|mrs\.?|ms\.?)\b/gi, ' ')
           .trim()}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(u) => {
           const si = picker?.sectionIndex;
           const ri = picker?.rowIndex;
           const excelName = picker?.excelName;
           if (si == null || ri == null) return;
           const row = matchedSections[si]?.rows?.find((x) => x.rowIndex === ri);
-          const dto = { id: u.id, names: u.names, urEmail: u.urEmail, email: u.email };
+          const dto = {
+            id: u.id,
+            names: capitalizePersonName(u.names),
+            urEmail: u.urEmail,
+            email: u.email,
+          };
           let leader = row?.lecturers?.leader || null;
           let others = [...(row?.lecturers?.others || [])];
           if (!leader) leader = dto;

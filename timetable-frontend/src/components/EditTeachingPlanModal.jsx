@@ -8,6 +8,14 @@ import {
 import SearchablePicker, { PickerButton } from './SearchablePicker';
 import ModalShell, { ModalPrimaryButton, ModalSecondaryButton } from './ModalShell';
 import { ConflictBoxWithPlanViewer } from './ConflictBox';
+import {
+  facilityCompactLabel,
+  facilityPickerLabel,
+  facilityPickerMeta,
+  facilitySearchHaystack,
+  lecturerPickerLabel,
+  lecturerPickerMeta,
+} from '../utils/formatDisplay';
 
 const DEFAULT_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -232,22 +240,22 @@ export default function EditTeachingPlanModal({
   })();
   const facilityLabel = (() => {
     const f = facilityList.find((x) => String(x.id) === String(facilityId)) || plan.facility;
-    return f
-      ? `${f.name}${f.capacity ? ` (${f.capacity})` : ''}${f.campus?.name ? ` — ${f.campus.name}` : ''}`
-      : null;
+    return f ? facilityCompactLabel(f) : null;
   })();
   const leaderLabel = (() => {
     const u = lecturers.find((x) => String(x.id) === String(leaderId)) || plan.leader_lecturer;
-    return u ? `${u.names}${u.urEmail || u.email ? ` · ${u.urEmail || u.email}` : ''}` : null;
+    return u
+      ? `${lecturerPickerLabel(u)}${u.urEmail || u.email ? ` · ${u.urEmail || u.email}` : ''}`
+      : null;
   })();
   const othersLabel = otherLecturerIds.length
     ? lecturers
         .filter((u) => otherLecturerIds.map(String).includes(String(u.id)))
-        .map((u) => u.names)
+        .map((u) => lecturerPickerLabel(u))
         .join(', ') ||
       (plan.other_lecturers || [])
         .filter((u) => otherLecturerIds.map(String).includes(String(u.id)))
-        .map((u) => u.names)
+        .map((u) => lecturerPickerLabel(u))
         .join(', ')
     : null;
 
@@ -512,8 +520,8 @@ export default function EditTeachingPlanModal({
         placeholder="Search name or email…"
         items={[{ id: '', names: '— None —' }, ...lecturers]}
         value={leaderId || ''}
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(u) => setLeaderId(u.id ? String(u.id) : '')}
       />
       <SearchablePicker
@@ -527,8 +535,8 @@ export default function EditTeachingPlanModal({
         items={lecturers.filter((u) => String(u.id) !== String(leaderId))}
         value={otherLecturerIds}
         multiple
-        getLabel={(u) => u.names}
-        getMeta={(u) => u.urEmail || u.email || ''}
+        getLabel={lecturerPickerLabel}
+        getMeta={lecturerPickerMeta}
         onSelect={(list) => setOtherLecturerIds(list.map((u) => u.id))}
         confirmLabel="Apply lecturers"
       />
@@ -537,13 +545,13 @@ export default function EditTeachingPlanModal({
         onClose={() => setPicker(null)}
         kind="facility"
         title="Choose facility"
-        placeholder="Search room name or campus…"
+        subtitle="Room, building, campus, type & capacity"
+        placeholder="Search room, building, site, campus…"
         items={facilityList}
         value={facilityId}
-        getLabel={(f) => f.name}
-        getMeta={(f) =>
-          `${f.capacity ? `Cap ${f.capacity}` : ''}${f.campus?.name ? ` · ${f.campus.name}` : ''}`
-        }
+        getLabel={facilityPickerLabel}
+        getMeta={facilityPickerMeta}
+        filterItem={(f, q) => facilitySearchHaystack(f).includes(q)}
         onSelect={(f) => setFacilityId(String(f.id))}
       />
     </>
