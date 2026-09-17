@@ -10,6 +10,7 @@ import {
 import { appPath } from '../utils/appPaths';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageOrg, isAdmin } from '../utils/roles';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -129,7 +130,7 @@ export default function DashboardPage() {
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900 m-0">Dashboard</h1>
         <p className="mt-1 mb-0 text-sm text-gray-500">
-          Welcome{user?.names ? `, ${user.names}` : ''} — manage the academic structure used by the timetable.
+          Welcome{user?.names ? `, ${capitalizePersonName(user.names)}` : ''} — manage the academic structure used by the timetable.
         </p>
       </div>
 

@@ -224,8 +224,8 @@ export default function PublicTimetablePage() {
               <UrLogo />
             </div>
             <div>
-              <div className="font-bold text-sm sm:text-base leading-tight">University of Rwanda</div>
-              <div className="text-xs opacity-90">Public timetable</div>
+              <div className="font-bold text-base sm:text-lg leading-tight">University of Rwanda</div>
+              <div className="text-sm opacity-90">Public timetable</div>
             </div>
           </div>
           <div className="flex items-center gap-2 text-sm">
@@ -255,7 +255,7 @@ export default function PublicTimetablePage() {
               <CalendarRange size={22} className="text-[#00628b]" />
               Teaching timetable
             </h1>
-            <p className="mt-1 mb-0 text-sm text-gray-600">
+            <p className="mt-1 mb-0 text-base text-gray-600">
               Academic year{' '}
               <strong>{meta?.yearLabel || meta?.academicYearId || '—'}</strong>
               {' · '}Semester <strong>{meta?.semester || '—'}</strong>
@@ -283,11 +283,11 @@ export default function PublicTimetablePage() {
               ['group', 'Group', groupOptions],
             ].map(([key, label, opts]) => (
               <label key={key} className="block">
-                <span className="block text-[10px] uppercase tracking-wide text-gray-500 mb-0.5">{label}</span>
+                <span className="block text-xs uppercase tracking-wide text-gray-500 mb-1">{label}</span>
                 <select
                   value={filters[key]}
                   onChange={(e) => setFilters((p) => ({ ...p, [key]: e.target.value }))}
-                  className="w-full rounded-lg border border-gray-200 px-2 py-1.5 text-xs"
+                  className="w-full rounded-lg border border-gray-200 px-2.5 py-2 text-sm"
                 >
                   <option value="">All</option>
                   {opts.map((o) => (
@@ -307,13 +307,13 @@ export default function PublicTimetablePage() {
               ['lecturer', 'Lecturer'],
             ].map(([key, ph]) => (
               <div key={key} className="relative">
-                <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   value={search[key]}
                   onChange={(e) => setSearch((p) => ({ ...p, [key]: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && setAppliedSearch({ ...search })}
                   placeholder={ph}
-                  className="w-full rounded-lg border border-gray-200 pl-8 pr-2 py-1.5 text-xs"
+                  className="w-full rounded-lg border border-gray-200 pl-8 pr-2 py-2 text-sm"
                 />
               </div>
             ))}
@@ -323,35 +323,35 @@ export default function PublicTimetablePage() {
             <button
               type="button"
               onClick={() => setAppliedSearch({ ...search })}
-              className="px-3 py-1.5 rounded-lg bg-[#00628b] text-white text-xs font-semibold"
+              className="px-3 py-2 rounded-lg bg-[#00628b] text-white text-sm font-semibold"
             >
               Apply search
             </button>
             <button
               type="button"
               onClick={resetFilters}
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#031f50] text-white text-xs font-semibold"
+              className="inline-flex items-center gap-1 px-3 py-2 rounded-lg bg-[#031f50] text-white text-sm font-semibold"
             >
-              <RotateCcw size={12} /> Reset
+              <RotateCcw size={14} /> Reset
             </button>
           </div>
         </div>
 
         <div className="bg-white rounded-xl border shadow-sm overflow-hidden">
           {loading ? (
-            <div className="py-16 text-center text-gray-500 text-sm">Loading timetable…</div>
+            <div className="py-16 text-center text-gray-500 text-base">Loading timetable…</div>
           ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-gray-500 text-sm">No teaching plans match these filters.</div>
+            <div className="py-16 text-center text-gray-500 text-base">No teaching plans match these filters.</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full text-[12px] border-collapse">
+              <table className="min-w-full text-sm border-collapse">
                 <thead>
                   <tr>
                     {['Day', 'Time', 'Course', 'Code', 'Credits', 'Facility'].map((h) => (
                       <th
                         key={h}
                         rowSpan={2}
-                        className="border px-2 py-1 text-white"
+                        className="border px-2.5 py-2 text-white text-sm font-semibold"
                         style={{ background: 'rgb(99,124,167)' }}
                       >
                         {h}
@@ -359,14 +359,14 @@ export default function PublicTimetablePage() {
                     ))}
                     <th
                       colSpan={6}
-                      className="border px-2 py-1 text-white text-center"
+                      className="border px-2.5 py-2 text-white text-center text-sm font-semibold"
                       style={{ background: 'rgb(99,124,167)' }}
                     >
                       Group details
                     </th>
                     <th
                       rowSpan={2}
-                      className="border px-2 py-1 text-white"
+                      className="border px-2.5 py-2 text-white text-sm font-semibold"
                       style={{ background: 'rgb(99,124,167)' }}
                     >
                       Lecturers
@@ -374,7 +374,11 @@ export default function PublicTimetablePage() {
                   </tr>
                   <tr>
                     {['Group', 'Year', 'Program', 'School', 'Campus', 'College'].map((h) => (
-                      <th key={h} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                      <th
+                        key={h}
+                        className="border px-2.5 py-2 text-white text-sm font-semibold"
+                        style={{ background: 'rgb(99,124,167)' }}
+                      >
                         {h}
                       </th>
                     ))}
@@ -389,34 +393,39 @@ export default function PublicTimetablePage() {
                       <tr key={`${t.id}-${gi}`} className={gi % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fa]'}>
                         {gi === 0 && (
                           <>
-                            <td rowSpan={groups.length} className="border px-2 py-1">
+                            <td rowSpan={groups.length} className="border px-2.5 py-2">
                               {first?.day || '—'}
                             </td>
-                            <td rowSpan={groups.length} className="border px-2 py-1 whitespace-nowrap">
+                            <td rowSpan={groups.length} className="border px-2.5 py-2 whitespace-nowrap">
                               {first ? `${fmtTime(first.start_time)}-${fmtTime(first.end_time)}` : '—'}
                             </td>
-                            <td rowSpan={groups.length} className="border px-2 py-1 text-left">
+                            <td rowSpan={groups.length} className="border px-2.5 py-2 text-left">
                               {t.course || '—'}
                             </td>
-                            <td rowSpan={groups.length} className="border px-2 py-1">
+                            <td rowSpan={groups.length} className="border px-2.5 py-2">
                               {t.code || '—'}
                             </td>
-                            <td rowSpan={groups.length} className="border px-2 py-1 text-center">
+                            <td rowSpan={groups.length} className="border px-2.5 py-2 text-center">
                               {t.credits ?? '—'}
                             </td>
-                            <td rowSpan={groups.length} className="border px-2 py-1">
-                              {t.facility?.name || '—'}
+                            <td rowSpan={groups.length} className="border px-2.5 py-2">
+                              <div className="font-medium">{t.facility?.name || '—'}</div>
+                              {t.facility?.buildName &&
+                              String(t.facility.buildName).trim().toLowerCase() !==
+                                String(t.facility.name || '').trim().toLowerCase() ? (
+                                <div className="text-xs text-slate-500 mt-0.5">{t.facility.buildName}</div>
+                              ) : null}
                             </td>
                           </>
                         )}
-                        <td className="border px-2 py-1">{g?.name || '—'}</td>
-                        <td className="border px-2 py-1 text-center">{g?.year_of_study || '—'}</td>
-                        <td className="border px-2 py-1 text-left">{g?.program || '—'}</td>
-                        <td className="border px-2 py-1 text-left">{g?.school || '—'}</td>
-                        <td className="border px-2 py-1 capitalize">{g?.campus || '—'}</td>
-                        <td className="border px-2 py-1">{g?.college || '—'}</td>
+                        <td className="border px-2.5 py-2">{g?.name || '—'}</td>
+                        <td className="border px-2.5 py-2 text-center">{g?.year_of_study || '—'}</td>
+                        <td className="border px-2.5 py-2 text-left">{g?.program || '—'}</td>
+                        <td className="border px-2.5 py-2 text-left">{g?.school || '—'}</td>
+                        <td className="border px-2.5 py-2 capitalize">{g?.campus || '—'}</td>
+                        <td className="border px-2.5 py-2">{g?.college || '—'}</td>
                         {gi === 0 && (
-                          <td rowSpan={groups.length} className="border px-2 py-1 text-left">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 text-left">
                             {lecturers || '—'}
                           </td>
                         )}
@@ -428,7 +437,7 @@ export default function PublicTimetablePage() {
             </div>
           )}
         </div>
-        <p className="text-xs text-gray-500 m-0">
+        <p className="text-sm text-gray-500 m-0">
           Showing {filtered.length} of {rows.length} plan(s) for the live academic period.
         </p>
       </main>

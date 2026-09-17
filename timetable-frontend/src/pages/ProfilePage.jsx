@@ -4,6 +4,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import { authService } from '../services/api';
 import { roleLabel } from '../utils/roles';
 import { UserAvatar } from '../components/UserAvatar';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 export default function ProfilePage() {
   const { user, refreshUser } = useAuth();
@@ -48,7 +49,9 @@ export default function ProfilePage() {
       <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm flex items-center gap-4">
         <UserAvatar user={user} size={56} />
         <div>
-          <p className="m-0 text-lg font-semibold text-gray-900">{user?.names}</p>
+          <p className="m-0 text-lg font-semibold text-gray-900">
+            {capitalizePersonName(user?.names) || 'User'}
+          </p>
           <p className="m-0 text-sm text-gray-500">{user?.urEmail}</p>
           <p className="m-0 text-xs text-gray-400 mt-1">{roleLabel(user?.role)}</p>
         </div>

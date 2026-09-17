@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { UserAvatar } from './UserAvatar';
 import { appPath, loginPath } from '../utils/appPaths';
 import { roleLabel } from '../utils/roles';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 export const Header = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -56,7 +57,7 @@ export const Header = ({ onMenuClick }) => {
           <UserAvatar user={user} size={36} />
           <div className="hidden sm:block text-left min-w-0">
             <p className="m-0 text-sm font-medium text-gray-900 truncate max-w-[160px]">
-              {user?.names || 'User'}
+              {capitalizePersonName(user?.names) || 'User'}
             </p>
             <p className="m-0 text-xs text-gray-500 truncate">{roleLabel(user?.role)}</p>
           </div>

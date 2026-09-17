@@ -226,7 +226,7 @@ export default function SetTimetablePage() {
   const [uploadResult, setUploadResult] = useState(null);
   const [uploadRowMeta, setUploadRowMeta] = useState([]);
   const [activeSectionIdx, setActiveSectionIdx] = useState(0);
-  const [facilityMode, setFacilityMode] = useState('auto'); // excel | auto
+  const [facilityMode, setFacilityMode] = useState('excel'); // excel | auto
   const [picker, setPicker] = useState(null); // { type, rowIndex? }
   const [pendingItems, setPendingItems] = useState(() => pendingConflictsStore.list());
   const [showPending, setShowPending] = useState(false);
@@ -1667,13 +1667,13 @@ export default function SetTimetablePage() {
                   disabled={Boolean(uploadBusy)}
                   className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#00628b]/25 disabled:opacity-60"
                 >
-                  <option value="auto">Auto free facilities (ignore Excel rooms)</option>
                   <option value="excel">Use Excel classrooms (match to system)</option>
+                  <option value="auto">Auto free facilities (ignore Excel rooms)</option>
                 </select>
                 <p className="m-0 mt-2 text-[11px] text-slate-500 leading-snug">
                   {facilityMode === 'auto'
-                    ? 'Uses all free campus rooms (smallest that fits). Avoids room clashes. Flags GROUP conflicts when the same group appears twice at the same time in Excel.'
-                    : 'Excel room names are matched to system facilities — fix unmatched before save.'}
+                    ? 'Ignores Excel rooms and picks free campus rooms. Each Excel section (G1&2, G3&4, …) stays separate — not merged into one plan.'
+                    : 'Keeps Excel structure: one plan per section/slot/group (many rows). Rooms matched from the Class room column.'}
                 </p>
               </div>
             </div>
@@ -2204,12 +2204,18 @@ export default function SetTimetablePage() {
                                     >
                                       <span className="block text-[10px] uppercase text-gray-400">Leader</span>
                                       <span className="font-medium text-gray-900">
-                                        {r.lecturers?.leader?.names || 'Search & pick leader…'}
+                                        {r.lecturers?.leader?.names
+                                          ? lecturerPickerLabel(r.lecturers.leader)
+                                          : 'Search & pick leader…'}
                                       </span>
                                     </button>
                                     {(r.lecturers?.others || []).length > 0 && (
                                       <div className="mt-1 text-[10px] text-gray-600">
-                                        +{(r.lecturers.others || []).map((o) => o.names).filter(Boolean).join(', ')}
+                                        +
+                                        {(r.lecturers.others || [])
+                                          .map((o) => lecturerPickerLabel(o))
+                                          .filter(Boolean)
+                                          .join(', ')}
                                       </div>
                                     )}
                                     <button

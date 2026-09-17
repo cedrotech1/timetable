@@ -293,7 +293,7 @@ export default function TimetablesPage() {
             <CalendarRange size={22} className="text-[#00628b]" />
             General timetable
           </h1>
-          <p className="mt-1 mb-0 text-sm text-gray-500">
+          <p className="mt-1 mb-0 text-base text-gray-500">
             Filter and browse saved teaching plans from single, bulk, or Excel save.
             {meta?.yearLabel || meta?.academicYearId
               ? ` · ${meta.yearLabel || `AY #${meta.academicYearId}`} · Semester ${meta.semester}`
@@ -374,7 +374,7 @@ export default function TimetablesPage() {
       <div className="bg-[#f8f9fa] rounded-lg border border-gray-200 p-4">
         <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-7 gap-3">
           <div>
-            <label className="block text-xs font-semibold mb-1">Timetable ID</label>
+            <label className="block text-sm font-semibold mb-1">Timetable ID</label>
             <input
               type="number"
               value={filters.id}
@@ -383,7 +383,7 @@ export default function TimetablesPage() {
             />
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">College</label>
+            <label className="block text-sm font-semibold mb-1">College</label>
             <select
               value={filters.college}
               onChange={(e) =>
@@ -400,7 +400,7 @@ export default function TimetablesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">School</label>
+            <label className="block text-sm font-semibold mb-1">School</label>
             <select
               value={filters.school}
               onChange={(e) => setFilters((p) => ({ ...p, school: e.target.value, program: '', group: '' }))}
@@ -415,7 +415,7 @@ export default function TimetablesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Program</label>
+            <label className="block text-sm font-semibold mb-1">Program</label>
             <select
               value={filters.program}
               onChange={(e) => setFilters((p) => ({ ...p, program: e.target.value, group: '' }))}
@@ -430,7 +430,7 @@ export default function TimetablesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Year of study</label>
+            <label className="block text-sm font-semibold mb-1">Year of study</label>
             <select
               value={filters.yearOfStudy}
               onChange={(e) => setFilters((p) => ({ ...p, yearOfStudy: e.target.value, group: '' }))}
@@ -445,7 +445,7 @@ export default function TimetablesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Group</label>
+            <label className="block text-sm font-semibold mb-1">Group</label>
             <select
               value={filters.group}
               onChange={(e) => setFilters((p) => ({ ...p, group: e.target.value }))}
@@ -460,7 +460,7 @@ export default function TimetablesPage() {
             </select>
           </div>
           <div>
-            <label className="block text-xs font-semibold mb-1">Campus</label>
+            <label className="block text-sm font-semibold mb-1">Campus</label>
             <select
               value={filters.campus}
               onChange={(e) => setFilters((p) => ({ ...p, campus: e.target.value }))}
@@ -488,7 +488,7 @@ export default function TimetablesPage() {
         <h2 className="m-0 text-xl font-bold text-[#031f50] border-b border-gray-200 pb-2">
           General timetable
         </h2>
-        <div className="mt-2 text-[13px] text-gray-700 leading-snug">
+        <div className="mt-2 text-sm text-gray-700 leading-snug">
           {currentView.length === 0 ? (
             <em>Currently viewing full timetable (no filters applied)</em>
           ) : (
@@ -504,9 +504,9 @@ export default function TimetablesPage() {
 
       <div className="bg-white rounded-lg border shadow-sm overflow-hidden">
         {loading ? (
-          <div className="py-16 text-center text-gray-500 text-sm">Loading timetable…</div>
+          <div className="py-16 text-center text-gray-500 text-base">Loading timetable…</div>
         ) : filtered.length === 0 ? (
-          <div className="py-16 text-center text-gray-500 text-sm">
+          <div className="py-16 text-center text-gray-500 text-base">
             No teaching plans match these filters.
             {canManage && (
               <>
@@ -519,40 +519,40 @@ export default function TimetablesPage() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full text-[12px] border-collapse">
+            <table className="min-w-full text-sm border-collapse">
               <thead>
                 <tr>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     ID
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Day
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Time
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Course
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Code
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Credits
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Facility
                   </th>
-                  <th colSpan={6} className="border px-2 py-1 text-white text-center" style={{ background: 'rgb(99,124,167)' }}>
+                  <th colSpan={6} className="border px-2.5 py-2 text-white text-center text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Group details
                   </th>
-                  <th rowSpan={2} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                  <th rowSpan={2} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                     Lecturers
                   </th>
                 </tr>
                 <tr>
                   {['Group', 'Year of Study', 'Program', 'School', 'Campus', 'College'].map((h) => (
-                    <th key={h} className="border px-2 py-1 text-white" style={{ background: 'rgb(99,124,167)' }}>
+                    <th key={h} className="border px-2.5 py-2 text-white text-sm font-semibold" style={{ background: 'rgb(99,124,167)' }}>
                       {h}
                     </th>
                   ))}
@@ -577,35 +577,35 @@ export default function TimetablesPage() {
                     >
                       {gi === 0 && (
                         <>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle text-center">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle text-center">
                             <span className={canManage ? 'text-[#00628b] font-semibold underline-offset-2 hover:underline' : ''}>
                               {t.id}
                             </span>
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle">
                             {first?.day || '—'}
                             {(t.sessions || []).length > 1 ? (
-                              <div className="text-[10px] text-gray-500 mt-0.5">{sessionText}</div>
+                              <div className="text-xs text-gray-500 mt-0.5">{sessionText}</div>
                             ) : null}
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle whitespace-nowrap">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle whitespace-nowrap">
                             {first ? `${fmtTime(first.start_time)}-${fmtTime(first.end_time)}` : '—'}
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle text-left">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle text-left">
                             {t.course || '—'}
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle">
                             {t.code || '—'}
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle text-center">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle text-center">
                             {t.credits ?? '—'}
                           </td>
-                          <td rowSpan={groups.length} className="border px-2 py-1 align-middle">
+                          <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle">
                             <div className="font-medium">{t.facility?.name || '—'}</div>
                             {t.facility?.buildCode &&
                             String(t.facility.buildCode).trim().toLowerCase() !==
                               String(t.facility.name || '').trim().toLowerCase() ? (
-                              <div className="text-[10px] text-slate-500 mt-0.5">
+                              <div className="text-xs text-slate-500 mt-0.5">
                                 Building: {t.facility.buildCode}
                               </div>
                             ) : null}
@@ -614,19 +614,19 @@ export default function TimetablesPage() {
                               String(t.facility.buildCode || '').trim().toLowerCase() &&
                             String(t.facility.buildName).trim().toLowerCase() !==
                               String(t.facility.name || '').trim().toLowerCase() ? (
-                              <div className="text-[10px] text-slate-400">{t.facility.buildName}</div>
+                              <div className="text-xs text-slate-400">{t.facility.buildName}</div>
                             ) : null}
                           </td>
                         </>
                       )}
-                      <td className="border px-2 py-1">{g?.name || '—'}</td>
-                      <td className="border px-2 py-1 text-center">{g?.year_of_study || '—'}</td>
-                      <td className="border px-2 py-1 text-left">{g?.program || '—'}</td>
-                      <td className="border px-2 py-1 text-left">{g?.school || '—'}</td>
-                      <td className="border px-2 py-1 capitalize">{g?.campus || '—'}</td>
-                      <td className="border px-2 py-1">{g?.college || '—'}</td>
+                      <td className="border px-2.5 py-2">{g?.name || '—'}</td>
+                      <td className="border px-2.5 py-2 text-center">{g?.year_of_study || '—'}</td>
+                      <td className="border px-2.5 py-2 text-left">{g?.program || '—'}</td>
+                      <td className="border px-2.5 py-2 text-left">{g?.school || '—'}</td>
+                      <td className="border px-2.5 py-2 capitalize">{g?.campus || '—'}</td>
+                      <td className="border px-2.5 py-2">{g?.college || '—'}</td>
                       {gi === 0 && (
-                        <td rowSpan={groups.length} className="border px-2 py-1 align-middle text-left">
+                        <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle text-left">
                           {lecturers || '—'}
                         </td>
                       )}
@@ -638,7 +638,7 @@ export default function TimetablesPage() {
           </div>
         )}
       </div>
-      <p className="text-xs text-gray-500 m-0">
+      <p className="text-sm text-gray-500 m-0">
         Showing {filtered.length} plan(s) of {rows.length} for current academic period.
         {canManage ? ' Click any row to edit module, facility, lecturers, sessions, or groups.' : ''}
       </p>

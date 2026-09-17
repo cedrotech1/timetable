@@ -1,3 +1,5 @@
+import { capitalizePersonName } from '../utils/formatDisplay';
+
 export const getUserInitials = (name) => {
   if (!name || typeof name !== 'string') return 'U';
   const words = name.trim().split(/\s+/).filter(Boolean);
@@ -10,7 +12,8 @@ export const getUserInitials = (name) => {
 };
 
 export const UserAvatar = ({ user, name, image, className = '', size = 36 }) => {
-  const displayName = name || user?.names || 'User';
+  const raw = name || user?.names || 'User';
+  const displayName = raw === 'User' ? raw : capitalizePersonName(raw) || 'User';
   const initials = getUserInitials(displayName);
   const px = typeof size === 'number' ? size : 36;
 

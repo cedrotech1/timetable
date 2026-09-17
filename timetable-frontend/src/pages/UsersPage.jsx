@@ -8,6 +8,7 @@ import {
 } from '../services/api';
 import { VALID_ROLES, roleLabel, isAdmin } from '../utils/roles';
 import { useAuth } from '../contexts/AuthContext';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -43,7 +44,7 @@ export default function UsersPage() {
       service={usersService}
       canManage
       columns={[
-        { key: 'names', label: 'Name', getValue: (r) => r.names },
+        { key: 'names', label: 'Name', getValue: (r) => capitalizePersonName(r.names) },
         { key: 'urEmail', label: 'UR Email', getValue: (r) => r.urEmail },
         { key: 'role', label: 'Role', getValue: (r) => roleLabel(r.role) },
         {
@@ -108,7 +109,7 @@ export default function UsersPage() {
       ]}
       toPayload={(form, editing) => {
         const payload = {
-          names: form.names,
+          names: capitalizePersonName(form.names),
           urEmail: form.urEmail,
           email: form.email || null,
           role: form.role || 'user',

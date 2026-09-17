@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
 import { canManageOrg } from '../utils/roles';
 import ModalShell, { ModalPrimaryButton, ModalSecondaryButton } from './ModalShell';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 /**
  * Reusable CRUD list page for timetable org entities.
@@ -305,7 +306,9 @@ export function ResourceCrudPage({
             <p className="m-0 text-sm text-slate-600">
               Delete{' '}
               <span className="font-semibold text-[#031f50]">
-                {deleteTarget?.name || deleteTarget?.names || `#${deleteTarget?.id}`}
+                {deleteTarget?.name ||
+                  (deleteTarget?.names ? capitalizePersonName(deleteTarget.names) : null) ||
+                  `#${deleteTarget?.id}`}
               </span>
               ?
             </p>

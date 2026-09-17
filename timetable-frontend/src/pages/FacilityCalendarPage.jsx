@@ -5,6 +5,7 @@ import { timetableService } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { appPath } from '../utils/appPaths';
 import ModalShell, { ModalPrimaryButton } from '../components/ModalShell';
+import { capitalizePersonName } from '../utils/formatDisplay';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_START_MIN = 8 * 60;
@@ -124,7 +125,7 @@ function SlotDetailModal({ slot, facility, onClose }) {
               Module leader (ML)
             </dt>
             <dd className="m-0 mt-0.5 text-slate-900">
-              {slot.leader?.names ? `${slot.leader.names} (ML)` : '—'}
+              {slot.leader?.names ? `${capitalizePersonName(slot.leader.names)} (ML)` : '—'}
               {slot.leader?.urEmail || slot.leader?.email ? (
                 <span className="block text-xs text-slate-500">
                   {slot.leader.urEmail || slot.leader.email}
@@ -144,7 +145,7 @@ function SlotDetailModal({ slot, facility, onClose }) {
                     key={u.id || u.names}
                     className="inline-flex px-2 py-1 rounded-lg text-[11px] font-medium bg-[#fff4eb] text-[#9a4518] border border-[#e8a05c]/50"
                   >
-                    {u.names}
+                    {capitalizePersonName(u.names)}
                   </span>
                 ))}
               </dd>

@@ -261,13 +261,35 @@ function matchModule(modules, code, name, programId, year, semester) {
 function matchFacility(facilities, room, capacity = null) {
   const roomT = String(room || "").trim();
   if (!roomT) return [null, 0];
+  const roomN = norm(roomT);
+  // Leading room code: "126 KOICA…", "B920 ICT…", "KOICA 116", "203 KOICA…"
+  const codeMatch =
+    roomT.match(/^\s*([A-Za-z]?\d{2,}[A-Za-z0-9/-]*)\b/) ||
+    roomT.match(/\b(?:KOICA|ROOM|CLASS(?:ROOM)?)\s*([A-Za-z]?\d{2,}[A-Za-z0-9/-]*)\b/i);
+  const roomCode = codeMatch ? norm(codeMatch[1]) : "";
+
   let best = null;
   let bestScore = 0;
   for (const f of facilities) {
+    const nameN = norm(f.name || "");
+    const buildN = norm(f.buildName || "");
     const hay = `${f.name || ""} ${f.buildName || ""} ${f.name2 || ""} ${f.campus?.name || ""}`;
-    let score = Math.max(likeScore(roomT, f.name), likeScore(roomT, f.buildName || ""), likeScore(roomT, hay));
-    const tokens = norm(roomT).split(/\s+/).filter((t) => t.length >= 2);
     const hayN = norm(hay);
+    let score = Math.max(likeScore(roomT, f.name), likeScore(roomT, f.buildName || ""), likeScore(roomT, hay));
+
+    if (roomCode) {
+      if (nameN === roomCode || nameN.startsWith(`${roomCode} `) || nameN.includes(` ${roomCode}`)) {
+        score = Math.max(score, 96);
+      } else if (nameN.includes(roomCode) && roomCode.length >= 3) {
+        score = Math.max(score, 88);
+      }
+      // "126 KOICA CLASS ROOM 4" ↔ name "126 CLASSROOM 4" + build KOICA
+      if (buildN.includes("koica") && roomN.includes("koica") && nameN.includes(roomCode.replace(/^0+/, ""))) {
+        score = Math.max(score, 90);
+      }
+    }
+
+    const tokens = roomN.split(/\s+/).filter((t) => t.length >= 2);
     let hits = 0;
     for (const t of tokens) if (hayN.includes(t)) hits += 1;
     if (tokens.length) score = Math.max(score, Math.round((100 * hits) / tokens.length));
@@ -762,8 +784,8 @@ export async function autoAssignImportFacilities({
         continue;
       }
 
-      // Different groups, same module → share one room (combined class)
-      if (sameModule && groupHit.facilityId) {
+      // Same Excel section only: different groups, same module → share one room (combined class)
+      if (sameModule && groupHit.facilityId && Number(groupHit.section) === Number(si)) {
         const fac = {
           id: groupHit.facilityId,
           name: groupHit.facilityName || `Facility #${groupHit.facilityId}`,
@@ -796,7 +818,7 @@ export async function autoAssignImportFacilities({
           ...(row.warnings || []).filter((w) => !/auto-assign|free facility|classroom|No free|GROUP|ROOM|Shared/i.test(w)),
         ];
         row.warnings.push(
-          `ROOM shared (combined class): same module at ${day} ${row.start}–${row.end} — reused “${row.facility.name}”. Prefer one plan with all groups.`
+          `ROOM shared (combined class, this section): same module at ${day} ${row.start}–${row.end} — reused “${row.facility.name}”.`
         );
         row.status = "warning";
         pushBooked(row, si, ri, row.facility);
@@ -890,8 +912,8 @@ export async function autoAssignImportFacilities({
 }
 
 /**
- * Year 2/3 (etc.) groups can share one module in one room → ONE timetable row.
- * Merge Excel rows with the same module + day + start + end into a single combined class.
+ * Within ONE Excel section only: same module + day + start + end → one combined class.
+ * Never merge across sections (G1&2 vs G3&4 vs G5&6 vs G7 stay separate rows / rooms).
  */
 export function mergeCombinedClassRows(sections) {
   const out = sections || [];
@@ -903,6 +925,7 @@ export function mergeCombinedClassRows(sections) {
       if (!row.module?.id || !row.day || !row.start || !row.end) return;
       if (!(row.groups || []).length) return;
       const key = [
+        si, // keep Excel sections separate (G1&2 ≠ G3&4 ≠ G7)
         Number(row.module.id),
         String(row.day).trim().toLowerCase(),
         normSlotTime(row.start).slice(0, 5),
@@ -919,7 +942,7 @@ export function mergeCombinedClassRows(sections) {
     items.sort((a, b) => {
       const af = a.row.facility?.id ? 0 : 1;
       const bf = b.row.facility?.id ? 0 : 1;
-      return af - bf || a.si - b.si || a.ri - b.ri;
+      return af - bf || a.ri - b.ri;
     });
 
     const primary = items[0];
@@ -953,23 +976,29 @@ export function mergeCombinedClassRows(sections) {
       }
     }
 
-    // Prefer largest-capacity facility among candidates if several were assigned
+    // Prefer facility already on a row; if several, keep primary's (Excel room for this section)
     let bestFac = primary.row.facility || null;
     for (const it of items) {
       const f = it.row.facility;
       if (!f?.id) continue;
-      if (!bestFac?.id || Number(f.capacity || 0) > Number(bestFac.capacity || 0)) bestFac = f;
+      if (!bestFac?.id) bestFac = f;
     }
 
     const names = allGroups.map((g) => g.name).filter(Boolean).join(", ");
+    const primaryGroupCountBefore = (primary.row.groups || []).length;
+    const wasDuplicateOnly = allGroups.length <= primaryGroupCountBefore;
     primary.row.groups = allGroups;
     primary.row.facility = bestFac;
     primary.row.lecturers = { leader, others };
-    primary.row.combinedClass = true;
+    primary.row.combinedClass = allGroups.length > 1 && !wasDuplicateOnly;
     primary.row.warnings = [
-      ...(primary.row.warnings || []).filter((w) => !/Combined class|Merged into/i.test(w)),
-      `Combined class (OK): ${names || `${allGroups.length} groups`} share one module, one room, one timetable row.`,
+      ...(primary.row.warnings || []).filter((w) => !/Combined class|Merged into|Duplicate Excel/i.test(w)),
     ];
+    if (!wasDuplicateOnly && allGroups.length > 1) {
+      primary.row.warnings.push(
+        `Combined class (this Excel section): ${names} share one module / time / room — one timetable row.`
+      );
+    }
     if (primary.row.status === "error" && bestFac?.id && allGroups.length) {
       primary.row.status = "ok";
     } else if (primary.row.status === "skipped") {
@@ -987,7 +1016,9 @@ export function mergeCombinedClassRows(sections) {
       it.row.facility = null;
       it.row.combinedClass = false;
       it.row.warnings = [
-        `Merged into combined class (${names}) — not a separate timetable row.`,
+        wasDuplicateOnly
+          ? `Duplicate Excel row in this section — kept one plan for ${names || "group(s)"}.`
+          : `Merged into combined class in this section (${names}) — not a separate timetable row.`,
       ];
     }
   }
