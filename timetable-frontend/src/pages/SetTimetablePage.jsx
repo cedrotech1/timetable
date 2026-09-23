@@ -832,6 +832,7 @@ export default function SetTimetablePage() {
           moduleId: row.module.id,
           moduleCode: row.excel?.moduleCode || row.module.code,
           moduleName: row.excel?.moduleName || row.module.name,
+          credits: row.excel?.credits ?? row.module?.credits ?? null,
           facilityId: row.facility.id,
           facilityName: row.facility.name,
           leaderLecturerId: row.lecturers?.leader?.id || null,
@@ -2151,17 +2152,30 @@ export default function SetTimetablePage() {
                                       <span className="block text-[10px] uppercase text-gray-400">Module</span>
                                       <span className="font-medium text-gray-900 line-clamp-2">
                                         {r.module
-                                          ? `${(r.excel?.moduleCode || r.module.code) ? `${r.excel?.moduleCode || r.module.code} — ` : ''}${r.excel?.moduleName || r.module.name}`
+                                          ? `${(r.excel?.moduleCode || r.module.code) ? `${r.excel?.moduleCode || r.module.code} — ` : ''}${
+                                              r.excel?.moduleName &&
+                                              r.excel.moduleName !== (r.excel?.moduleCode || r.module.code)
+                                                ? r.excel.moduleName
+                                                : r.module.name || r.excel?.moduleName || '—'
+                                            }`
                                           : 'Search & pick module…'}
                                       </span>
                                     </button>
-                                    {r.module?.fromExcel && (r.excel?.moduleCode || r.excel?.moduleName) ? (
-                                      <div className="text-emerald-700 mt-1 text-[10px]">Excel module saved / prioritized</div>
-                                    ) : (r.excel?.moduleCode || r.excel?.moduleName) && (
+                                    {r.excel?.moduleName &&
+                                    r.excel.moduleName !== (r.excel?.moduleCode || r.module?.code) ? (
+                                      <div className="text-emerald-700 mt-1 text-[10px]">
+                                        Excel name saved
+                                        {r.excel?.moduleCode ? ` · code ${r.excel.moduleCode}` : ''}
+                                      </div>
+                                    ) : r.module?.fromExcel ? (
+                                      <div className="text-amber-700 mt-1 text-[10px]">
+                                        Excel code saved — course name missing from sheet column
+                                      </div>
+                                    ) : (r.excel?.moduleCode || r.excel?.moduleName) ? (
                                       <div className="text-gray-400 mt-1 text-[10px]">
                                         Excel: {[r.excel.moduleCode, r.excel.moduleName].filter(Boolean).join(' — ')}
                                       </div>
-                                    )}
+                                    ) : null}
                                   </td>
                                   <td className="px-2 py-1 min-w-[160px]">
                                     <button

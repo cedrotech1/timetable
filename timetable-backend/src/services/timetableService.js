@@ -295,13 +295,26 @@ export async function createTeachingPlan(dto, { user, transaction: outerTx = nul
     throw err;
   }
 
-  // Excel / payload overrides win — persist spreadsheet code & name on the module
+  // Excel / payload overrides win — persist spreadsheet code, name & credits on the module
   const excelCode = String(dto.moduleCode || dto.module_code || "").trim();
-  const excelName = String(dto.moduleName || dto.module_name || "").trim();
-  if (excelCode || excelName) {
+  let excelName = String(dto.moduleName || dto.module_name || "").trim();
+  if (
+    excelName &&
+    excelCode &&
+    excelName.toUpperCase().replace(/\s+/g, "") === excelCode.toUpperCase().replace(/\s+/g, "")
+  ) {
+    excelName = ""; // code was mistakenly sent as name
+  }
+  const excelCreditsRaw = dto.credits ?? dto.moduleCredits ?? dto.module_credits;
+  const excelCredits =
+    excelCreditsRaw != null && excelCreditsRaw !== "" && Number.isFinite(Number(excelCreditsRaw))
+      ? Number(excelCreditsRaw)
+      : null;
+  if (excelCode || excelName || excelCredits != null) {
     const updates = {};
     if (excelCode && String(mod.code || "").trim() !== excelCode) updates.code = excelCode.slice(0, 50);
     if (excelName && String(mod.name || "").trim() !== excelName) updates.name = excelName.slice(0, 255);
+    if (excelCredits != null && Number(mod.credits) !== excelCredits) updates.credits = excelCredits;
     if (Object.keys(updates).length) {
       await mod.update(updates);
     }

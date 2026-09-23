@@ -272,9 +272,15 @@ function matchModule(modules, code, name, programId, year, semester) {
  * Excel wins: find/create module and overwrite system code/name from the spreadsheet.
  * Missing modules are created under the section program so import can proceed.
  */
-async function ensureExcelModule(modules, { code, name, programId, year, semester }) {
+async function ensureExcelModule(modules, { code, name, credits, programId, year, semester }) {
   const codeTrim = String(code || "").trim();
-  const nameTrim = String(name || "").trim();
+  let nameTrim = String(name || "").trim();
+  // Never treat the code itself as the course title
+  if (nameTrim && codeTrim && nameTrim.toUpperCase().replace(/\s+/g, "") === codeTrim.toUpperCase().replace(/\s+/g, "")) {
+    nameTrim = "";
+  }
+  const creditsNum =
+    credits != null && credits !== "" && Number.isFinite(Number(credits)) ? Number(credits) : null;
   if (!codeTrim && !nameTrim) return [null, "No module in Excel — pick a system module"];
 
   let [mod, score, candidates] = matchModule(modules, codeTrim, nameTrim, programId, year, semester);
@@ -290,13 +296,9 @@ async function ensureExcelModule(modules, { code, name, programId, year, semeste
   if (mod) {
     const updates = {};
     if (codeTrim && String(mod.code || "").trim() !== codeTrim) updates.code = codeTrim.slice(0, 50);
+    // Excel course title always wins when present
     if (nameTrim && String(mod.name || "").trim() !== nameTrim) updates.name = nameTrim.slice(0, 255);
-    if (programId && Number(mod.programId) !== Number(programId)) {
-      // Prefer attaching to this section's program when Excel is unambiguous by code
-      if (score >= 100 && codeTrim) {
-        /* keep existing program — code is global identity */
-      }
-    }
+    if (creditsNum != null && Number(mod.credits) !== creditsNum) updates.credits = creditsNum;
     if (Object.keys(updates).length) {
       await Module.update(updates, { where: { id: mod.id } });
       Object.assign(mod, updates);
@@ -313,14 +315,14 @@ async function ensureExcelModule(modules, { code, name, programId, year, semeste
   const created = await Module.create({
     code: (codeTrim || nameTrim).slice(0, 50),
     name: (nameTrim || codeTrim).slice(0, 255),
-    credits: 0,
+    credits: creditsNum != null ? creditsNum : 0,
     year: Number(year) > 0 ? Number(year) : 1,
     semester: String(semester || "1"),
     programId: Number(programId),
   });
   const j = created.toJSON();
   modules.push({ ...j, programName: "" });
-  return [j, `Created module from Excel: ${j.code}`, candidates];
+  return [j, `Created module from Excel: ${j.code}${nameTrim ? ` — ${nameTrim}` : ""}`, candidates];
 }
 
 function matchFacility(facilities, room, capacity = null) {
@@ -568,6 +570,11 @@ export async function matchImportSections({ sections, campusId = null, semester 
       }
       const moduleCode = String(row.module_code || row.moduleCode || "").trim();
       const moduleName = String(row.module_name || row.moduleName || "").trim();
+      const creditsRaw = row.credits ?? row.Credits ?? null;
+      const credits =
+        creditsRaw != null && creditsRaw !== "" && Number.isFinite(Number(creditsRaw))
+          ? Number(creditsRaw)
+          : null;
       const lecturersRaw = String(row.lecturers || "").trim();
       const classroom = String(row.classroom || "").trim();
       const capacity = row.room_capacity ?? row.roomCapacity ?? null;
@@ -579,6 +586,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
       const [mod, modNote, moduleCandidates] = await ensureExcelModule(modules, {
         code: moduleCode,
         name: moduleName,
+        credits,
         programId,
         year: year || null,
         semester,
@@ -588,7 +596,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
       } else if (!mod) {
         warnings.push(modNote || `Module not in system: ${moduleCode || moduleName}`);
       } else if (moduleCode || moduleName) {
-        // Excel code/name already applied on the module record
+        // Excel code/name/credits already applied on the module record
       }
 
       const [fac, fScore] =
@@ -628,6 +636,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
         excel: {
           moduleCode,
           moduleName,
+          credits,
           lecturers: lecturersRaw,
           classroom,
           timeRaw,
@@ -638,6 +647,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
               // Prefer Excel labels on the matched row (what we save/show)
               code: moduleCode || mod.code,
               name: moduleName || mod.name,
+              credits: credits != null ? credits : mod.credits ?? null,
               year: mod.year,
               semester: mod.semester,
               programId: mod.programId,
