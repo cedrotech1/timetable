@@ -5,7 +5,8 @@ import { timetableService } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { appPath } from '../utils/appPaths';
 import ModalShell, { ModalPrimaryButton } from '../components/ModalShell';
-import { capitalizePersonName } from '../utils/formatDisplay';
+import { capitalizePersonName, capitalizeCampusName } from '../utils/formatDisplay';
+import { fmtTime, toMinutes as toMinutesFlexible } from '../utils/timeFormat';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_START_MIN = 8 * 60;
@@ -13,14 +14,11 @@ const DAY_END_MIN = 18 * 60;
 const HOUR_PX = 72;
 
 function fmt(t) {
-  return String(t || '').slice(0, 5);
+  return fmtTime(t);
 }
 
 function toMinutes(t) {
-  const s = fmt(t);
-  const [h, m] = s.split(':').map(Number);
-  if (Number.isNaN(h)) return DAY_START_MIN;
-  return h * 60 + (Number.isNaN(m) ? 0 : m);
+  return toMinutesFlexible(t, DAY_START_MIN);
 }
 
 function clamp(n, min, max) {
@@ -84,7 +82,10 @@ function SlotDetailModal({ slot, facility, onClose }) {
                 : ''}
             </dd>
             <dd className="m-0 text-xs text-slate-500">
-              {[slot.facilityCampus || facility?.campus?.name, slot.facilityType || facility?.type]
+              {[
+                capitalizeCampusName(slot.facilityCampus || facility?.campus?.name) || null,
+                slot.facilityType || facility?.type,
+              ]
                 .filter(Boolean)
                 .join(' · ') || null}
             </dd>
@@ -584,7 +585,7 @@ export default function FacilityCalendarPage() {
             <option value="">All campuses</option>
             {campuses.map((c) => (
               <option key={c.id} value={c.id}>
-                {c.name}
+                {capitalizeCampusName(c.name)}
               </option>
             ))}
           </FilterSelect>
@@ -720,7 +721,7 @@ export default function FacilityCalendarPage() {
                 <div>
                   <h2 className="m-0 text-lg font-semibold">{block.facility.name}</h2>
                   <p className="m-0 mt-1 text-sm opacity-90">
-                    {block.facility.campus?.name || '—'}
+                    {capitalizeCampusName(block.facility.campus?.name) || '—'}
                     {block.facility.capacity != null ? ` · Capacity ${block.facility.capacity}` : ''}
                     {block.facility.type ? ` · ${block.facility.type}` : ''}
                     {block.facility.buildName ? ` · ${block.facility.buildName}` : ''}

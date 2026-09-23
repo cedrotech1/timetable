@@ -1,5 +1,6 @@
 import { ResourceCrudPage } from '../components/ResourceCrudPage';
 import { campusesService } from '../services/api';
+import { capitalizeCampusName } from '../utils/formatDisplay';
 
 export default function CampusesPage() {
   return (
@@ -9,11 +10,10 @@ export default function CampusesPage() {
       service={campusesService}
       columns={[
         { key: 'id', label: 'ID', getValue: (r) => r.id },
-        { key: 'name', label: 'Name', getValue: (r) => r.name },
+        { key: 'name', label: 'Name', getValue: (r) => capitalizeCampusName(r.name) },
       ]}
       buildFormFields={() => [{ name: 'name', label: 'Campus name', required: true }]}
-      toPayload={(form) => ({ name: form.name })}
+      toPayload={(form) => ({ name: capitalizeCampusName(form.name) || form.name })}
     />
-    // campus
   );
 }

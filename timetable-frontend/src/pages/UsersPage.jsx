@@ -8,7 +8,7 @@ import {
 } from '../services/api';
 import { VALID_ROLES, roleLabel, isAdmin } from '../utils/roles';
 import { useAuth } from '../contexts/AuthContext';
-import { capitalizePersonName } from '../utils/formatDisplay';
+import { capitalizePersonName, capitalizeCampusName } from '../utils/formatDisplay';
 
 export default function UsersPage() {
   const { user } = useAuth();
@@ -63,7 +63,7 @@ export default function UsersPage() {
         {
           key: 'campus',
           label: 'Campus',
-          getValue: (r) => r.campus?.name || '—',
+          getValue: (r) => capitalizeCampusName(r.campus?.name) || '—',
         },
       ]}
       buildFormFields={(form, editing) => [
@@ -90,7 +90,7 @@ export default function UsersPage() {
           label: 'Campus',
           type: 'select',
           valueAsNumber: true,
-          options: campuses.map((c) => ({ value: c.id, label: c.name })),
+          options: campuses.map((c) => ({ value: c.id, label: capitalizeCampusName(c.name) || c.name })),
         },
         {
           name: 'collegeId',

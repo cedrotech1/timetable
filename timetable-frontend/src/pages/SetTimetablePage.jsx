@@ -36,6 +36,7 @@ import { ConflictBoxWithPlanViewer, conflictKindsLabel, getConflictKindsFromPayl
 import EditTeachingPlanModal from '../components/EditTeachingPlanModal';
 import {
   capitalizePersonName,
+  capitalizeCampusName,
   facilityCompactLabel,
   facilityPickerLabel,
   facilityPickerMeta,
@@ -43,6 +44,7 @@ import {
   lecturerPickerLabel,
   lecturerPickerMeta,
 } from '../utils/formatDisplay';
+import { fmtTime, toMinutes, sessionsOverlap } from '../utils/timeFormat';
 
 const MODES = [
   { id: 'single', label: 'Single entry', icon: CalendarDays, blurb: 'One teaching plan at a time' },
@@ -61,23 +63,7 @@ const emptyBulkRow = () => ({
 });
 
 function fmtConflictTime(t) {
-  return String(t || '').slice(0, 5);
-}
-
-function toMinutes(t) {
-  const s = String(t || '').slice(0, 5);
-  const [h, m] = s.split(':').map(Number);
-  if (!Number.isFinite(h)) return 0;
-  return h * 60 + (Number.isFinite(m) ? m : 0);
-}
-
-function sessionsOverlap(a, b) {
-  if (!a?.day || !b?.day || String(a.day).toLowerCase() !== String(b.day).toLowerCase()) return false;
-  const a0 = toMinutes(a.start || a.startTime);
-  const a1 = toMinutes(a.end || a.endTime);
-  const b0 = toMinutes(b.start || b.startTime);
-  const b1 = toMinutes(b.end || b.endTime);
-  return a0 < b1 && b0 < a1;
+  return fmtTime(t);
 }
 
 function rowStudentNeed(row) {
@@ -1036,7 +1022,7 @@ export default function SetTimetablePage() {
                       <p className="m-0 mt-1 text-gray-800">{item.message}</p>
                       {item.attempt && (
                         <p className="m-0 mt-1 text-gray-600">
-                          {[item.attempt.day, item.attempt.start && `${item.attempt.start}–${item.attempt.end}`]
+                          {[item.attempt.day, item.attempt.start && `${fmtConflictTime(item.attempt.start)}–${fmtConflictTime(item.attempt.end)}`]
                             .filter(Boolean)
                             .join(' · ')}
                           {item.attempt.moduleCode || item.attempt.moduleName
@@ -1154,7 +1140,7 @@ export default function SetTimetablePage() {
                 <option value="">Select intake…</option>
                 {programIntakes.map((i) => (
                   <option key={i.id} value={i.id}>
-                    Year {i.yearOfStudy} — {i.campus?.name || `campus #${i.campusId}`} ({i.size || 0} students)
+                    Year {i.yearOfStudy} — {capitalizeCampusName(i.campus?.name) || `campus #${i.campusId}`} ({i.size || 0} students)
                   </option>
                 ))}
               </select>
@@ -1652,7 +1638,7 @@ export default function SetTimetablePage() {
                   <option value="">Select campus…</option>
                   {campuses.map((c) => (
                     <option key={c.id} value={c.id}>
-                      {c.name}
+                      {capitalizeCampusName(c.name)}
                     </option>
                   ))}
                 </select>
@@ -2132,7 +2118,7 @@ export default function SetTimetablePage() {
                                     )}
                                   </td>
                                   <td className="px-2 py-1 whitespace-nowrap">
-                                    {r.day} {r.start}-{r.end}
+                                    {r.day} {fmtConflictTime(r.start)}-{fmtConflictTime(r.end)}
                                     {r.students ? (
                                       <div className="text-gray-400">{r.students} students</div>
                                     ) : null}

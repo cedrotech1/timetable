@@ -1,5 +1,11 @@
 import { Op } from "sequelize";
 import db from "../database/models/index.js";
+import {
+  normalizeClock,
+  normSlotTime,
+  parseTimeRange,
+  timesOverlapStr,
+} from "../utils/timeFormat.js";
 
 const {
   Module,
@@ -489,8 +495,18 @@ export async function matchImportSections({ sections, campusId = null, semester 
       const warnings = [];
 
       const day = String(row.day || "").trim();
-      const start = String(row.start || "").trim();
-      const end = String(row.end || "").trim();
+      let start = String(row.start || "").trim();
+      let end = String(row.end || "").trim();
+      const timeRaw = String(row.time_raw || row.timeRaw || "").trim();
+      // Re-parse flexible clocks from Excel time_raw when start/end empty or non-HH:MM
+      if ((!start || !end || !/^\d{1,2}:\d{2}/.test(start) || !/^\d{1,2}:\d{2}/.test(end)) && timeRaw) {
+        const parsed = parseTimeRange(timeRaw);
+        if (parsed.start) start = parsed.start;
+        if (parsed.end) end = parsed.end;
+      } else {
+        start = normalizeClock(start) || start;
+        end = normalizeClock(end) || end;
+      }
       const moduleCode = String(row.module_code || row.moduleCode || "").trim();
       const moduleName = String(row.module_name || row.moduleName || "").trim();
       const lecturersRaw = String(row.lecturers || "").trim();
@@ -551,7 +567,7 @@ export async function matchImportSections({ sections, campusId = null, semester 
           moduleName,
           lecturers: lecturersRaw,
           classroom,
-          timeRaw: row.time_raw || row.timeRaw || "",
+          timeRaw,
         },
         module: mod
           ? {
@@ -619,27 +635,6 @@ export async function matchImportSections({ sections, campusId = null, semester 
   }
 
   return { sections: mergeCombinedClassRows(outSections) };
-}
-
-function normSlotTime(t) {
-  const s = String(t || "").trim();
-  if (/^\d{1,2}:\d{2}$/.test(s)) {
-    const [h, m] = s.split(":");
-    return `${h.padStart(2, "0")}:${m}:00`;
-  }
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
-    const [h, m, sec] = s.split(":");
-    return `${h.padStart(2, "0")}:${m}:${sec}`;
-  }
-  return s;
-}
-
-function timesOverlapStr(aStart, aEnd, bStart, bEnd) {
-  const aS = String(aStart).slice(0, 8);
-  const aE = String(aEnd).slice(0, 8);
-  const bS = String(bStart).slice(0, 8);
-  const bE = String(bEnd).slice(0, 8);
-  return aS < bE && aE > bS;
 }
 
 function rowRequiredStudents(sec, row) {

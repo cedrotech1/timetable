@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { AlertTriangle, Eye, Loader2, Users, Building2 } from 'lucide-react';
 import { timetableService } from '../services/api';
+import { fmtTime } from '../utils/timeFormat';
 
 function fmtConflictTime(t) {
-  const s = String(t || '').slice(0, 5);
-  return s || '—';
+  return fmtTime(t) || '—';
 }
 
 export function getConflictKindsFromPayload(conflicts, explicitKinds) {

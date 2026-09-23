@@ -1,5 +1,6 @@
 import { Op } from "sequelize";
 import db from "../database/models/index.js";
+import { normalizeTime, timesOverlapStr } from "../utils/timeFormat.js";
 
 const {
   Timetable,
@@ -22,26 +23,8 @@ const {
 
 const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-function normalizeTime(t) {
-  if (!t) return null;
-  const s = String(t).trim();
-  if (/^\d{1,2}:\d{2}$/.test(s)) {
-    const [h, m] = s.split(":");
-    return `${h.padStart(2, "0")}:${m}:00`;
-  }
-  if (/^\d{1,2}:\d{2}:\d{2}$/.test(s)) {
-    const [h, m, sec] = s.split(":");
-    return `${h.padStart(2, "0")}:${m}:${sec}`;
-  }
-  return s;
-}
-
 function timesOverlap(aStart, aEnd, bStart, bEnd) {
-  const aS = String(aStart).slice(0, 8);
-  const aE = String(aEnd).slice(0, 8);
-  const bS = String(bStart).slice(0, 8);
-  const bE = String(bEnd).slice(0, 8);
-  return aS < bE && aE > bS;
+  return timesOverlapStr(aStart, aEnd, bStart, bEnd);
 }
 
 export function normalizeSessions(sessions = []) {

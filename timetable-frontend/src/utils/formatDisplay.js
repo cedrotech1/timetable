@@ -18,6 +18,11 @@ export function capitalizePersonName(name) {
     .join(' ');
 }
 
+/** Campus names: "huye" / "HUYE" → "Huye" */
+export function capitalizeCampusName(name) {
+  return capitalizePersonName(name);
+}
+
 export function lecturerPickerLabel(user) {
   if (!user) return '';
   if (user.id === '' || user.id == null) {
@@ -33,7 +38,7 @@ export function lecturerPickerMeta(user) {
     user.staffNumber ? `Staff ${user.staffNumber}` : null,
     user.department || null,
     user.academicRank || null,
-    user.campus?.name || null,
+    user.campus?.name ? capitalizeCampusName(user.campus.name) : null,
   ].filter(Boolean);
   return bits.join(' · ');
 }
@@ -50,10 +55,11 @@ export function facilityPickerLabel(f) {
 /** Secondary line: building code, campus, type, site */
 export function facilityPickerMeta(f) {
   if (!f) return '';
+  const campusRaw = f.campus?.name || (typeof f.campus === 'string' ? f.campus : null);
   return [
     f.buildCode ? `Code: ${f.buildCode}` : null,
     f.site ? `Site: ${f.site}` : null,
-    f.campus?.name || (typeof f.campus === 'string' ? f.campus : null) || null,
+    campusRaw ? capitalizeCampusName(campusRaw) : null,
     f.type || null,
     f.name2 && String(f.name2) !== String(f.name) ? f.name2 : null,
   ]
@@ -67,7 +73,8 @@ export function facilityCompactLabel(f) {
   const name = f.name || 'Facility';
   const cap = f.capacity != null && f.capacity !== '' ? ` (${f.capacity})` : '';
   const building = f.buildName ? ` · ${f.buildName}` : '';
-  const campus = f.campus?.name || (typeof f.campus === 'string' ? f.campus : null);
+  const campusRaw = f.campus?.name || (typeof f.campus === 'string' ? f.campus : null);
+  const campus = campusRaw ? capitalizeCampusName(campusRaw) : null;
   return `${name}${cap}${building}${campus ? ` · ${campus}` : ''}`;
 }
 

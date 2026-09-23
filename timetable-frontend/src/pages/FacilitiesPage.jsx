@@ -4,6 +4,7 @@ import { CalendarDays } from 'lucide-react';
 import { ResourceCrudPage } from '../components/ResourceCrudPage';
 import { campusesService, facilitiesService } from '../services/api';
 import { appPath } from '../utils/appPaths';
+import { capitalizeCampusName } from '../utils/formatDisplay';
 
 export default function FacilitiesPage() {
   const [campuses, setCampuses] = useState([]);
@@ -35,7 +36,7 @@ export default function FacilitiesPage() {
         {
           key: 'campus',
           label: 'Campus',
-          getValue: (r) => r.campus?.name || r.campusId,
+          getValue: (r) => capitalizeCampusName(r.campus?.name) || r.campusId,
         },
         { key: 'buildName', label: 'Building', getValue: (r) => r.buildName || '—' },
         { key: 'site', label: 'Site', getValue: (r) => r.site || '—' },
@@ -60,7 +61,7 @@ export default function FacilitiesPage() {
           type: 'select',
           required: true,
           valueAsNumber: true,
-          options: campuses.map((c) => ({ value: c.id, label: c.name })),
+          options: campuses.map((c) => ({ value: c.id, label: capitalizeCampusName(c.name) || c.name })),
         },
         { name: 'site', label: 'Site' },
         { name: 'buildName', label: 'Building name' },

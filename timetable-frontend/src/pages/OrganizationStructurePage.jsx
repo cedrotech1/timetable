@@ -28,6 +28,7 @@ import { useNotification } from '../contexts/NotificationContext';
 import ModalShell, { ModalPrimaryButton, ModalSecondaryButton } from '../components/ModalShell';
 import { canManageOrg } from '../utils/roles';
 import { appPath } from '../utils/appPaths';
+import { capitalizeCampusName } from '../utils/formatDisplay';
 
 const ENTITY = {
   campus: 'campus',
@@ -687,7 +688,7 @@ export default function OrganizationStructurePage() {
                 key={campus.id}
                 className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-1.5 text-sm"
               >
-                <span className="font-medium text-gray-800 capitalize">{campus.name}</span>
+                <span className="font-medium text-gray-800">{capitalizeCampusName(campus.name)}</span>
                 {canManage && (
                   <span className="inline-flex">
                     <button type="button" className="p-1 text-[#00628b]" onClick={() => openEdit(ENTITY.campus, campus)}>
@@ -863,7 +864,7 @@ export default function OrganizationStructurePage() {
                                     Year {intake.yearOfStudy}
                                   </span>
                                   <span className="text-gray-400"> · </span>
-                                  <span className="capitalize">{intake.campus?.name || '—'}</span>
+                                  <span>{capitalizeCampusName(intake.campus?.name) || '—'}</span>
                                   <span className="text-gray-400"> · </span>
                                   <span>{intake.size || 0} students</span>
                                   <div className="mt-0.5 text-gray-600">

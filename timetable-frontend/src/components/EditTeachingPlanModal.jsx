@@ -9,6 +9,7 @@ import SearchablePicker, { PickerButton } from './SearchablePicker';
 import ModalShell, { ModalPrimaryButton, ModalSecondaryButton } from './ModalShell';
 import { ConflictBoxWithPlanViewer } from './ConflictBox';
 import {
+  capitalizeCampusName,
   facilityCompactLabel,
   facilityPickerLabel,
   facilityPickerMeta,
@@ -16,11 +17,12 @@ import {
   lecturerPickerLabel,
   lecturerPickerMeta,
 } from '../utils/formatDisplay';
+import { fmtTime } from '../utils/timeFormat';
 
 const DEFAULT_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
 function toTimeInput(t) {
-  return String(t || '').slice(0, 5);
+  return fmtTime(t);
 }
 
 /**
@@ -73,7 +75,7 @@ export default function EditTeachingPlanModal({
           ...g,
           intakeId: intake.id,
           yearOfStudy: intake.yearOfStudy,
-          campusName: intake.campus?.name,
+          campusName: capitalizeCampusName(intake.campus?.name) || intake.campus?.name,
           programName: intake.program?.name,
           programId: intake.programId,
         });
@@ -88,7 +90,7 @@ export default function EditTeachingPlanModal({
         name: g.name,
         size: g.size,
         yearOfStudy: g.year_of_study,
-        campusName: g.campus,
+        campusName: capitalizeCampusName(g.campus) || g.campus,
         programName: g.program,
         programId: g.program_id,
       });

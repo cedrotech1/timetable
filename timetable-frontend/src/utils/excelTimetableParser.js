@@ -3,6 +3,8 @@
  * Mirrors PHP Dashboard/timetable_import_excel.php parsers.
  */
 
+import { parseTimeRange } from "./timeFormat.js";
+
 function normalizeDayName(d) {
   const s = String(d || "")
     .toLowerCase()
@@ -34,27 +36,14 @@ function normalizeDayName(d) {
 
 export function parseExcelTime(raw) {
   const text = String(raw || "")
+    .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
     .trim();
   const timeGroupNums = [];
   const gp = text.match(/\(?\s*(?:GP|G|Group)\s*([0-9]+(?:\s*[&,]\s*[0-9]+)*)\s*\)?/i);
   if (gp) (gp[1].match(/\d+/g) || []).forEach((n) => timeGroupNums.push(parseInt(n, 10)));
 
-  const m = text.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?\s*[-–—to]+\s*(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
-  if (!m) return { start: "", end: "", time_raw: text, time_group_nums: timeGroupNums };
-
-  const to24 = (h, min, ampm) => {
-    let hh = parseInt(h, 10);
-    const ap = (ampm || "").toUpperCase();
-    if (ap === "PM" && hh < 12) hh += 12;
-    if (ap === "AM" && hh === 12) hh = 0;
-    return `${String(hh).padStart(2, "0")}:${min}`;
-  };
-
-  let start = to24(m[1], m[2], m[3] || "");
-  let end = to24(m[4], m[5], m[6] || "");
-  if (parseInt(m[1], 10) >= 13) start = `${String(parseInt(m[1], 10)).padStart(2, "0")}:${m[2]}`;
-  if (parseInt(m[4], 10) >= 13) end = `${String(parseInt(m[4], 10)).padStart(2, "0")}:${m[5]}`;
+  const { start, end } = parseTimeRange(text);
   return { start, end, time_raw: text, time_group_nums: timeGroupNums };
 }
 

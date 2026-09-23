@@ -8,6 +8,8 @@ import { UrLogo } from '../components/UrLogo';
 import { loginPath, appPath } from '../utils/appPaths';
 import { useAuth } from '../contexts/AuthContext';
 import { formatPlanLecturers } from '../utils/formatPlanLecturers';
+import { capitalizeCampusName } from '../utils/formatDisplay';
+import { fmtTime } from '../utils/timeFormat';
 
 const DAY_ORDER = {
   Monday: 1,
@@ -18,10 +20,6 @@ const DAY_ORDER = {
   Saturday: 6,
   Sunday: 7,
 };
-
-function fmtTime(t) {
-  return String(t || '').slice(0, 5);
-}
 
 function setSelectOptions(items, getId, getText) {
   const map = new Map();
@@ -89,7 +87,7 @@ export default function PublicTimetablePage() {
     return setSelectOptions(source, (g) => g.program_id, (g) => g.program);
   }, [allGroups, filters.college, filters.school]);
   const campusOptions = useMemo(
-    () => setSelectOptions(allGroups, (g) => g.campus_id, (g) => g.campus),
+    () => setSelectOptions(allGroups, (g) => g.campus_id, (g) => capitalizeCampusName(g.campus) || g.campus),
     [allGroups]
   );
   const yearOptions = useMemo(
@@ -201,7 +199,7 @@ export default function PublicTimetablePage() {
             'Year of Study': g.year_of_study || '',
             Program: g.program || '',
             School: g.school || '',
-            Campus: g.campus || '',
+            Campus: capitalizeCampusName(g.campus) || '',
             College: g.college || '',
             Lecturers: formatPlanLecturers(t),
           });
@@ -422,7 +420,7 @@ export default function PublicTimetablePage() {
                         <td className="border px-2.5 py-2 text-center">{g?.year_of_study || '—'}</td>
                         <td className="border px-2.5 py-2 text-left">{g?.program || '—'}</td>
                         <td className="border px-2.5 py-2 text-left">{g?.school || '—'}</td>
-                        <td className="border px-2.5 py-2 capitalize">{g?.campus || '—'}</td>
+                        <td className="border px-2.5 py-2">{capitalizeCampusName(g?.campus) || '—'}</td>
                         <td className="border px-2.5 py-2">{g?.college || '—'}</td>
                         {gi === 0 && (
                           <td rowSpan={groups.length} className="border px-2.5 py-2 text-left">
