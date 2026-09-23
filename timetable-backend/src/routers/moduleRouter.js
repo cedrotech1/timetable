@@ -5,13 +5,15 @@ const {
   createModuleController,
   updateModuleController,
   deleteModuleController,
+  truncateModulesController,
 } = require("../controllers/moduleController.js");
 const { protect } = require("../middlewares/protect.js");
-const { requireManageAccess } = require("../middlewares/roleAccess.js");
+const { requireManageAccess, requireAdmin } = require("../middlewares/roleAccess.js");
 
 const router = express.Router();
 
 router.get("/", getAllModulesController);
+router.post("/truncate", protect, requireAdmin, truncateModulesController);
 router.get("/:id", getModuleByIdController);
 router.post("/", protect, requireManageAccess, createModuleController);
 router.put("/:id", protect, requireManageAccess, updateModuleController);

@@ -600,15 +600,17 @@ export async function matchImportSections({ sections, campusId = null, semester 
       }
 
       const [fac, fScore] =
-        facilityMode === "auto"
+        facilityMode === "auto" || facilityMode === "skip"
           ? [null, 0]
           : matchFacility(facilities, classroom, capacity);
-      if (facilityMode === "auto") {
+      if (facilityMode === "skip") {
+        warnings.push("Facility skipped — assign later or pick before save (no room required for preview)");
+      } else if (facilityMode === "auto") {
         warnings.push("Excel classroom ignored — free facility will be auto-assigned");
       } else if (classroom && !fac) {
         warnings.push(`Facility not matched: ${classroom}`);
       } else if (!classroom) {
-        warnings.push("No classroom in Excel — pick a facility or use Auto mode");
+        warnings.push("No classroom in Excel — pick a facility or use Auto / Skip mode");
       } else if (fScore < 70) {
         warnings.push(`Facility weak match (${fScore}%): ${fac.name}`);
       }

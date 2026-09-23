@@ -29,7 +29,10 @@ export const campusesService = makeCrudService('/campuses');
 export const collegesService = makeCrudService('/colleges');
 export const schoolsService = makeCrudService('/schools');
 export const programsService = makeCrudService('/programs');
-export const modulesService = makeCrudService('/modules');
+export const modulesService = {
+  ...makeCrudService('/modules'),
+  truncateAll: async () => (await apiClient.post('/modules/truncate')).data,
+};
 export const facilitiesService = makeCrudService('/facilities');
 export const usersService = makeCrudService('/users');
 

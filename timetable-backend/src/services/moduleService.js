@@ -1,6 +1,7 @@
 import db from "../database/models/index.js";
+import { Op } from "sequelize";
 
-const { Module } = db;
+const { Module, Timetable, TimetableSession, TimetableGroup, TimetableLecturer, sequelize } = db;
 
 export const getAllModules = async (filters = {}) => {
   const where = {};
@@ -47,3 +48,47 @@ export const deleteModule = async (id) => {
   await moduleRow.destroy();
   return moduleRow;
 };
+
+/**
+ * Wipe all modules (and teaching plans that reference them).
+ * Excel upload / rematch can recreate modules from the spreadsheet again.
+ */
+export async function truncateAllModules() {
+  return sequelize.transaction(async (t) => {
+    const beforeModules = await Module.count({ transaction: t });
+    const moduleIds = (await Module.findAll({ attributes: ["id"], transaction: t })).map((m) => m.id);
+
+    let clearedTimetables = 0;
+    if (moduleIds.length) {
+      const plans = await Timetable.findAll({
+        attributes: ["id"],
+        where: { moduleId: { [Op.in]: moduleIds } },
+        transaction: t,
+      });
+      const ttIds = plans.map((p) => p.id);
+      clearedTimetables = ttIds.length;
+      if (ttIds.length) {
+        await TimetableSession.destroy({ where: { timetableId: { [Op.in]: ttIds } }, transaction: t });
+        await TimetableLecturer.destroy({ where: { timetableId: { [Op.in]: ttIds } }, transaction: t });
+        await TimetableGroup.destroy({ where: { timetableId: { [Op.in]: ttIds } }, transaction: t });
+        await Timetable.destroy({ where: { id: { [Op.in]: ttIds } }, transaction: t });
+      }
+    }
+
+    await Module.destroy({ where: {}, transaction: t });
+
+    try {
+      await sequelize.query(`ALTER SEQUENCE IF EXISTS modules_id_seq RESTART WITH 1`, { transaction: t });
+    } catch {
+      /* ignore */
+    }
+
+    return {
+      deletedModules: beforeModules,
+      clearedTimetables,
+      message: `Truncated ${beforeModules} module(s)${
+        clearedTimetables ? ` and ${clearedTimetables} linked teaching plan(s)` : ""
+      }. Re-upload Excel or rematch to recreate modules from the spreadsheet.`,
+    };
+  });
+}

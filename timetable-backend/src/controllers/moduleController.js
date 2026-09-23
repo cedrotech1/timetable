@@ -4,6 +4,7 @@ import {
   createModule,
   updateModule,
   deleteModule,
+  truncateAllModules,
 } from "../services/moduleService.js";
 import { logSuccess, logFailure } from "../services/logService.js";
 
@@ -90,5 +91,16 @@ export const deleteModuleController = async (req, res) => {
   } catch (error) {
     logFailure(req, "Failed to delete module", "Module", "DELETE", error.message);
     return res.status(500).json({ success: false, message: "Something went wrong", error: error.message });
+  }
+};
+
+export const truncateModulesController = async (req, res) => {
+  try {
+    const data = await truncateAllModules();
+    logSuccess(req, data.message, "Module", "TRUNCATE", null, null, "Module");
+    return res.status(200).json({ success: true, message: data.message, data });
+  } catch (error) {
+    logFailure(req, "Failed to truncate modules", "Module", "TRUNCATE", error.message);
+    return res.status(500).json({ success: false, message: error.message || "Something went wrong" });
   }
 };

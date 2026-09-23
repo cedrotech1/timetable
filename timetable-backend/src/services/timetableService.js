@@ -27,6 +27,40 @@ function timesOverlap(aStart, aEnd, bStart, bEnd) {
   return timesOverlapStr(aStart, aEnd, bStart, bEnd);
 }
 
+const UNASSIGNED_FACILITY_NAME = "UNASSIGNED";
+
+/** Placeholder room when Excel import skips facilities (facilityId still required). */
+export async function ensureUnassignedFacility(campusId = null) {
+  let campus = campusId ? await Campus.findByPk(Number(campusId)) : null;
+  if (!campus) campus = await Campus.findOne({ order: [["id", "ASC"]] });
+  if (!campus) {
+    const err = new Error("No campus found — create a campus before skipping facilities");
+    err.code = "VALIDATION";
+    throw err;
+  }
+
+  const [row] = await Facility.findOrCreate({
+    where: { name: UNASSIGNED_FACILITY_NAME, campusId: campus.id },
+    defaults: {
+      name: UNASSIGNED_FACILITY_NAME,
+      name2: "Assign later",
+      type: "Classroom",
+      capacity: 0,
+      campusId: campus.id,
+      buildName: "TBD",
+      buildCode: "UNASSIGNED",
+      site: null,
+    },
+  });
+  return row;
+}
+
+export function isUnassignedFacility(fac) {
+  if (!fac) return false;
+  const name = String(fac.name || fac.facilityName || "").trim().toUpperCase();
+  return name === UNASSIGNED_FACILITY_NAME;
+}
+
 export function normalizeSessions(sessions = []) {
   const out = [];
   for (const s of sessions) {
@@ -88,6 +122,8 @@ export async function findConflicts({
 
   const groupIdSet = new Set((groupIds || []).map(Number));
   const groupNameById = {};
+  const neuFacility = await Facility.findByPk(facilityId, { attributes: ["id", "name"] });
+  const skipRoomConflicts = isUnassignedFacility(neuFacility);
 
   const fmtGroups = (planGroups) =>
     (planGroups || [])
@@ -101,7 +137,10 @@ export async function findConflicts({
       if (tg.group?.name) groupNameById[Number(tg.groupId)] = tg.group.name;
     }
     const sharedGroups = planGroupIds.filter((g) => groupIdSet.has(g));
-    const sameFacility = Number(plan.facilityId) === Number(facilityId);
+    const sameFacility =
+      !skipRoomConflicts &&
+      !isUnassignedFacility(plan.facility) &&
+      Number(plan.facilityId) === Number(facilityId);
     const groupsLabel = fmtGroups(plan.timetableGroups);
 
     for (const sess of plan.sessions || []) {
@@ -154,7 +193,10 @@ export async function findConflicts({
   for (const booked of batchBooked) {
     const bookedGroups = new Set((booked.groupIds || []).map(Number));
     const shared = [...groupIdSet].filter((g) => bookedGroups.has(g));
-    const sameFacility = Number(booked.facilityId) === Number(facilityId);
+    const sameFacility =
+      !skipRoomConflicts &&
+      !isUnassignedFacility({ name: booked.facilityName }) &&
+      Number(booked.facilityId) === Number(facilityId);
     const groupsLabel = (booked.groupNames || []).join(", ") || (booked.groupIds || []).map((g) => `Group#${g}`).join(", ");
 
     for (const bSess of booked.sessions || []) {
@@ -252,7 +294,7 @@ export async function getActiveSettings() {
  */
 export async function createTeachingPlan(dto, { user, transaction: outerTx = null, batchBooked = [] } = {}) {
   const moduleId = Number(dto.moduleId || dto.selectedModuleId);
-  const facilityId = Number(dto.facilityId || dto.selectedFacilityId);
+  let facilityId = Number(dto.facilityId || dto.selectedFacilityId);
   const academicYearId = Number(dto.academicYearId);
   const semester = String(dto.semester ?? "");
   const groupIds = (dto.groupIds || dto.selectedGroupIds || []).map(Number).filter(Boolean);
@@ -262,10 +304,16 @@ export async function createTeachingPlan(dto, { user, transaction: outerTx = nul
     .filter((id) => id && id !== leaderLecturerId);
   const ignoreConflicts = Boolean(dto.ignoreConflicts);
   const dryRun = Boolean(dto.dryRun);
+  const skipFacility = Boolean(dto.skipFacility || dto.skip_facility);
+
+  if ((!facilityId || Number.isNaN(facilityId)) && skipFacility) {
+    const placeholder = await ensureUnassignedFacility(dto.campusId || dto.campus_id || null);
+    facilityId = Number(placeholder.id);
+  }
 
   const missing = [];
   if (!moduleId) missing.push("module");
-  if (!facilityId) missing.push("facility");
+  if (!facilityId || Number.isNaN(facilityId)) missing.push("facility");
   if (!academicYearId) missing.push("academic year");
   if (!semester) missing.push("semester");
   if (!groupIds.length) missing.push("groups");

@@ -8,11 +8,13 @@ import {
   BookOpen,
   GraduationCap,
   ArrowLeft,
+  RefreshCw,
+  Eraser,
 } from 'lucide-react';
 import { modulesService, programsService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotification } from '../contexts/NotificationContext';
-import { canManageOrg } from '../utils/roles';
+import { canManageOrg, isAdmin } from '../utils/roles';
 import { appPath } from '../utils/appPaths';
 import ModalShell, { ModalPrimaryButton, ModalSecondaryButton } from '../components/ModalShell';
 
@@ -59,6 +61,7 @@ export default function ModulesPage() {
   const { user } = useAuth();
   const { showSuccess, showError } = useNotification();
   const canManage = canManageOrg(user?.role);
+  const admin = isAdmin(user?.role);
 
   const [programs, setPrograms] = useState([]);
   const [rows, setRows] = useState([]);
@@ -199,6 +202,28 @@ export default function ModulesPage() {
     }
   };
 
+  const handleTruncateAll = async () => {
+    if (!admin) return;
+    const ok = window.confirm(
+      `Delete ALL ${rows.length} module(s)?\n\nLinked teaching plans will also be removed.\nYou can recreate modules by re-uploading Excel on Set timetable (Rematch).\n\nContinue?`
+    );
+    if (!ok) return;
+    try {
+      setSaving(true);
+      const response = await modulesService.truncateAll();
+      if (response?.success) {
+        showSuccess(response.message || 'All modules truncated');
+        await load();
+      } else {
+        showError(response?.message || 'Truncate failed');
+      }
+    } catch (error) {
+      showError(error.response?.data?.message || 'Truncate failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
@@ -219,13 +244,35 @@ export default function ModulesPage() {
           </p>
         </div>
         {canManage && (
-          <button
-            type="button"
-            onClick={() => openCreate()}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#00628b] text-white px-4 py-2.5 text-sm font-semibold hover:bg-[#004f70]"
-          >
-            <Plus size={16} /> Add module
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => load()}
+              disabled={loading || saving}
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium hover:bg-slate-50 disabled:opacity-50"
+              title="Reload modules from the database"
+            >
+              <RefreshCw size={15} /> Reload
+            </button>
+            {admin && (
+              <button
+                type="button"
+                onClick={handleTruncateAll}
+                disabled={loading || saving || !rows.length}
+                className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-red-50 text-red-800 px-3 py-2.5 text-sm font-medium hover:bg-red-100 disabled:opacity-50"
+                title="Delete all modules (Excel rematch can recreate them)"
+              >
+                <Eraser size={15} /> Truncate all
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => openCreate()}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00628b] text-white px-4 py-2.5 text-sm font-semibold hover:bg-[#004f70]"
+            >
+              <Plus size={16} /> Add module
+            </button>
+          </div>
         )}
       </div>
 

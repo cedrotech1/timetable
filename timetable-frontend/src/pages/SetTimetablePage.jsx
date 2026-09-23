@@ -821,7 +821,8 @@ export default function SetTimetablePage() {
       const sec = matchedSections[si];
       for (let ri = 0; ri < (sec.rows || []).length; ri += 1) {
         const row = sec.rows[ri];
-        if (!row.module?.id || !row.facility?.id || !(row.groups || []).length) continue;
+        if (!row.module?.id || !(row.groups || []).length) continue;
+        if (facilityMode !== 'skip' && !row.facility?.id) continue;
         if (row.status === 'skipped' || row.mergedAway) continue;
         // Include previous conflict rows so re-check / save works after facility fix
         const groupNames = row.groups.map((g) => g.name).filter(Boolean);
@@ -834,8 +835,9 @@ export default function SetTimetablePage() {
           moduleCode: row.excel?.moduleCode || row.module.code,
           moduleName: row.excel?.moduleName || row.module.name,
           credits: row.excel?.credits ?? row.module?.credits ?? null,
-          facilityId: row.facility.id,
-          facilityName: row.facility.name,
+          facilityId: row.facility?.id || null,
+          facilityName: row.facility?.name || null,
+          skipFacility: facilityMode === 'skip' && !row.facility?.id,
           leaderLecturerId: row.lecturers?.leader?.id || null,
           otherLecturerIds: (row.lecturers?.others || []).map((l) => l.id),
           day: row.day,
@@ -851,8 +853,8 @@ export default function SetTimetablePage() {
     if (!rows.length) {
       showError(
         sectionFilter != null
-          ? 'This section has no fully matched rows to save (need module + facility + groups)'
-          : 'No fully matched rows to save (need module + facility + groups)'
+          ? `This section has no fully matched rows to save (need module + groups${facilityMode === 'skip' ? '' : ' + facility'})`
+          : `No fully matched rows to save (need module + groups${facilityMode === 'skip' ? '' : ' + facility'})`
       );
       return;
     }
@@ -861,7 +863,10 @@ export default function SetTimetablePage() {
       const result = await timetableService.bulk({
         academicYearId,
         semester,
-        rows,
+        rows: rows.map((r) => ({
+          ...r,
+          campusId: uploadCampusId ? Number(uploadCampusId) : null,
+        })),
         dryRun,
       });
       const data = result?.data || null;
@@ -1668,11 +1673,14 @@ export default function SetTimetablePage() {
                 >
                   <option value="excel">Use Excel classrooms (match to system)</option>
                   <option value="auto">Auto free facilities (ignore Excel rooms)</option>
+                  <option value="skip">Skip facilities (assign later)</option>
                 </select>
                 <p className="m-0 mt-2 text-[11px] text-slate-500 leading-snug">
                   {facilityMode === 'auto'
                     ? 'Ignores Excel rooms and picks free campus rooms. Each Excel section (G1&2, G3&4, …) stays separate — not merged into one plan.'
-                    : 'Keeps Excel structure: one plan per section/slot/group (many rows). Rooms matched from the Class room column.'}
+                    : facilityMode === 'skip'
+                      ? 'Skips room matching. Save still works using a placeholder UNASSIGNED room — pick real facilities later from the preview or edit plans.'
+                      : 'Keeps Excel structure: one plan per section/slot/group (many rows). Rooms matched from the Class room column.'}
                 </p>
               </div>
             </div>

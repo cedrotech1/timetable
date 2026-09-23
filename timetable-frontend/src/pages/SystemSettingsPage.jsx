@@ -8,8 +8,9 @@ import {
   CalendarRange,
   Plus,
   RefreshCw,
+  BookOpen,
 } from 'lucide-react';
-import { timetableService } from '../services/api';
+import { timetableService, modulesService } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
 import { canManageOrg, isAdmin } from '../utils/roles';
@@ -162,6 +163,24 @@ export default function SystemSettingsPage() {
     }
   };
 
+  const truncateModules = async () => {
+    if (!admin) return;
+    const ok = window.confirm(
+      'Delete ALL modules and linked teaching plans?\n\nYou can recreate modules by re-uploading Excel on Set timetable.\n\nContinue?'
+    );
+    if (!ok) return;
+    try {
+      setSaving(true);
+      const res = await modulesService.truncateAll();
+      showSuccess(res?.message || 'Modules truncated');
+      await load();
+    } catch (error) {
+      showError(error.response?.data?.message || 'Truncate failed');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return <div className="text-center text-gray-500 py-16">Loading settings…</div>;
   }
@@ -224,7 +243,7 @@ export default function SystemSettingsPage() {
 
       {tab === 'system' && (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
             <div className="bg-white rounded-xl border border-red-200 p-5 shadow-sm">
               <h2 className="m-0 text-base font-semibold text-red-700 flex items-center gap-2">
                 <Trash2 size={16} /> Reset timetables
@@ -280,6 +299,31 @@ export default function SystemSettingsPage() {
               {!admin && (
                 <p className="m-0 mt-1 text-xs text-gray-400">Admin only</p>
               )}
+            </div>
+            <div className="bg-white rounded-xl border border-violet-300 p-5 shadow-sm">
+              <h2 className="m-0 text-base font-semibold text-violet-900 flex items-center gap-2">
+                <BookOpen size={16} /> Truncate all modules
+              </h2>
+              <p className="mt-2 mb-3 text-sm text-gray-600">
+                Deletes every module and any teaching plans that use them. Re-upload Excel on Set
+                timetable (or Rematch) to recreate modules from the spreadsheet again.
+              </p>
+              <button
+                type="button"
+                disabled={!admin || saving}
+                onClick={truncateModules}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                <Trash2 size={14} /> Truncate all modules
+              </button>
+              <p className="m-0 mt-2 text-xs text-gray-500">
+                Also available on{' '}
+                <Link to={appPath('modules')} className="text-[#00628b] hover:underline">
+                  Modules
+                </Link>{' '}
+                (Reload refreshes the list from the database).
+              </p>
+              {!admin && <p className="m-0 mt-1 text-xs text-gray-400">Admin only</p>}
             </div>
           </div>
 
