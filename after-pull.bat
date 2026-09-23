@@ -64,9 +64,14 @@ REM --- 3) Frontend build → htdocs ---
 echo.
 echo [3/5] Frontend build for /timetable/ ...
 cd /d "%ROOT%timetable-frontend"
-call npm install
+call npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 if errorlevel 1 (
-  echo ERROR: frontend npm install failed
+  echo WARNING: npm install failed once — retrying...
+  timeout /t 3 /nobreak >nul
+  call npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+)
+if errorlevel 1 (
+  echo ERROR: frontend npm install failed ^(network^). Retry later or check internet/proxy.
   pause
   exit /b 1
 )

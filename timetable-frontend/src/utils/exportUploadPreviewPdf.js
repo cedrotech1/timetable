@@ -104,7 +104,6 @@ function pdfEscape(s) {
     .replace(/\)/g, '\\)')
     .replace(/\r?\n/g, ' ')
     .replace(/[^\x20-\x7E]/g, (ch) => {
-      // Keep latin accents roughly by stripping; PDF Helvetica is WinAnsi-ish via simple ASCII fallback
       try {
         return ch.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
       } catch {
@@ -132,96 +131,7 @@ function wrapWords(text, maxChars) {
   return lines.length ? lines : [''];
 }
 
-/** Minimal multi-page landscape PDF writer (Helvetica only). */
-function buildSimplePdf(pages) {
-  // pages: array of { lines: string[] } where lines are already laid out as draw commands helpers
-  const objs = [];
-  const add = (content) => {
-    objs.push(content);
-    return objs.length;
-  };
-
-  const fontObj = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  const fontBoldObj = add('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
-
-  const pageIds = [];
-  const contentIds = [];
-
-  for (const page of pages) {
-    const stream = page.stream;
-    const contentId = add(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
-    contentIds.push(contentId);
-    const pageId = add(null); // placeholder
-    pageIds.push(pageId);
-  }
-
-  // Fill page objects (need kids refs later)
-  const pagesObjId = objs.length + 1; // will push after filling pages
-  // Actually we need pages dict after page objects. Rebuild carefully:
-
-  const catalogId = add(null);
-  const pagesDictId = add(null);
-
-  // Reset and rebuild with known structure
-  const out = [];
-  const offsets = [0];
-
-  const writeObj = (id, body) => {
-    offsets[id] = out.join('').length;
-    out.push(`${id} 0 obj\n${body}\nendobj\n`);
-  };
-
-  // Object 1: font
-  // Object 2: font bold
-  // Object 3..: content streams
-  // then page objs
-  // then pages
-  // then catalog
-
-  let id = 1;
-  const FONT = id++;
-  writeObj(FONT, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-  const FONTB = id++;
-  writeObj(FONTB, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
-
-  const contentObjIds = [];
-  for (const page of pages) {
-    const cid = id++;
-    contentObjIds.push(cid);
-    const stream = page.stream;
-    writeObj(cid, `<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream`);
-  }
-
-  const pageObjIds = [];
-  for (let i = 0; i < pages.length; i += 1) {
-    const pid = id++;
-    pageObjIds.push(pid);
-  }
-  const PAGES = id++;
-  const CATALOG = id++;
-
-  for (let i = 0; i < pageObjIds.length; i += 1) {
-    writeObj(
-      pageObjIds[i],
-      `<< /Type /Page /Parent ${PAGES} 0 R /MediaBox [0 0 842 595] /Contents ${contentObjIds[i]} 0 R /Resources << /Font << /F1 ${FONT} 0 R /F2 ${FONTB} 0 R >> >> >>`
-    );
-  }
-
-  writeObj(PAGES, `<< /Type /Pages /Kids [${pageObjIds.map((p) => `${p} 0 R`).join(' ')}] /Count ${pageObjIds.length} >>`);
-  writeObj(CATALOG, `<< /Type /Catalog /Pages ${PAGES} 0 R >>`);
-
-  const body = out.join('');
-  let xrefPos = body.length;
-  let xref = `xref\n0 ${id}\n0000000000 65535 f \n`;
-  for (let i = 1; i < id; i += 1) {
-    xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-  }
-  const trailer = `trailer\n<< /Size ${id} /Root ${CATALOG} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
-  return `%PDF-1.4\n${body}${xref}${trailer}`;
-}
-
 function pageStreamFromLines(drawLines) {
-  // drawLines: array of { text, x, y, bold?, size? }
   const parts = ['BT'];
   let lastFont = null;
   let lastSize = null;
@@ -252,7 +162,6 @@ function layoutSectionPages(sec, meta, generated) {
     { key: 'lecturers', title: 'Lecturers', width: 170 },
     { key: 'groups', title: 'Groups', width: 90 },
   ];
-  // normalize widths to usable
   const sumW = cols.reduce((s, c) => s + c.width, 0);
   cols.forEach((c) => {
     c.width = (c.width / sumW) * usable;
@@ -279,7 +188,7 @@ function layoutSectionPages(sec, meta, generated) {
     };
   });
 
-  const charW = (size) => size * 0.5; // approx for Helvetica
+  const charW = (size) => size * 0.5;
   const wrapCell = (text, width, size = 8) => wrapWords(text, Math.max(8, Math.floor(width / charW(size))));
 
   const pages = [];
@@ -307,9 +216,10 @@ function layoutSectionPages(sec, meta, generated) {
   };
 
   writeLine(sec.title || 'Untitled section', { bold: true, size: 12 });
-  writeLine(`Upload preview before save · Generated ${generated}${[ay, sem].filter(Boolean).length ? ` · ${[ay, sem].filter(Boolean).join(' · ')}` : ''}`, {
-    size: 8,
-  });
+  writeLine(
+    `Upload preview before save · Generated ${generated}${[ay, sem].filter(Boolean).length ? ` · ${[ay, sem].filter(Boolean).join(' · ')}` : ''}`,
+    { size: 8 }
+  );
   writeLine(
     `Year ${sec.year || '—'} · Groups ${(sec.groupNumbers || []).join('&') || '—'} · ${program} · ${rows.length} row(s)`,
     { size: 8 }
@@ -369,6 +279,53 @@ function layoutSectionPages(sec, meta, generated) {
   return pages;
 }
 
+function buildPdfBytes(pages) {
+  const out = [];
+  const offsets = [0];
+  let id = 1;
+  const push = (s) => out.push(s);
+  const writeObj = (oid, body) => {
+    offsets[oid] = out.reduce((n, s) => n + s.length, 0);
+    push(`${oid} 0 obj\n${body}\nendobj\n`);
+  };
+  const byteLen = (s) => new TextEncoder().encode(s).length;
+
+  const FONT = id++;
+  writeObj(FONT, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const FONTB = id++;
+  writeObj(FONTB, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+
+  const contentObjIds = [];
+  for (const page of pages) {
+    const cid = id++;
+    contentObjIds.push(cid);
+    const stream = page.stream;
+    writeObj(cid, `<< /Length ${byteLen(stream)} >>\nstream\n${stream}\nendstream`);
+  }
+
+  const pageObjIds = [];
+  for (let i = 0; i < pages.length; i += 1) pageObjIds.push(id++);
+  const PAGES = id++;
+  const CATALOG = id++;
+
+  for (let i = 0; i < pageObjIds.length; i += 1) {
+    writeObj(
+      pageObjIds[i],
+      `<< /Type /Page /Parent ${PAGES} 0 R /MediaBox [0 0 842 595] /Contents ${contentObjIds[i]} 0 R /Resources << /Font << /F1 ${FONT} 0 R /F2 ${FONTB} 0 R >> >> >>`
+    );
+  }
+  writeObj(PAGES, `<< /Type /Pages /Kids [${pageObjIds.map((p) => `${p} 0 R`).join(' ')}] /Count ${pageObjIds.length} >>`);
+  writeObj(CATALOG, `<< /Type /Catalog /Pages ${PAGES} 0 R >>`);
+
+  const body = out.join('');
+  const xrefPos = byteLen(body);
+  let xref = `xref\n0 ${id}\n0000000000 65535 f \n`;
+  for (let i = 1; i < id; i += 1) {
+    xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  return `%PDF-1.4\n${body}${xref}trailer\n<< /Size ${id} /Root ${CATALOG} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+}
+
 /**
  * Build and download a PDF of upload-preview table(s) — no popup, no npm PDF libs.
  */
@@ -387,59 +344,7 @@ export async function exportUploadSectionsPdf(sections, meta = {}) {
     allPages.push({ stream: pageStreamFromLines([{ text: 'No content', x: 40, y: 550, size: 12 }]) });
   }
 
-  // Use TextEncoder length correctly in browser
-  const pdfSource = (() => {
-    // rebuild with browser-safe byte length
-    const pages = allPages;
-    const out = [];
-    const offsets = [0];
-    let id = 1;
-
-    const push = (s) => {
-      out.push(s);
-    };
-    const writeObj = (oid, body) => {
-      offsets[oid] = out.reduce((n, s) => n + s.length, 0);
-      push(`${oid} 0 obj\n${body}\nendobj\n`);
-    };
-    const byteLen = (s) => new TextEncoder().encode(s).length;
-
-    const FONT = id++;
-    writeObj(FONT, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
-    const FONTB = id++;
-    writeObj(FONTB, '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
-
-    const contentObjIds = [];
-    for (const page of pages) {
-      const cid = id++;
-      contentObjIds.push(cid);
-      const stream = page.stream;
-      writeObj(cid, `<< /Length ${byteLen(stream)} >>\nstream\n${stream}\nendstream`);
-    }
-
-    const pageObjIds = [];
-    for (let i = 0; i < pages.length; i += 1) pageObjIds.push(id++);
-    const PAGES = id++;
-    const CATALOG = id++;
-
-    for (let i = 0; i < pageObjIds.length; i += 1) {
-      writeObj(
-        pageObjIds[i],
-        `<< /Type /Page /Parent ${PAGES} 0 R /MediaBox [0 0 842 595] /Contents ${contentObjIds[i]} 0 R /Resources << /Font << /F1 ${FONT} 0 R /F2 ${FONTB} 0 R >> >> >>`
-      );
-    }
-    writeObj(PAGES, `<< /Type /Pages /Kids [${pageObjIds.map((p) => `${p} 0 R`).join(' ')}] /Count ${pageObjIds.length} >>`);
-    writeObj(CATALOG, `<< /Type /Catalog /Pages ${PAGES} 0 R >>`);
-
-    const body = out.join('');
-    const xrefPos = byteLen(body);
-    let xref = `xref\n0 ${id}\n0000000000 65535 f \n`;
-    for (let i = 1; i < id; i += 1) {
-      xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
-    }
-    return `%PDF-1.4\n${body}${xref}trailer\n<< /Size ${id} /Root ${CATALOG} 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
-  })();
-
+  const pdfSource = buildPdfBytes(allPages);
   const fileName = safeFileName(
     meta.fileName || (list.length === 1 ? list[0].title : 'timetable-preview-all-sections')
   );
