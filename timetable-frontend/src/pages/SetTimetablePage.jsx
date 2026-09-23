@@ -1910,9 +1910,9 @@ export default function SetTimetablePage() {
                         semester,
                         fileName: `timetable-preview-section-${activeSectionIdx + 1}`,
                       });
-                      showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                      showSuccess('PDF downloaded');
                     } catch (e) {
-                      showError(e.message || 'Failed to open PDF preview');
+                      showError(e.message || 'Failed to download PDF preview');
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-950 text-sm font-medium disabled:opacity-50"
@@ -1930,9 +1930,9 @@ export default function SetTimetablePage() {
                         semester,
                         fileName: 'timetable-preview-all-sections',
                       });
-                      showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                      showSuccess('PDF downloaded');
                     } catch (e) {
-                      showError(e.message || 'Failed to open PDF preview');
+                      showError(e.message || 'Failed to download PDF preview');
                     }
                   }}
                   className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50"
@@ -2036,9 +2036,9 @@ export default function SetTimetablePage() {
                                         .replace(/[^\w\-]+/g, '_')
                                         .slice(0, 60)}`,
                                     });
-                                    showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                                    showSuccess('PDF downloaded');
                                   } catch (e) {
-                                    showError(e.message || 'Failed to open PDF preview');
+                                    showError(e.message || 'Failed to download PDF preview');
                                   }
                                 }}
                                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-950 text-xs font-medium disabled:opacity-50"

@@ -1,12 +1,15 @@
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { fmtTime } from './timeFormat.js';
 import { capitalizePersonName, facilityCompactLabel } from './formatDisplay.js';
 
-function esc(s) {
-  return String(s ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+function safeFileName(name) {
+  const base = String(name || 'timetable-preview')
+    .replace(/[^\w\-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '')
+    .slice(0, 80);
+  return `${base || 'timetable-preview'}.pdf`;
 }
 
 function rowStatus(row) {
@@ -92,68 +95,8 @@ function sectionConflictStats(sec) {
   return { room, group, both, total: room + group + both };
 }
 
-function buildSectionHtml(sec, meta = {}) {
-  const stats = sectionConflictStats(sec);
-  const rows = (sec.rows || []).filter((r) => r.status !== 'skipped' && !r.mergedAway);
-  const program = sec.program?.name || 'Program not matched';
-  const ay = meta.yearLabel || (meta.academicYearId ? `AY #${meta.academicYearId}` : '');
-  const sem = meta.semester != null && meta.semester !== '' ? `Semester ${meta.semester}` : '';
-
-  const body = rows
-    .map((r) => {
-      const status = rowStatus(r);
-      const isConflict = /^CONFLICT/i.test(status);
-      const detail = conflictDetails(r);
-      const when = `${r.day || '—'} ${fmtTime(r.start)}-${fmtTime(r.end)}`;
-      return `<tr class="${isConflict ? 'conflict' : ''}">
-        <td class="status">${esc(status)}</td>
-        <td class="nowrap">${esc(when)}</td>
-        <td>${esc(moduleLabel(r))}${detail ? `<div class="detail">${esc(detail)}</div>` : ''}</td>
-        <td>${esc(facilityLabel(r))}${r.excel?.classroom ? `<div class="muted">Excel: ${esc(r.excel.classroom)}</div>` : ''}</td>
-        <td>${esc(lecturersLabel(r))}${r.excel?.lecturers ? `<div class="muted">Excel: ${esc(r.excel.lecturers)}</div>` : ''}</td>
-        <td>${esc(groupsLabel(r))}</td>
-      </tr>`;
-    })
-    .join('');
-
-  return `
-    <section class="section">
-      <h2>${esc(sec.title || 'Untitled section')}</h2>
-      <p class="meta">
-        ${esc([ay, sem].filter(Boolean).join(' · '))}
-        ${ay || sem ? '<br/>' : ''}
-        Year ${esc(sec.year || '—')} · Groups ${(sec.groupNumbers || []).join('&') || '—'} · ${esc(program)}
-        · ${rows.length} row(s)
-        ${
-          stats.total
-            ? `<br/><strong class="warn">${stats.total} conflict warning(s)</strong> — ${[
-                stats.room ? `${stats.room} ROOM` : null,
-                stats.group ? `${stats.group} GROUP` : null,
-                stats.both ? `${stats.both} ROOM+GROUP` : null,
-              ]
-                .filter(Boolean)
-                .join(' · ')} (review before save)`
-            : '<br/><span class="ok">No ROOM/GROUP conflicts flagged on this preview</span>'
-        }
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>Status</th>
-            <th>Day / Time</th>
-            <th>Module</th>
-            <th>Facility</th>
-            <th>Lecturers</th>
-            <th>Groups</th>
-          </tr>
-        </thead>
-        <tbody>${body || '<tr><td colspan="6">No rows</td></tr>'}</tbody>
-      </table>
-    </section>`;
-}
-
 /**
- * Open a print window for upload-preview table(s) so the user can Save as PDF.
+ * Build and download a PDF of upload-preview table(s) — no popup / print dialog.
  * @param {object[]} sections matched upload sections
  * @param {{ yearLabel?: string, academicYearId?: number|string, semester?: string|number, fileName?: string }} meta
  */
@@ -163,74 +106,134 @@ export function exportUploadSectionsPdf(sections, meta = {}) {
     throw new Error('No section to export');
   }
 
+  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+  const pageW = doc.internal.pageSize.getWidth();
+  const margin = 10;
   const generated = new Date().toLocaleString();
+  const ay = meta.yearLabel || (meta.academicYearId ? `AY #${meta.academicYearId}` : '');
+  const sem = meta.semester != null && meta.semester !== '' ? `Semester ${meta.semester}` : '';
   const title =
     list.length === 1
       ? `Timetable preview — ${list[0].title || 'section'}`
       : `Timetable preview — ${list.length} sections`;
 
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>${esc(title)}</title>
-  <style>
-    @page { size: A4 landscape; margin: 12mm; }
-    * { box-sizing: border-box; }
-    body { font-family: "Segoe UI", Tahoma, sans-serif; font-size: 11px; color: #0f172a; margin: 0; padding: 12px; }
-    h1 { font-size: 16px; margin: 0 0 4px; color: #031f50; }
-    .sub { color: #64748b; margin: 0 0 16px; font-size: 11px; }
-    .section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 22px; }
-    .section h2 { font-size: 13px; margin: 0 0 6px; color: #031f50; }
-    .meta { margin: 0 0 10px; color: #475569; line-height: 1.45; }
-    .warn { color: #b45309; }
-    .ok { color: #047857; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    th, td { border: 1px solid #cbd5e1; padding: 5px 6px; vertical-align: top; word-wrap: break-word; }
-    th { background: #031f50; color: #fff; text-align: left; font-size: 10px; }
-    tr.conflict td { background: #fff7ed; }
-    td.status { font-weight: 700; font-size: 10px; width: 11%; }
-    td.nowrap { white-space: nowrap; width: 12%; }
-    .detail { margin-top: 3px; color: #c2410c; font-size: 10px; font-weight: 600; }
-    .muted { margin-top: 2px; color: #94a3b8; font-size: 9px; }
-    .toolbar { margin-bottom: 12px; }
-    .toolbar button {
-      background: #00628b; color: #fff; border: 0; border-radius: 8px;
-      padding: 8px 14px; font-weight: 600; cursor: pointer; font-size: 12px;
-    }
-    @media print {
-      .toolbar { display: none !important; }
-      body { padding: 0; }
-    }
-  </style>
-</head>
-<body>
-  <div class="toolbar">
-    <button type="button" onclick="window.print()">Save / Print as PDF</button>
-    <span style="margin-left:8px;color:#64748b">Use your browser’s “Save as PDF” printer.</span>
-  </div>
-  <h1>${esc(title)}</h1>
-  <p class="sub">Upload preview before save · Generated ${esc(generated)} · Conflicts highlighted for review</p>
-  ${list.map((sec) => buildSectionHtml(sec, meta)).join('')}
-  <script>
-    window.addEventListener('load', function () {
-      setTimeout(function () { window.focus(); window.print(); }, 250);
-    });
-  </script>
-</body>
-</html>`;
+  let y = margin;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(13);
+  doc.setTextColor(3, 31, 80);
+  doc.text(title, margin, y);
+  y += 6;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(100, 116, 139);
+  doc.text(
+    `Upload preview before save · Generated ${generated}${[ay, sem].filter(Boolean).length ? ` · ${[ay, sem].filter(Boolean).join(' · ')}` : ''}`,
+    margin,
+    y
+  );
+  y += 8;
 
-  const w = window.open('', '_blank', 'noopener,noreferrer,width=1200,height=800');
-  if (!w) {
-    throw new Error('Pop-up blocked — allow pop-ups to download the PDF preview');
-  }
-  w.document.open();
-  w.document.write(html);
-  w.document.close();
-  try {
-    w.document.title = meta.fileName || title;
-  } catch {
-    /* ignore */
-  }
-  return true;
+  list.forEach((sec, idx) => {
+    if (idx > 0) {
+      doc.addPage();
+      y = margin;
+    }
+
+    const stats = sectionConflictStats(sec);
+    const rows = (sec.rows || []).filter((r) => r.status !== 'skipped' && !r.mergedAway);
+    const program = sec.program?.name || 'Program not matched';
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(3, 31, 80);
+    const titleLines = doc.splitTextToSize(sec.title || 'Untitled section', pageW - margin * 2);
+    doc.text(titleLines, margin, y);
+    y += titleLines.length * 5 + 2;
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(71, 85, 105);
+    const metaLine = `Year ${sec.year || '—'} · Groups ${(sec.groupNumbers || []).join('&') || '—'} · ${program} · ${rows.length} row(s)`;
+    doc.text(doc.splitTextToSize(metaLine, pageW - margin * 2), margin, y);
+    y += 5;
+
+    if (stats.total) {
+      doc.setTextColor(180, 83, 9);
+      doc.setFont('helvetica', 'bold');
+      const conflictLine = `${stats.total} conflict warning(s) — ${[
+        stats.room ? `${stats.room} ROOM` : null,
+        stats.group ? `${stats.group} GROUP` : null,
+        stats.both ? `${stats.both} ROOM+GROUP` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')} (review before save)`;
+      doc.text(doc.splitTextToSize(conflictLine, pageW - margin * 2), margin, y);
+      y += 5;
+    } else {
+      doc.setTextColor(4, 120, 87);
+      doc.text('No ROOM/GROUP conflicts flagged on this preview', margin, y);
+      y += 5;
+    }
+
+    const body = rows.map((r) => {
+      const status = rowStatus(r);
+      const detail = conflictDetails(r);
+      const moduleCell = detail ? `${moduleLabel(r)}\n${detail}` : moduleLabel(r);
+      const fac = facilityLabel(r);
+      const lec = lecturersLabel(r);
+      return [
+        status,
+        `${r.day || '—'} ${fmtTime(r.start)}-${fmtTime(r.end)}`,
+        moduleCell,
+        fac,
+        lec,
+        groupsLabel(r),
+      ];
+    });
+
+    autoTable(doc, {
+      startY: y,
+      margin: { left: margin, right: margin },
+      head: [['Status', 'Day / Time', 'Module', 'Facility', 'Lecturers', 'Groups']],
+      body: body.length ? body : [['—', '—', 'No rows', '—', '—', '—']],
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 1.8,
+        valign: 'top',
+        overflow: 'linebreak',
+        lineColor: [203, 213, 225],
+        lineWidth: 0.2,
+      },
+      headStyles: {
+        fillColor: [3, 31, 80],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8,
+      },
+      columnStyles: {
+        0: { cellWidth: 28, fontStyle: 'bold' },
+        1: { cellWidth: 32 },
+        2: { cellWidth: 70 },
+        3: { cellWidth: 40 },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 30 },
+      },
+      didParseCell(data) {
+        if (data.section !== 'body') return;
+        const status = String(data.row.raw?.[0] || '');
+        if (/^CONFLICT/i.test(status)) {
+          data.cell.styles.fillColor = [255, 247, 237];
+          if (data.column.index === 0 || data.column.index === 2) {
+            data.cell.styles.textColor = [194, 65, 12];
+          }
+        }
+      },
+    });
+
+    y = (doc.lastAutoTable?.finalY || y) + 8;
+  });
+
+  const fileName = safeFileName(meta.fileName || (list.length === 1 ? list[0].title : 'timetable-preview-all-sections'));
+  doc.save(fileName);
+  return fileName;
 }
