@@ -1,5 +1,3 @@
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import { fmtTime } from './timeFormat.js';
 import { capitalizePersonName, facilityCompactLabel } from './formatDisplay.js';
 
@@ -95,16 +93,31 @@ function sectionConflictStats(sec) {
   return { room, group, both, total: room + group + both };
 }
 
+async function loadPdfLibs() {
+  try {
+    const [{ jsPDF }, autoTableMod] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
+    return { jsPDF, autoTable: autoTableMod.default || autoTableMod };
+  } catch (err) {
+    const e = new Error(
+      'PDF libraries not installed. On this PC run: cd timetable-frontend && npm install jspdf jspdf-autotable'
+    );
+    e.cause = err;
+    throw e;
+  }
+}
+
 /**
  * Build and download a PDF of upload-preview table(s) — no popup / print dialog.
  * @param {object[]} sections matched upload sections
  * @param {{ yearLabel?: string, academicYearId?: number|string, semester?: string|number, fileName?: string }} meta
  */
-export function exportUploadSectionsPdf(sections, meta = {}) {
+export async function exportUploadSectionsPdf(sections, meta = {}) {
   const list = (sections || []).filter(Boolean);
   if (!list.length) {
     throw new Error('No section to export');
   }
+
+  const { jsPDF, autoTable } = await loadPdfLibs();
 
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
   const pageW = doc.internal.pageSize.getWidth();

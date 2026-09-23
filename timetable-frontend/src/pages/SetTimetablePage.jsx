@@ -1910,9 +1910,9 @@ export default function SetTimetablePage() {
                 <button
                   type="button"
                   disabled={Boolean(uploadBusy) || activeSectionIdx == null || !matchedSections[activeSectionIdx]}
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      exportUploadSectionsPdf([matchedSections[activeSectionIdx]], {
+                      await exportUploadSectionsPdf([matchedSections[activeSectionIdx]], {
                         yearLabel: settings?.settings?.academicYear?.yearLabel,
                         academicYearId,
                         semester,
@@ -1930,9 +1930,9 @@ export default function SetTimetablePage() {
                 <button
                   type="button"
                   disabled={Boolean(uploadBusy) || !matchedSections.length}
-                  onClick={() => {
+                  onClick={async () => {
                     try {
-                      exportUploadSectionsPdf(matchedSections, {
+                      await exportUploadSectionsPdf(matchedSections, {
                         yearLabel: settings?.settings?.academicYear?.yearLabel,
                         academicYearId,
                         semester,
@@ -2034,9 +2034,9 @@ export default function SetTimetablePage() {
                               <button
                                 type="button"
                                 disabled={Boolean(uploadBusy)}
-                                onClick={() => {
+                                onClick={async () => {
                                   try {
-                                    exportUploadSectionsPdf([sec], {
+                                    await exportUploadSectionsPdf([sec], {
                                       yearLabel: settings?.settings?.academicYear?.yearLabel,
                                       academicYearId,
                                       semester,
