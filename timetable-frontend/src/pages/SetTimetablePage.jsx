@@ -45,6 +45,7 @@ import {
   lecturerPickerMeta,
 } from '../utils/formatDisplay';
 import { fmtTime, toMinutes, sessionsOverlap } from '../utils/timeFormat';
+import { exportUploadSectionsPdf } from '../utils/exportUploadPreviewPdf';
 
 const MODES = [
   { id: 'single', label: 'Single entry', icon: CalendarDays, blurb: 'One teaching plan at a time' },
@@ -1898,6 +1899,46 @@ export default function SetTimetablePage() {
                 >
                   Save this section
                 </button>
+                <button
+                  type="button"
+                  disabled={Boolean(uploadBusy) || activeSectionIdx == null || !matchedSections[activeSectionIdx]}
+                  onClick={() => {
+                    try {
+                      exportUploadSectionsPdf([matchedSections[activeSectionIdx]], {
+                        yearLabel: settings?.settings?.academicYear?.yearLabel,
+                        academicYearId,
+                        semester,
+                        fileName: `timetable-preview-section-${activeSectionIdx + 1}`,
+                      });
+                      showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                    } catch (e) {
+                      showError(e.message || 'Failed to open PDF preview');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-amber-300 bg-amber-50 text-amber-950 text-sm font-medium disabled:opacity-50"
+                >
+                  <Download size={14} /> PDF this section
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(uploadBusy) || !matchedSections.length}
+                  onClick={() => {
+                    try {
+                      exportUploadSectionsPdf(matchedSections, {
+                        yearLabel: settings?.settings?.academicYear?.yearLabel,
+                        academicYearId,
+                        semester,
+                        fileName: 'timetable-preview-all-sections',
+                      });
+                      showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                    } catch (e) {
+                      showError(e.message || 'Failed to open PDF preview');
+                    }
+                  }}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50"
+                >
+                  <Download size={14} /> PDF all sections
+                </button>
               </div>
 
               {uploadResult && mode === 'upload' && (
@@ -1981,6 +2022,28 @@ export default function SetTimetablePage() {
                                 className="px-3 py-1.5 rounded-lg bg-[#00628b] text-white text-xs font-semibold disabled:opacity-50"
                               >
                                 Save this section
+                              </button>
+                              <button
+                                type="button"
+                                disabled={Boolean(uploadBusy)}
+                                onClick={() => {
+                                  try {
+                                    exportUploadSectionsPdf([sec], {
+                                      yearLabel: settings?.settings?.academicYear?.yearLabel,
+                                      academicYearId,
+                                      semester,
+                                      fileName: `timetable-preview-${(sec.title || 'section')
+                                        .replace(/[^\w\-]+/g, '_')
+                                        .slice(0, 60)}`,
+                                    });
+                                    showSuccess('PDF preview opened — use Save as PDF in the print dialog');
+                                  } catch (e) {
+                                    showError(e.message || 'Failed to open PDF preview');
+                                  }
+                                }}
+                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-950 text-xs font-medium disabled:opacity-50"
+                              >
+                                <Download size={12} /> Download PDF preview
                               </button>
                             </div>
                           </div>
