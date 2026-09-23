@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import * as XLSX from 'xlsx';
-import { CalendarRange, Download, Plus, RotateCcw, Search } from 'lucide-react';
+import { CalendarRange, Download, Plus, RotateCcw, Search, AlertTriangle } from 'lucide-react';
 import { timetableService } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,7 +10,7 @@ import { appPath } from '../utils/appPaths';
 import EditTeachingPlanModal from '../components/EditTeachingPlanModal';
 import { formatPlanLecturers } from '../utils/formatPlanLecturers';
 import { capitalizeCampusName } from '../utils/formatDisplay';
-import { fmtTime } from '../utils/timeFormat';
+import { fmtTime, detectTimetableConflicts } from '../utils/timeFormat';
 
 const DAY_ORDER = {
   Monday: 1,
@@ -189,6 +189,24 @@ export default function TimetablesPage() {
         return String(sa.start_time || '').localeCompare(String(sb.start_time || ''));
       });
   }, [rows, filters, appliedSearch]);
+
+  const conflictMap = useMemo(() => detectTimetableConflicts(rows), [rows]);
+
+  const filteredConflictStats = useMemo(() => {
+    let room = 0;
+    let group = 0;
+    let both = 0;
+    for (const t of filtered) {
+      const c = conflictMap.get(t.id);
+      if (!c) continue;
+      const hasF = c.kinds.includes('facility');
+      const hasG = c.kinds.includes('group');
+      if (hasF && hasG) both += 1;
+      else if (hasF) room += 1;
+      else if (hasG) group += 1;
+    }
+    return { room, group, both, total: room + group + both };
+  }, [filtered, conflictMap]);
 
   const currentView = useMemo(() => {
     const lines = [];
@@ -482,6 +500,33 @@ export default function TimetablesPage() {
         </button>
       </div>
 
+      {filteredConflictStats.total > 0 && (
+        <div
+          className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 flex gap-3 items-start"
+          role="status"
+        >
+          <AlertTriangle className="shrink-0 mt-0.5 text-amber-600" size={20} />
+          <div>
+            <p className="m-0 font-semibold">
+              {filteredConflictStats.total} teaching plan
+              {filteredConflictStats.total === 1 ? '' : 's'} with conflict warnings
+              {filtered.length !== rows.length ? ' in this view' : ''}
+            </p>
+            <p className="m-0 mt-1 text-amber-900/90 text-[13px] leading-snug">
+              {[
+                filteredConflictStats.room ? `${filteredConflictStats.room} ROOM` : null,
+                filteredConflictStats.group ? `${filteredConflictStats.group} GROUP` : null,
+                filteredConflictStats.both ? `${filteredConflictStats.both} ROOM + GROUP` : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
+              . Same room or same student group at overlapping times. Highlighted rows below —
+              {canManage ? ' click a row to edit and fix.' : ' ask an admin to resolve.'}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="m-0 text-xl font-bold text-[#031f50] border-b border-gray-200 pb-2">
           General timetable
@@ -564,14 +609,36 @@ export default function TimetablesPage() {
                   const first = t.sessions?.[0];
                   const lecturers = formatPlanLecturers(t);
                   const groups = t.groups?.length ? t.groups : [null];
+                  const conflict = conflictMap.get(t.id);
+                  const conflictHint = conflict
+                    ? [
+                        conflict.summary,
+                        ...(conflict.facility || []).slice(0, 2).map((x) => x.simpleReason),
+                        ...(conflict.groups || []).slice(0, 2).map((x) => x.simpleReason),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')
+                    : '';
                   return groups.map((g, gi) => (
                     <tr
                       key={`${t.id}-${gi}`}
-                      className={`${gi % 2 === 0 ? 'bg-white' : 'bg-[#f8f9fa]'} ${
-                        canManage ? 'cursor-pointer hover:bg-sky-50/80' : ''
+                      className={`${
+                        conflict
+                          ? 'bg-amber-50/90'
+                          : gi % 2 === 0
+                            ? 'bg-white'
+                            : 'bg-[#f8f9fa]'
+                      } ${canManage ? 'cursor-pointer hover:bg-sky-50/80' : ''} ${
+                        conflict ? 'hover:bg-amber-100/80' : ''
                       }`}
                       onClick={canManage ? () => setEditingPlan(t) : undefined}
-                      title={canManage ? 'Click to view / edit' : undefined}
+                      title={
+                        conflict
+                          ? conflictHint
+                          : canManage
+                            ? 'Click to view / edit'
+                            : undefined
+                      }
                     >
                       {gi === 0 && (
                         <>
@@ -579,6 +646,19 @@ export default function TimetablesPage() {
                             <span className={canManage ? 'text-[#00628b] font-semibold underline-offset-2 hover:underline' : ''}>
                               {t.id}
                             </span>
+                            {conflict ? (
+                              <div
+                                className="mt-1 inline-flex items-center gap-1 rounded-md border border-amber-400 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-900"
+                                title={conflictHint}
+                              >
+                                <AlertTriangle size={11} />
+                                {conflict.kinds.includes('facility') && conflict.kinds.includes('group')
+                                  ? 'Room+Group'
+                                  : conflict.kinds.includes('facility')
+                                    ? 'Room'
+                                    : 'Group'}
+                              </div>
+                            ) : null}
                           </td>
                           <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle">
                             {first?.day || '—'}
@@ -591,6 +671,18 @@ export default function TimetablesPage() {
                           </td>
                           <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle text-left">
                             {t.course || '—'}
+                            {conflict ? (
+                              <div className="mt-1 text-[11px] text-amber-800 leading-snug font-medium">
+                                {conflict.summary}
+                                {conflict.peerIds?.length ? (
+                                  <span className="font-normal text-amber-700/90">
+                                    {' '}
+                                    ↔ #{conflict.peerIds.slice(0, 3).join(', #')}
+                                    {conflict.peerIds.length > 3 ? '…' : ''}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
                           </td>
                           <td rowSpan={groups.length} className="border px-2.5 py-2 align-middle">
                             {t.code || '—'}
@@ -637,7 +729,11 @@ export default function TimetablesPage() {
         )}
       </div>
       <p className="text-sm text-gray-500 m-0">
-        Showing {filtered.length} plan(s) of {rows.length} for current academic period.
+        Showing {filtered.length} plan(s) of {rows.length} for current academic period
+        {filteredConflictStats.total
+          ? ` · ${filteredConflictStats.total} with conflict warnings`
+          : ''}
+        .
         {canManage ? ' Click any row to edit module, facility, lecturers, sessions, or groups.' : ''}
       </p>
 

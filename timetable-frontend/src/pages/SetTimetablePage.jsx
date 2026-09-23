@@ -72,7 +72,10 @@ function rowStudentNeed(row) {
 
 function quietRowWarnings(warnings = []) {
   return (warnings || []).filter(
-    (w) => !/Auto room:|auto-assign|free facility|No free|weak match|Shared room/i.test(String(w || ''))
+    (w) =>
+      !/Auto room:|auto-assign|free facility|No free facility|weak match|Shared room|Created module from Excel/i.test(
+        String(w || '')
+      )
   );
 }
 
@@ -596,6 +599,7 @@ export default function SetTimetablePage() {
         sections,
         campusId,
         semester,
+        academicYearId,
         facilityMode,
       });
       let matched = sanitizeMatchedSections(matchRes?.data?.sections || []);
@@ -635,6 +639,7 @@ export default function SetTimetablePage() {
           sections,
           campusId,
           semester,
+          academicYearId,
           facilityMode,
         });
         matched = sanitizeMatchedSections(rematchRes?.data?.sections || []);
@@ -679,6 +684,7 @@ export default function SetTimetablePage() {
         sections,
         campusId: uploadCampusId ? Number(uploadCampusId) : null,
         semester,
+        academicYearId,
         facilityMode,
       });
       setMatchedSections(sanitizeMatchedSections(matchRes?.data?.sections || []));
@@ -687,7 +693,12 @@ export default function SetTimetablePage() {
           `Rematched + auto facilities: ${matchRes.data.autoAssign.assigned} assigned`
         );
       } else {
-        showSuccess('Rematched against system programs / intakes / groups');
+        const c = matchRes?.data?.conflictPreview?.conflicts;
+        showSuccess(
+          c
+            ? `Rematched — ${c} ROOM/GROUP conflict(s) flagged`
+            : 'Rematched against system programs / intakes / groups'
+        );
       }
     } catch (error) {
       showError(error.response?.data?.message || 'Rematch failed');
@@ -819,8 +830,8 @@ export default function SetTimetablePage() {
         });
         rows.push({
           moduleId: row.module.id,
-          moduleCode: row.module.code,
-          moduleName: row.module.name,
+          moduleCode: row.excel?.moduleCode || row.module.code,
+          moduleName: row.excel?.moduleName || row.module.name,
           facilityId: row.facility.id,
           facilityName: row.facility.name,
           leaderLecturerId: row.lecturers?.leader?.id || null,
@@ -2140,11 +2151,13 @@ export default function SetTimetablePage() {
                                       <span className="block text-[10px] uppercase text-gray-400">Module</span>
                                       <span className="font-medium text-gray-900 line-clamp-2">
                                         {r.module
-                                          ? `${r.module.code ? `${r.module.code} — ` : ''}${r.module.name}`
+                                          ? `${(r.excel?.moduleCode || r.module.code) ? `${r.excel?.moduleCode || r.module.code} — ` : ''}${r.excel?.moduleName || r.module.name}`
                                           : 'Search & pick module…'}
                                       </span>
                                     </button>
-                                    {(r.excel?.moduleCode || r.excel?.moduleName) && (
+                                    {r.module?.fromExcel && (r.excel?.moduleCode || r.excel?.moduleName) ? (
+                                      <div className="text-emerald-700 mt-1 text-[10px]">Excel module saved / prioritized</div>
+                                    ) : (r.excel?.moduleCode || r.excel?.moduleName) && (
                                       <div className="text-gray-400 mt-1 text-[10px]">
                                         Excel: {[r.excel.moduleCode, r.excel.moduleName].filter(Boolean).join(' — ')}
                                       </div>

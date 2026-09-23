@@ -294,6 +294,19 @@ export async function createTeachingPlan(dto, { user, transaction: outerTx = nul
     err.code = "NOT_FOUND";
     throw err;
   }
+
+  // Excel / payload overrides win — persist spreadsheet code & name on the module
+  const excelCode = String(dto.moduleCode || dto.module_code || "").trim();
+  const excelName = String(dto.moduleName || dto.module_name || "").trim();
+  if (excelCode || excelName) {
+    const updates = {};
+    if (excelCode && String(mod.code || "").trim() !== excelCode) updates.code = excelCode.slice(0, 50);
+    if (excelName && String(mod.name || "").trim() !== excelName) updates.name = excelName.slice(0, 255);
+    if (Object.keys(updates).length) {
+      await mod.update(updates);
+    }
+  }
+
   if (!fac) {
     const err = new Error("Facility not found");
     err.code = "NOT_FOUND";

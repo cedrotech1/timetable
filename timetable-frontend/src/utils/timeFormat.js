@@ -76,3 +76,114 @@ export function sessionsOverlap(a, b) {
   const b1 = toMinutes(b.end || b.endTime || b.end_time);
   return a0 < b1 && b0 < a1;
 }
+
+/**
+ * Scan saved teaching plans for ROOM + GROUP overlaps (same rules as save conflicts).
+ * Returns Map<planId, { kinds: string[], facility: [...], groups: [...], summary: string }>
+ */
+export function detectTimetableConflicts(plans = []) {
+  const byId = new Map();
+  const list = (plans || []).filter((p) => p?.id != null);
+
+  const ensure = (id) => {
+    if (!byId.has(id)) byId.set(id, { kinds: new Set(), facility: [], groups: [], peers: new Set() });
+    return byId.get(id);
+  };
+
+  const planLabel = (p) =>
+    [p.code || p.module?.code, p.course || p.module?.name].filter(Boolean).join(" — ") || `Plan #${p.id}`;
+
+  const sessionPairsOverlap = (aSessions, bSessions) => {
+    for (const sa of aSessions || []) {
+      for (const sb of bSessions || []) {
+        if (sessionsOverlap(sa, sb)) return { sa, sb };
+      }
+    }
+    return null;
+  };
+
+  for (let i = 0; i < list.length; i += 1) {
+    for (let j = i + 1; j < list.length; j += 1) {
+      const a = list[i];
+      const b = list[j];
+      const hit = sessionPairsOverlap(a.sessions, b.sessions);
+      if (!hit) continue;
+
+      const sameFacility =
+        a.facility?.id != null &&
+        b.facility?.id != null &&
+        Number(a.facility.id) === Number(b.facility.id);
+
+      const aGroups = new Set((a.groups || []).map((g) => Number(g.id)).filter(Boolean));
+      const sharedGroups = (b.groups || []).filter((g) => aGroups.has(Number(g.id)));
+
+      if (!sameFacility && !sharedGroups.length) continue;
+
+      const when = `${hit.sa.day || hit.sb.day} ${fmtTime(hit.sa.start_time || hit.sa.startTime)}–${fmtTime(hit.sa.end_time || hit.sa.endTime)}`;
+
+      if (sameFacility) {
+        const entryA = ensure(a.id);
+        const entryB = ensure(b.id);
+        entryA.kinds.add("facility");
+        entryB.kinds.add("facility");
+        entryA.peers.add(b.id);
+        entryB.peers.add(a.id);
+        entryA.facility.push({
+          peerId: b.id,
+          peerLabel: planLabel(b),
+          when,
+          facilityName: a.facility?.name || b.facility?.name,
+          simpleReason: `ROOM conflict with #${b.id} (${planLabel(b)})`,
+        });
+        entryB.facility.push({
+          peerId: a.id,
+          peerLabel: planLabel(a),
+          when,
+          facilityName: a.facility?.name || b.facility?.name,
+          simpleReason: `ROOM conflict with #${a.id} (${planLabel(a)})`,
+        });
+      }
+
+      if (sharedGroups.length) {
+        const entryA = ensure(a.id);
+        const entryB = ensure(b.id);
+        entryA.kinds.add("group");
+        entryB.kinds.add("group");
+        entryA.peers.add(b.id);
+        entryB.peers.add(a.id);
+        const names = sharedGroups.map((g) => g.name).filter(Boolean).join(", ");
+        entryA.groups.push({
+          peerId: b.id,
+          peerLabel: planLabel(b),
+          when,
+          groupsLabel: names,
+          simpleReason: `GROUP conflict (${names || "shared group"}) with #${b.id}`,
+        });
+        entryB.groups.push({
+          peerId: a.id,
+          peerLabel: planLabel(a),
+          when,
+          groupsLabel: names,
+          simpleReason: `GROUP conflict (${names || "shared group"}) with #${a.id}`,
+        });
+      }
+    }
+  }
+
+  const out = new Map();
+  for (const [id, v] of byId) {
+    const kinds = [...v.kinds];
+    let summary = "Conflict";
+    if (kinds.includes("facility") && kinds.includes("group")) summary = "ROOM + GROUP conflict";
+    else if (kinds.includes("facility")) summary = "ROOM conflict";
+    else if (kinds.includes("group")) summary = "GROUP conflict";
+    out.set(id, {
+      kinds,
+      facility: v.facility,
+      groups: v.groups,
+      peerIds: [...v.peers],
+      summary,
+    });
+  }
+  return out;
+}

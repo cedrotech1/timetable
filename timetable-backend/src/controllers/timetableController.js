@@ -9,7 +9,7 @@ import {
   getActiveSettings,
   DAYS,
 } from "../services/timetableService.js";
-import { matchImportSections, createIntakeGroups, createIntakeGroupsBulk, autoAssignImportFacilities, getFacilityCalendar } from "../services/excelImportService.js";
+import { matchImportSections, createIntakeGroups, createIntakeGroupsBulk, autoAssignImportFacilities, stampImportSaveConflicts, getFacilityCalendar } from "../services/excelImportService.js";
 import {
   getSystemCounts,
   updateSystemSettings,
@@ -441,22 +441,32 @@ export const matchImportController = async (req, res) => {
   try {
     const settings = await getActiveSettings();
     const facilityMode = req.body.facilityMode || req.body.facility_mode || "excel";
+    const academicYearId = req.body.academicYearId || settings?.academicYearId;
+    const semester = req.body.semester || settings?.semester;
     let data = await matchImportSections({
       sections: req.body.sections || [],
       campusId: req.body.campusId || req.body.campus_id || null,
-      semester: req.body.semester || settings?.semester || null,
+      semester,
       facilityMode,
     });
 
     if (facilityMode === "auto") {
       const assigned = await autoAssignImportFacilities({
         sections: data.sections,
-        academicYearId: req.body.academicYearId || settings?.academicYearId,
-        semester: req.body.semester || settings?.semester,
+        academicYearId,
+        semester,
         campusId: req.body.campusId || req.body.campus_id || null,
       });
       data = { ...data, sections: assigned.sections, autoAssign: assigned.stats };
     }
+
+    // Always stamp ROOM + GROUP conflicts (Excel rooms and auto-assigned rooms)
+    const stamped = await stampImportSaveConflicts({
+      sections: data.sections,
+      academicYearId,
+      semester,
+    });
+    data = { ...data, sections: stamped.sections, conflictPreview: stamped.stats };
 
     return res.status(200).json({ success: true, data });
   } catch (error) {
@@ -467,16 +477,23 @@ export const matchImportController = async (req, res) => {
 export const autoAssignFacilitiesController = async (req, res) => {
   try {
     const settings = await getActiveSettings();
+    const academicYearId = req.body.academicYearId || settings?.academicYearId;
+    const semester = req.body.semester || settings?.semester;
     const result = await autoAssignImportFacilities({
       sections: req.body.sections || [],
-      academicYearId: req.body.academicYearId || settings?.academicYearId,
-      semester: req.body.semester || settings?.semester,
+      academicYearId,
+      semester,
       campusId: req.body.campusId || req.body.campus_id || null,
+    });
+    const stamped = await stampImportSaveConflicts({
+      sections: result.sections,
+      academicYearId,
+      semester,
     });
     return res.status(200).json({
       success: true,
       message: `Auto-assigned ${result.stats.assigned} facilities (${result.stats.failed} failed)`,
-      data: result,
+      data: { ...result, sections: stamped.sections, conflictPreview: stamped.stats },
     });
   } catch (error) {
     return res.status(500).json({ success: false, message: error.message });

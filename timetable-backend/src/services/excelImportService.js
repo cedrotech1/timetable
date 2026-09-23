@@ -261,7 +261,66 @@ function matchModule(modules, code, name, programId, year, semester) {
     const exactName = candidates.find((m) => norm(m.name) === nameN);
     if (exactName) return [exactName, 95, candidates];
   }
+  if (nameN) {
+    const byName = candidates.find((m) => norm(m.name) === nameN);
+    if (byName) return [byName, 90, candidates];
+  }
   return [null, 0, candidates.slice(0, 40)];
+}
+
+/**
+ * Excel wins: find/create module and overwrite system code/name from the spreadsheet.
+ * Missing modules are created under the section program so import can proceed.
+ */
+async function ensureExcelModule(modules, { code, name, programId, year, semester }) {
+  const codeTrim = String(code || "").trim();
+  const nameTrim = String(name || "").trim();
+  if (!codeTrim && !nameTrim) return [null, "No module in Excel — pick a system module"];
+
+  let [mod, score, candidates] = matchModule(modules, codeTrim, nameTrim, programId, year, semester);
+
+  // Name match under program when code was unknown
+  if (!mod && nameTrim && programId) {
+    mod = modules.find(
+      (m) => Number(m.programId) === Number(programId) && norm(m.name) === norm(nameTrim)
+    );
+    if (mod) score = 90;
+  }
+
+  if (mod) {
+    const updates = {};
+    if (codeTrim && String(mod.code || "").trim() !== codeTrim) updates.code = codeTrim.slice(0, 50);
+    if (nameTrim && String(mod.name || "").trim() !== nameTrim) updates.name = nameTrim.slice(0, 255);
+    if (programId && Number(mod.programId) !== Number(programId)) {
+      // Prefer attaching to this section's program when Excel is unambiguous by code
+      if (score >= 100 && codeTrim) {
+        /* keep existing program — code is global identity */
+      }
+    }
+    if (Object.keys(updates).length) {
+      await Module.update(updates, { where: { id: mod.id } });
+      Object.assign(mod, updates);
+      const idx = modules.findIndex((m) => Number(m.id) === Number(mod.id));
+      if (idx >= 0) modules[idx] = { ...modules[idx], ...updates };
+    }
+    return [mod, null, candidates];
+  }
+
+  if (!programId) {
+    return [null, `Module not in system: ${codeTrim || nameTrim} — set program or pick a module`, candidates];
+  }
+
+  const created = await Module.create({
+    code: (codeTrim || nameTrim).slice(0, 50),
+    name: (nameTrim || codeTrim).slice(0, 255),
+    credits: 0,
+    year: Number(year) > 0 ? Number(year) : 1,
+    semester: String(semester || "1"),
+    programId: Number(programId),
+  });
+  const j = created.toJSON();
+  modules.push({ ...j, programName: "" });
+  return [j, `Created module from Excel: ${j.code}`, candidates];
 }
 
 function matchFacility(facilities, room, capacity = null) {
@@ -516,17 +575,21 @@ export async function matchImportSections({ sections, campusId = null, semester 
 
       if (!day) errors.push("Missing day");
       if (!start || !end) errors.push("Missing time");
-      if (!moduleCode && !moduleName) warnings.push("No module in Excel — pick a system module");
 
-      const [mod, , moduleCandidates] = matchModule(
-        modules,
-        moduleCode,
-        moduleName,
+      const [mod, modNote, moduleCandidates] = await ensureExcelModule(modules, {
+        code: moduleCode,
+        name: moduleName,
         programId,
-        year || null,
-        semester
-      );
-      if (!mod) warnings.push(`Module code not in system: ${moduleCode || moduleName}`);
+        year: year || null,
+        semester,
+      });
+      if (modNote && /Created module/i.test(modNote)) {
+        warnings.push(modNote);
+      } else if (!mod) {
+        warnings.push(modNote || `Module not in system: ${moduleCode || moduleName}`);
+      } else if (moduleCode || moduleName) {
+        // Excel code/name already applied on the module record
+      }
 
       const [fac, fScore] =
         facilityMode === "auto"
@@ -572,11 +635,13 @@ export async function matchImportSections({ sections, campusId = null, semester 
         module: mod
           ? {
               id: mod.id,
-              code: mod.code,
-              name: mod.name,
+              // Prefer Excel labels on the matched row (what we save/show)
+              code: moduleCode || mod.code,
+              name: moduleName || mod.name,
               year: mod.year,
               semester: mod.semester,
               programId: mod.programId,
+              fromExcel: Boolean(moduleCode || moduleName),
             }
           : null,
         moduleCandidates: (moduleCandidates || []).slice(0, 40).map((m) => ({
@@ -635,6 +700,95 @@ export async function matchImportSections({ sections, campusId = null, semester 
   }
 
   return { sections: mergeCombinedClassRows(outSections) };
+}
+
+/**
+ * Stamp ROOM + GROUP conflicts on matched rows (Excel room mode + after auto-assign).
+ * Uses the same findConflicts rules as save, including within-import batch overlaps.
+ */
+export async function stampImportSaveConflicts({ sections, academicYearId, semester }) {
+  const { findConflicts, normalizeSessions, conflictErrorMessage, getConflictKinds } = await import(
+    "./timetableService.js"
+  );
+  const ay = Number(academicYearId);
+  const sem = String(semester || "");
+  if (!ay || !sem) return { sections, stats: { checked: 0, conflicts: 0 } };
+
+  const out = (sections || []).map((sec) => ({
+    ...sec,
+    rows: (sec.rows || []).map((r) => ({ ...r })),
+  }));
+
+  const batchBooked = [];
+  let checked = 0;
+  let conflictCount = 0;
+
+  for (let si = 0; si < out.length; si += 1) {
+    const sec = out[si];
+    for (let ri = 0; ri < (sec.rows || []).length; ri += 1) {
+      const row = sec.rows[ri];
+      if (!row || row.status === "skipped" || row.mergedAway) continue;
+      if (!row.module?.id || !row.facility?.id || !(row.groups || []).length) continue;
+      if (!row.day || !row.start || !row.end) continue;
+
+      const sessions = normalizeSessions([{ day: row.day, start: row.start, end: row.end }]);
+      if (!sessions.length) continue;
+
+      const groupIds = (row.groups || []).map((g) => Number(g.id)).filter(Boolean);
+      const groupNames = (row.groups || []).map((g) => g.name).filter(Boolean);
+      const groupNameById = {};
+      (row.groups || []).forEach((g) => {
+        if (g?.id) groupNameById[g.id] = g.name;
+      });
+
+      checked += 1;
+      const { hasConflict, conflicts, conflictKinds } = await findConflicts({
+        facilityId: Number(row.facility.id),
+        moduleId: Number(row.module.id),
+        academicYearId: ay,
+        semester: sem,
+        groupIds,
+        sessions,
+        batchBooked,
+      });
+
+      // Clear prior stamp warnings from earlier rematch
+      row.warnings = (row.warnings || []).filter(
+        (w) => !/ROOM conflict|GROUP time conflict|Conflicts detected/i.test(String(w))
+      );
+      row.saveConflict = null;
+      row.conflictKinds = [];
+
+      if (hasConflict) {
+        conflictCount += 1;
+        row.saveConflict = conflicts;
+        row.conflictKinds = conflictKinds || getConflictKinds(conflicts);
+        row.status = "error";
+        row.warnings.push(conflictErrorMessage(row.conflictKinds));
+        if ((conflicts.facility || []).length) {
+          row.conflictKind = row.conflictKinds.includes("group") ? "facility+group" : "facility";
+        } else {
+          row.conflictKind = "group";
+        }
+      }
+
+      // Always book so later Excel rows collide with this facility/group slot
+      batchBooked.push({
+        tempId: `match-${si}-${ri}`,
+        moduleId: Number(row.module.id),
+        moduleCode: row.module.code || row.excel?.moduleCode || null,
+        moduleName: row.module.name || row.excel?.moduleName || null,
+        facilityId: Number(row.facility.id),
+        facilityName: row.facility.name || null,
+        groupIds,
+        groupNames,
+        groupNameById,
+        sessions,
+      });
+    }
+  }
+
+  return { sections: out, stats: { checked, conflicts: conflictCount } };
 }
 
 function rowRequiredStudents(sec, row) {
