@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { CalendarDays, ArrowLeft } from 'lucide-react';
+import { CalendarDays, ArrowLeft, Download } from 'lucide-react';
 import { timetableService } from '../services/api';
 import { useNotification } from '../contexts/NotificationContext';
 import { appPath } from '../utils/appPaths';
 import ModalShell, { ModalPrimaryButton } from '../components/ModalShell';
 import { capitalizePersonName, capitalizeCampusName } from '../utils/formatDisplay';
 import { fmtTime, toMinutes as toMinutesFlexible } from '../utils/timeFormat';
+import { exportFacilityCalendarPdf } from '../utils/exportFacilityCalendarPdf';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const DAY_START_MIN = 8 * 60;
@@ -368,8 +369,9 @@ function FilterSelect({ label, value, onChange, children, className = '' }) {
 export default function FacilityCalendarPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { showError } = useNotification();
+  const { showError, showSuccess } = useNotification();
   const [loading, setLoading] = useState(true);
+  const [exportingPdf, setExportingPdf] = useState(false);
   const [calendar, setCalendar] = useState({ days: DAYS, facilities: [] });
   const [meta, setMeta] = useState(null);
   const [selectedId, setSelectedId] = useState(id || '');
@@ -431,7 +433,7 @@ export default function FacilityCalendarPage() {
     return [...set].sort();
   }, [calendar.facilities]);
 
-  const filteredBlocks = useMemo(() => {
+  const matchingBlocks = useMemo(() => {
     let list = [...(calendar.facilities || [])];
     const q = search.trim().toLowerCase();
     const minCap = minCapacity ? Number(minCapacity) : 0;
@@ -453,7 +455,6 @@ export default function FacilityCalendarPage() {
         ? sessions.some((s) => String(s.day) === filterDay)
         : bookedAny;
       const busyAtTime = sessionsOverlapWindow(sessions, filterDay || null, fromMin, toMin);
-      // free at time: if day set, only that day; else free on that window any day? Prefer requiring day for free_at_time
       const freeAtTime = !busyAtTime;
       const freeOnDay = filterDay
         ? !sessions.some((s) => String(s.day) === filterDay)
@@ -469,14 +470,13 @@ export default function FacilityCalendarPage() {
       if (occupancy === 'fully_free') return !bookedAny;
       if (occupancy === 'free_on_day') return freeOnDay;
       if (occupancy === 'free_at_time') {
-        if (!filterDay) return freeAtTime; // free for window on every checked day → treat as no overlap that window on any day when no day: free for that clock range every day? Simpler: no overlap in window across week if no day
+        if (!filterDay) return freeAtTime;
         return freeAtTime;
       }
       if (occupancy === 'booked_at_time') return busyAtTime;
       return true;
     });
 
-    // Booked first when browsing all
     list.sort((a, b) => {
       const as = (a.sessions || []).length;
       const bs = (b.sessions || []).length;
@@ -485,9 +485,6 @@ export default function FacilityCalendarPage() {
       return String(a.facility?.name || '').localeCompare(String(b.facility?.name || ''));
     });
 
-    if (selectedId) {
-      return list.filter((f) => String(f.facility?.id) === String(selectedId));
-    }
     return list;
   }, [
     calendar.facilities,
@@ -498,8 +495,14 @@ export default function FacilityCalendarPage() {
     filterDay,
     timeFrom,
     timeTo,
-    selectedId,
   ]);
+
+  const filteredBlocks = useMemo(() => {
+    if (selectedId) {
+      return matchingBlocks.filter((f) => String(f.facility?.id) === String(selectedId));
+    }
+    return matchingBlocks;
+  }, [matchingBlocks, selectedId]);
 
   const firstBookedId = useMemo(() => {
     const hit = filteredBlocks.find((b) => (b.sessions || []).length > 0);
@@ -546,6 +549,26 @@ export default function FacilityCalendarPage() {
     (occupancy === 'free_on_day' || occupancy === 'free_at_time' || occupancy === 'booked_at_time') &&
     !filterDay;
 
+  const exportAllPdf = async () => {
+    try {
+      setExportingPdf(true);
+      const ay = academicYears.find((y) => String(y.id) === String(academicYearId));
+      const campus = campuses.find((c) => String(c.id) === String(campusId));
+      await exportFacilityCalendarPdf(matchingBlocks, {
+        academicYearId,
+        yearLabel: ay?.yearLabel || '',
+        semester,
+        campusLabel: campus ? capitalizeCampusName(campus.name) : campusId ? '' : 'All campuses',
+        fileName: `facility-schedules-sem${semester || 'x'}`,
+      });
+      showSuccess(`PDF downloaded (${matchingBlocks.length} facility(ies))`);
+    } catch (e) {
+      showError(e.message || 'Failed to download PDF');
+    } finally {
+      setExportingPdf(false);
+    }
+  };
+
   return (
     <div className="max-w-[95rem] mx-auto space-y-3">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3">
@@ -564,6 +587,15 @@ export default function FacilityCalendarPage() {
             Filter rooms by campus, day, free/booked time, capacity. Click a slot for details.
           </p>
         </div>
+        <button
+          type="button"
+          disabled={loading || exportingPdf || matchingBlocks.length === 0}
+          onClick={exportAllPdf}
+          className="inline-flex items-center gap-1.5 rounded-lg bg-[#00628b] text-white px-3 py-2 text-sm font-semibold disabled:opacity-50 hover:bg-[#014d6e]"
+        >
+          <Download size={16} />
+          {exportingPdf ? 'Preparing PDF…' : `Export all PDF (${matchingBlocks.length})`}
+        </button>
       </div>
 
       {/* Compact filters */}
@@ -658,7 +690,7 @@ export default function FacilityCalendarPage() {
             onChange={onPick}
             className="sm:col-span-2"
           >
-            <option value="">All matching ({filteredBlocks.length})</option>
+            <option value="">All matching ({matchingBlocks.length})</option>
             {(calendar.facilities || []).map((b) => (
               <option key={b.facility.id} value={b.facility.id}>
                 {b.facility.name}

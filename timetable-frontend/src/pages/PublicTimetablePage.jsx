@@ -192,7 +192,6 @@ export default function PublicTimetablePage() {
             Day: s.day || '',
             Time: s.start_time ? `${fmtTime(s.start_time)}-${fmtTime(s.end_time)}` : '',
             Course: t.course || '',
-            Code: t.code || '',
             Credits: t.credits ?? '',
             Facility: t.facility?.name || '',
             Group: g.name || '',
@@ -300,7 +299,7 @@ export default function PublicTimetablePage() {
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {[
-              ['module', 'Module / code'],
+              ['module', 'Module'],
               ['facility', 'Facility'],
               ['lecturer', 'Lecturer'],
             ].map(([key, ph]) => (
@@ -345,7 +344,7 @@ export default function PublicTimetablePage() {
               <table className="min-w-full text-sm border-collapse">
                 <thead>
                   <tr>
-                    {['Day', 'Time', 'Course', 'Code', 'Credits', 'Facility'].map((h) => (
+                    {['Day', 'Time', 'Course', 'Credits', 'Facility'].map((h) => (
                       <th
                         key={h}
                         rowSpan={2}
@@ -399,9 +398,6 @@ export default function PublicTimetablePage() {
                             </td>
                             <td rowSpan={groups.length} className="border px-2.5 py-2 text-left">
                               {t.course || '—'}
-                            </td>
-                            <td rowSpan={groups.length} className="border px-2.5 py-2">
-                              {t.code || '—'}
                             </td>
                             <td rowSpan={groups.length} className="border px-2.5 py-2 text-center">
                               {t.credits ?? '—'}
